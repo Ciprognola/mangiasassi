@@ -1,0 +1,15 @@
+{
+  "developer": "your-name",
+  "date": "YYYY-MM-DD",
+  "baseVersion": "V0.2_5",
+  "changes": [
+    {
+      "type": "text | audio | sprite",
+      "target": "where it applies, e.g. dialogue.uomoRoccia.win",
+      "character": "uomoRoccia | algidone | shared",
+      "file": "relative path inside this folder (omit for text)",
+      "value": "new text (text changes only)",
+      "note": "why"
+    }
+  ]
+}
