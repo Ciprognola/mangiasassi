@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "developer": "_example",
+  "date": "2026-01-01",
+  "baseVersion": "V0.2_5",
+  "notes": "Example only. Not a real submission.",
+  "changes": [
+    {
+      "type": "text",
+      "character": "uomoRoccia",
+      "target": "dialogue.win",
+      "value": "Sì, deo caro!",
+      "note": "Shorter victory line"
+    }
+  ]
+}

@@ -1,15 +1,30 @@
 {
+  "schemaVersion": 1,
   "developer": "your-name",
   "date": "YYYY-MM-DD",
   "baseVersion": "V0.2_5",
+  "notes": "optional overall comment",
   "changes": [
     {
-      "type": "text | audio | sprite",
-      "target": "where it applies, e.g. dialogue.uomoRoccia.win",
-      "character": "uomoRoccia | algidone | shared",
-      "file": "relative path inside this folder (omit for text)",
-      "value": "new text (text changes only)",
-      "note": "why"
+      "type": "text",
+      "character": "uomoRoccia",
+      "target": "dialogue.win",
+      "value": "New Italian text here",
+      "note": "why this change"
+    },
+    {
+      "type": "audio",
+      "character": "algidone",
+      "target": "sound.eat",
+      "file": "eat.mp3",
+      "note": "why this change"
+    },
+    {
+      "type": "sprite",
+      "character": "uomoRoccia",
+      "target": "sprite.enemy.plane",
+      "file": "plane.png",
+      "note": "why this change"
     }
   ]
 }
