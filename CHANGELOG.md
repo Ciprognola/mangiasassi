@@ -836,6 +836,70 @@ for anything not itemised below.
 - Not tested: real device/iOS, an actual approved submission going through this path end-to-end (no
   submissions exist yet — `BUILTIN_AUD` ships empty).
 
+## 0.3_8 — 2026-09-23
+- **Follow-up fix — `PR_TRACKS` memory release now also covers both win-branch exits.** 0.3_7's
+  release-on-exit only fired from `prExit()`, but review pointed out that a **won** professor battle
+  never calls `prExit()` at all — neither the "continue at girone 3" branch (`startGame(...)`) nor the
+  "back to menu" branch (`go("menu")`) — so `PR_TRACKS` stayed decoded for the entire rest of that session
+  after a win. Extracted the release loop into **`prReleaseMusic()`** and call it from `prExit()` and from
+  the shared point right after `pbTeardown()` in `pbEnding()`'s win branch (covers both the "sì" and "no"
+  outcomes of the continue-at-girone-3 question in one place, since they diverge only after that line).
+- **v0.4 P1 — popup unlock framework.** New persisted state `S.p.pop={queue:[],seen:{},needsSeed:false}`
+  (`DEF` + migration — see the seeding note below). Shown **only on the home menu**, one at a time, as a
+  centred modal (reuses the existing `openModal()`/`.box` pixel-style modal, not a new full-screen screen).
+  Enter = "Guarda", Esc = "Non ora" (wired into the existing global modal keydown handler alongside the
+  older single-button "Avanti" pattern).
+- **Event types wired**: **asset/ghost** (an item becomes buyable for the *current* character — checked
+  against `planeUnlock(i)`/`rockUnlock(i)`, the same threshold `cardHTML` already uses), **character** (El
+  Gamblador / Il Professore's card becomes visible in Giocatore, via the existing `S.p.gam.seen`/
+  `S.p.pr.seen` flags), **mini-game** (the same two flags also unlock their Giochi cards, G2/G3 — a
+  *separate* popup from "character" since they lead to different tabs). **milestone** is wired as a stub
+  only (`POP_TITLE`/`popBodyHTML`/`popGoto` all handle the type) — nothing pushes it yet; R4 will push
+  `{type:"milestone",items:[...]}` onto the same queue once the roadmap exists.
+- **Grouped per type**: one scan (`scanNewUnlocks()`, run once per `renderMenu()`) collects every
+  newly-crossed item of the same type into a single queue entry with an `items` array, rather than one
+  popup per item. "Guarda" navigates to Lista desideri, tab `planes`/`rocks` (asset — picks the first
+  item's kind when a group mixes both), `player` (character) or `games` (mini-game).
+- **Old-save seeding**: a save from before this build (detected via the same raw-pre-merge-capture pattern
+  the `S.p.gam`/`S.p.pr` migration already uses, not just "does `.pop` exist" — see the bug below) gets
+  `needsSeed=true`; the first `scanNewUnlocks()` call (lazily, once all game functions are defined) then
+  runs `seedPopSeen()`, which marks everything **already** unlocked **for both characters** as seen before
+  doing its normal diff, so an existing player isn't flooded. A brand-new save starts with an empty `seen`
+  map instead, so a first-time player does see the very first popup (their starting plane/rock at level 1
+  count as a "new" unlock the moment they first reach the menu) — this is intentional, not a seeding gap.
+- **Bug found and fixed during this session's own testing**: the first version of the migration computed
+  `needsSeed` as `!!store.get("mgs_v1")` and merged it via `Object.assign({...defaults},S.p.pop||{})` —
+  but `S.p.pop` is *never* actually absent by that point, because the earlier `S.p=Object.assign(DEF.p,
+  S.p)` step had already back-filled it from `DEF.p.pop`'s own default (`needsSeed:false`), so the
+  Object.assign always kept the stale `false`. Old saves never got seeded and would have been flooded.
+  Fixed by capturing `_hadSave`/`_hadPop` from the *raw* pre-merge save object (same technique as the
+  existing `sp.ch` check on the line above it) and setting `needsSeed=true` explicitly only when a save
+  existed before and genuinely never had `.pop`.
+- **Never enqueues from `SIM()` or a dev-test run** (`G.dev`): `scanNewUnlocks()` bails immediately in both
+  cases, and the auto-show at the end of `renderMenu()` has the same guard.
+- **Dev panel**: one preview button per event type (Asset / Personaggio / Minigioco / Traguardo) under a
+  new "Popup di sblocco" row in Strumenti di test → Obiettivi, each calling `popPreview(type)` with sample
+  data — never touches the real queue or `persist()`.
+- **Popup strings** (Italian, in-universe, as shown in-game):
+  - Titles: *"Novità in negozio!"* (asset) · *"Nuovo personaggio!"* (character) · *"Nuovo minigioco!"*
+    (mini-game) · *"Traguardo raggiunto!"* (milestone stub)
+  - Body: *"Ora puoi acquistare: **Nome1**, **Nome2**."* (asset) · *"Ora disponibile: **Nome**."*
+    (character) · *"Ora disponibile nei Giochi: **Nome**."* (mini-game)
+  - Buttons: *"Guarda"* / *"Non ora"* (per the owner's answer, logged in CLAUDE.md §10.9)
+- **Verified in headless Chromium**, three scenarios exactly as requested: (A) fresh save via the real
+  `wipeData()`, leveled to 10 → exactly **one** grouped popup (`Sopwith Camel`, `Supermarine Spitfire`,
+  `Rame`) → clicking "Guarda" correctly lands on `screen="wish"`, `tab="planes"`, queue empties; (B) an old
+  save (level 20/15, `gam`/`pr` already `seen`) loaded in a **fresh isolated browser context** (to avoid a
+  real, pre-existing `visibilitychange`→`persist()` handler racing a same-page `localStorage` + `reload()`
+  test technique and silently overwriting the injected save — a probe-methodology pitfall worth flagging
+  for future test scripts, not an app bug) → `needsSeed` true → false after one menu visit, queue stays
+  **empty**, 18 keys pre-seeded as seen; leveling that save further afterward correctly starts producing
+  normal new popups again; (C) `SIM()` mode (level 100 on every character) → queue stays **empty** even
+  though every asset would otherwise qualify.
+- Not tested: real device/touch (Enter/Esc keyboard shortcut is desktop-only by nature), an actual roadmap
+  milestone popup (nothing to trigger it yet), the mixed-group tab-choice heuristic (picks the first item's
+  kind) with a real plane+rock unlock happening in the same level-up in practice.
+
 ## 0.3_2 — 2026-09-23
 - **v0.4 bugfix B3 — win/lose track now starts right after the last faint, not after the first
   dialogue line.** In `pbEnding()`, both the win branch (`prMusicStop(400);prMusic("win",{fadeIn:300})`)

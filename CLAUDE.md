@@ -577,7 +577,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | B4 | Rocciamon card (G3) in Giochi after first real professor game | — | Sonnet · low | done (0.3_3) |
 | A0 | Built-in audio layer (IDB → built-in → synth) + matching export targets | — | Sonnet · medium | done (0.3_7) |
 | A1…An | One build per approved audio submission (roccia sounds, algidone sounds, BJ voiceover, professor voiceover, professor intro music) | submissions | Sonnet · medium | wait-assets |
-| P1 | Popup unlock framework + asset/ghost/character/mini-game triggers + old-save seeding + dev preview | [Q] wording, grouping | Sonnet · medium | todo |
+| P1 | Popup unlock framework + asset/ghost/character/mini-game triggers + old-save seeding + dev preview | [Q] wording, grouping (answered) | Sonnet · medium | done (0.3_8) |
 | R1 | Roadmap state, entry button, snake screen, regular girone tiles | [Q] per-character | Sonnet · medium | todo |
 | R2 | Special tiles 3 and 5 (10 hands won), `S.p.gam.won`, new blackjack achievement, "?" tiles | [Q] achievement, "?" | Sonnet · medium | todo |
 | R3 | Gift container (animated gift) + generic reward claim | [Q] reward mapping | Sonnet · medium | todo |
