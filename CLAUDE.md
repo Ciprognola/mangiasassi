@@ -190,7 +190,7 @@ unlock flags (`seen`, achievements).
 index.html                     the game (the source of truth) — always the latest build
 VERSION
 builds/                        delivered versioned builds
-<historical log>               changelog of the project — CURRENTLY OUT OF DATE, see below
+CHANGELOG.md                   changelog of the project — kept current, see below
 submissions/                   developer submission packages + README
 android/                       WebView wrapper
 scripts/validate_submission.py structure + size validator
@@ -204,11 +204,10 @@ CLAUDE.md                      this file
 GitHub Pages deploys from `main` via GitHub Actions on every push.
 
 ### The historical log
-There is a historical log file in the repo (find it — likely `CHANGELOG.md` or similar in the root).
-**It is currently out of date.** First maintenance task: bring it in line with §7 of this file, up to the
-build now sitting in `index.html`. From then on, **every commit appends one entry to it**: version, date,
-one line per change, and a note if it needed a reference/asset from the owner. §7 here stays as the short
-summary; the log is the detailed record.
+`CHANGELOG.md` is the detailed build-by-build log, kept current through the 0.3 release (`## 0.3 —
+2026-09-23`). **Every commit appends one entry to it**: version, date, one line per change, and a note if
+it needed a reference/asset from the owner. §7 here stays as the short summary; the log is the detailed
+record.
 
 ### Developer submission flow
 Collaborators edit text / audio / sprites in dev mode and export a package (ZIP + `manifest.json`,
