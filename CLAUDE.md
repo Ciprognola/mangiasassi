@@ -578,7 +578,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | A0 | Built-in audio layer (IDB → built-in → synth) + matching export targets | — | Sonnet · medium | done (0.3_7) |
 | A1…An | One build per approved audio submission (roccia sounds, algidone sounds, BJ voiceover, professor voiceover, professor intro music) | submissions | Sonnet · medium | wait-assets |
 | P1 | Popup unlock framework + asset/ghost/character/mini-game triggers + old-save seeding + dev preview | [Q] wording, grouping (answered) | Sonnet · medium | done (0.3_8) |
-| R1 | Roadmap state, entry button, snake screen, regular girone tiles | [Q] per-character | Sonnet · medium | todo |
+| R1 | Roadmap state, entry button, snake screen, regular girone tiles | [Q] per-character (answered) | Sonnet · medium | done (0.3_9) |
 | R2 | Special tiles 3 and 5 (10 hands won), `S.p.gam.won`, new blackjack achievement, "?" tiles | [Q] achievement, "?" | Sonnet · medium | todo |
 | R3 | Gift container (animated gift) + generic reward claim | [Q] reward mapping | Sonnet · medium | todo |
 | R4 | Milestone popups wired to the roadmap | P1, R2 | Sonnet · low | todo |
@@ -612,6 +612,11 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-23 | B1 | Main menu music loop symptom | The track restarts correctly at the loop point, but there's still silence/a gap right before it loops (not a click, not a screen-change restart, not double-playback) |
 | 2026-09-23 | P1 | Popup accept/dismiss wording | "Guarda" (accept) / "Non ora" (dismiss) |
 | 2026-09-23 | P1 | Grouping when several unlocks fire at once | Grouped per type (one popup per unlock type, not one per item) — spec default confirmed |
+| 2026-09-23 | R1 | Roadmap tiles per-character or combined | Regular tiles (`cs().gir`) are **per-character**. Special/reward-tile claimed state stays **global** in `S.p.road.claimed` — claiming once marks it claimed on both characters' roadmaps, never claimable twice |
+| 2026-09-23 | R2 | Does the professor "No" branch count for tile 3 | **No** — only `S.p.pr.seen` (a real battle) unlocks tile 3, `S.p.pr.visits` alone does not |
+| 2026-09-23 | R2 | New achievement (31st, 10 BJ hands won) name/category | Name **"Il banco trema"**. Category: **blocked** — none of the 4 existing categories (`gen`/`roc`/`alg`/`gio`) is blackjack-specific; no existing achievement mentions El Gamblador/blackjack at all. Asked the owner to pick before this achievement is added (see R2 chunk note) |
+| 2026-09-23 | R2 | "?" tiles unlock condition | Unlock with their girone like regular tiles; tapping shows "Premio in arrivo", not claimable yet — spec default confirmed |
+| 2026-09-23 | R3 | Reward mapping | Tile 3 → GEKA SNC hat (Uomo roccia), tile 5 → kebab costume (Algidone) — spec default confirmed |
 
 **Built-in audio slots** (filled by A-chunks):
 

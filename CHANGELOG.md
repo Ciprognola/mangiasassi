@@ -899,6 +899,58 @@ for anything not itemised below.
 - Not tested: real device/touch (Enter/Esc keyboard shortcut is desktop-only by nature), an actual roadmap
   milestone popup (nothing to trigger it yet), the mixed-group tab-choice heuristic (picks the first item's
   kind) with a real plane+rock unlock happening in the same level-up in practice.
+- **Follow-up from the P1 review**: checked whether any single level unlocks both a plane/gym item and a
+  rock/snack item at once (`planeUnlock(i)` vs `rockUnlock(i)`) — **yes**, levels **1, 37 and 73** do (e.g.
+  level 1 is everyone's starting plane+rock, already observed live in testing). The tab-choice heuristic
+  above is exercised for real, not just in theory; the proper fix (group popups per *tab*, not per *shop
+  section*) is deferred to R4 as instructed.
+
+## 0.3_9 — 2026-09-23
+- **v0.4 R1 — roadmap: state, entry button, snake screen, regular girone tiles.** New persisted state
+  `S.p.road={claimed:{}}` in `DEF` + migration (simple `Object.assign`, no old-save seeding needed — nothing
+  has ever been "claimed" before this feature existed, so an empty default is correct for every save, old
+  or new alike).
+- **Entry**: a new icon button `#road` (a simple mountain-path glyph) sits right next to the trophy `#trop`
+  in the home `.brand` bar, per the owner's decision logged in §10.9. Opens `screen="road"`.
+- **Screen** (`renderRoad`/`bindRoad`): 50 tiles, tile 1→50, laid out as a boustrophedon (snake) path —
+  rows of 5, alternating left-to-right/right-to-left so tile *N* and *N+1* are always adjacent — with small
+  arrow connectors between tiles and at each row-end turn. Scrollable (`.roadwrap`), auto-scrolls to the
+  player's current tile (`min(50, cs().gir+1)`, outlined) on open.
+- **Tile faces**: number, except **3 = ⬤** (pokéball placeholder), **5 = ♠** (playing-card-suit
+  placeholder), **10/15/…/50 = "?"** — `roadFace(n)`. These are plain Unicode glyphs, not drawn/generated
+  character art (no rule against that here — same category as the "?" already used elsewhere for
+  locked/mystery cards), but they're placeholders; happy to swap for real icons if/when art arrives.
+- **Regular-tile unlock — per-character, as decided**: `roadUnlocked(n)` is simply `cs().gir>=n`, the
+  existing per-character cumulative girone counter (excludes dev/test runs already, via the existing
+  `if(!G.dev)` guard on `c0.gir++`). **All 50 tiles use this same rule for now**, including 3, 5 and the
+  "?" tiles — R2 will swap tiles 3 and 5 specifically to their dedicated conditions (a real professor
+  battle / 10 blackjack hands won) without touching this function for the other 48.
+- **States implemented**: locked (grey, dim) and unlocked (coloured). The CSS for **claimable** (pulsing
+  yellow, reusing the exact `abpulse` keyframe the ability button already uses) and **claimed** (dimmed,
+  distinct from locked) is included so R2/R3 only need to flip which state a tile reports, not build new
+  rendering — but no tile can reach either state yet since no reward data exists until R2/R3.
+  **Claimed state is deliberately global** (`S.p.road.claimed`, not per-character) per the owner's answer,
+  even though this chunk doesn't populate it yet.
+- Tapping a locked tile toasts "Sblocca al girone N"; tapping an unlocked regular tile toasts "Girone N
+  raggiunto"; tapping an unlocked tile 3/5/"?" toasts "Premio in arrivo" (placeholder — R2/R3 replace this
+  with the real expand-to-"Riscatta" flow).
+- **Verified in headless Chromium** with a screenshot: confirmed the snake layout, alternating row
+  direction and connectors render correctly; confirmed **per-character isolation** — setting only
+  `S.p.ch.roccia.gir=12` showed tiles 1–12 unlocked and 13 (current) locked on roccia, while switching to
+  algidone (still `gir=0`) showed tile 1 locked and marked current, proving the two characters' progress
+  don't leak into each other; confirmed tile faces (⬤/♠/"?") render at the right indices; confirmed the
+  locked-tile toast fires.
+- **Bug caught and fixed while building this** (not a logic bug this time — a text-editing mistake): the
+  edit that inserted this whole section accidentally left the section-header comment above `const MAZE=…`
+  unterminated (`/* ============ GAME ============` missing its closing `*/`), which silently swallowed
+  `const MAZE=…` and everything after it into a comment — `node --check` still passed (a shifted comment
+  boundary is still syntactically valid JS) but the page threw `MAZE is not defined` at runtime the moment
+  anything touched it. Caught immediately by the headless probe failing to even reach the menu; fixed by
+  restoring the closing `*/`. Flagging the general lesson: an unterminated block comment is exactly the
+  kind of error `node --check` cannot catch, so a runtime smoke-test (even a trivial one) after any edit
+  near a large `/* */` section header is worth keeping in the routine.
+- Not tested: real device/touch, R2/R3's actual claim flow (not built yet), whether the placeholder
+  ⬤/♠ glyphs read well against the game's existing pixel art style.
 
 ## 0.3_2 — 2026-09-23
 - **v0.4 bugfix B3 — win/lose track now starts right after the last faint, not after the first
