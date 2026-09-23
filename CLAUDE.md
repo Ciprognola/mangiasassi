@@ -2,6 +2,28 @@
 
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
+## SESSION HANDOFF (2026-09-23 → next session)
+Work paused here for the day; owner said "will continue tomorrow, reply to this message." Nothing is
+pending or half-done — every change through this point is **committed and pushed to `main`**
+(`git status` clean at handoff, HEAD `47047bd`, build `0.3_12`). §10.8's chunk table is up to date
+(R1–R4 all `done`); §10.9's decisions log has every `[Q]` answered so far.
+
+**Where things stand in the §10 v0.4 release plan:**
+- Done: B1a, B1a-fix, B1b, B2, B3, B4 (§10.2 bugfixes) · A0 (§10.3 built-in audio layer) · P1 (popup
+  framework) · R1–R4 (roadmap, §10.4) — all shipped, builds 0.3_1 through 0.3_12.
+- **Next up per the suggested order (§10.8): K1** (skin system — overlay hook in every draw path,
+  `SPRITE_INVENTORY.md`, missing-frame warning). No `[Q]` pending for K1 specifically, but K2/K3 (the
+  actual skins) are `wait-assets` — asset sheets from the owner needed when those start.
+- Still `todo`, not started: C1 (customisation page), M0–M9 (Algidone's mini-game, the big one), REL.
+- A1…An (audio submissions) slot in whenever a submission arrives — check §1b at the start of the next
+  session as always.
+
+**Read this file in full as usual** (per the instruction below) — this handoff note is just an index into
+what's already there, not a replacement for it. Once read, this note can be deleted at the start of the
+next session as part of confirming the sync.
+
+---
+
 Owner: **Ciprognola** ("El Cipro") — product owner and master developer.
 Repo: `https://github.com/Ciprognola/mangiasassi` · Live: `https://ciprognola.github.io/mangiasassi/`
 Licence: MIT. Game language: **Italian** (all UI text, dialogue and new strings stay in Italian).
