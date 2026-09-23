@@ -742,6 +742,47 @@ for anything not itemised below.
   still applies), a custom-uploaded menu-music override's actual trim amount (will vary per file — check
   the same `window.__mgsAudioDebug` console line after uploading one).
 
+## 0.3_6 — 2026-09-23
+- **v0.4 bugfix B1b — `bgmGam` (blackjack table) and `prMusic` (professor) moved onto `loopTrack`.**
+  `bgmGam`: `gamMusicInit()` now builds a `loopTrack` instead of `new Audio`; the existing `if(bgmGam)return`
+  guard already meant it's only created once per session, and the custom-upload / reset handlers already
+  null it out to force a fresh decode — both kept working unchanged.
+- `prMusic`: replaced "create a brand-new `Audio` object every call" with a **per-slot cache**,
+  `PR_TRACKS[slot]`, populated by a new `prTrackFor(slot)` — decodes once per slot and reuses the same
+  `loopTrack` instance on every later `prMusic(slot,…)` call (restarting it from position 0 each time via
+  the existing `currentTime=0` setter, matching the old "always a fresh `Audio`" behaviour without a
+  redecode). Keyed by slot, not URL, because an IndexedDB override's blob URL is different every time it's
+  read — `prTrackInvalidate(slot)` (called from both the dev-panel upload handler and the "Ripristina"
+  reset handler, the same places that already touched `musicPr_<slot>` in IndexedDB) discards the cached
+  track so the next call redecodes the new file.
+- Added **`loopTrack().preload()`** (just exposes the existing internal decode step without playing) and
+  **`loopTrack().stop()`** (stops the source, resets position to 0, `paused=true` — a full reset, unlike
+  `pause()` which remembers position to resume later). `prMusOut()` now calls `.stop()` after its fade-out
+  instead of the old `<audio>`-specific `a.pause();a.removeAttribute("src");a.load()`; `prFade()` needed no
+  change since it only ever touches `.volume`, which `loopTrack` already exposed.
+- Added **`prWarmMusic()`**, called at the very start of `prIntroYes()`: pre-decodes the battle/win/lose
+  slots (via `preload()`, no playback) while the intro dialogue is still running, so B2/B3's timing (battle
+  music starting with the transition, win/lose starting the instant the fight is decided) never waits on an
+  MP3 decode on a phone.
+- Small robustness fix caught in this session's own review of 0.3_5: `play()`'s `finally` now only clears
+  `st.pending` `if(tk===st.tk)`, so a stale/superseded call finishing late can't clear a newer call's
+  in-flight flag.
+- **Verified in headless Chromium** (Playwright, same wrapped-`start`/`stop` live-source counter as 0.3_5),
+  driving the real call sequence rather than full simulated gameplay (battle turn logic/RNG is separately
+  covered by `pbSim`, not re-exercised here): `prStart()` into the professor screen (confirms `bgm` is
+  correctly paused by the existing `syncMusic()`/`musicWanted()` gating the instant screen leaves
+  menu/wish/opt/dev) → `prWarmMusic()` (0 live sources — decode-only, nothing plays) → `prMusic('intro')` →
+  `prMusic('battle')` → `prMusic('win')` → back to the menu. **Exactly 1 live source at every step** (the
+  previous slot's source is always cleanly stopped once its crossfade finishes, never orphaned), 1 (`bgm`)
+  once back on the menu, `win` correctly still `paused===false` mid-playback. One blackjack enter/leave
+  (`gamMusicInit()`+`gamMusic(true)` → `gamMusic(false)`) also showed a clean +1/-1 with no leaked source.
+  My first pass at this probe (calling `prMusic()` directly without a real screen transition, and with
+  waits shorter than the 400 ms default crossfade) produced misleading counts of 2–3 — that was a
+  probe-fidelity bug, not an app bug; the corrected probe (real `prStart()`, 600 ms waits) is the one whose
+  numbers are reported here.
+- Not tested: real device/iOS, a full real professor battle played end-to-end through actual UI turns
+  (gameplay/RNG correctness is `pbSim`'s job, not this chunk's).
+
 ## 0.3_2 — 2026-09-23
 - **v0.4 bugfix B3 — win/lose track now starts right after the last faint, not after the first
   dialogue line.** In `pbEnding()`, both the win branch (`prMusicStop(400);prMusic("win",{fadeIn:300})`)

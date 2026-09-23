@@ -164,8 +164,8 @@ in-universe — never use developer words like "asset" or "fantasma" in player-f
   `AudioBufferSourceNode` with `loopStart`/`loopEnd` trimmed to the decoded buffer's non-silent range,
   because HTML `<audio loop>` leaves an audible gap on MP3. Exposes an `<audio>`-like surface
   (`play/pause/volume/paused/currentTime`) and falls back to plain `<audio>` if there's no `AudioContext`
-  or decoding fails. `initMusic()`/`bgm` use it as of 0.3_4; `bgmGam`/`prMusic` are planned to move onto
-  it in B1b (§10.8).
+  or decoding fails. `initMusic()`/`bgm` use it as of 0.3_4; `bgmGam` (0.3_6) and `prMusic`'s per-slot
+  `PR_TRACKS` cache (0.3_6, `prTrackFor`/`prTrackInvalidate`/`prWarmMusic`) use it too.
 - **Hero drawing**: `drawFace(ctx,cx,cy,w,frame,flip)`, `drawEat`, `drawAlg(ctx,X,Y,c,o)`, `drawHero(…)`.
   Render object built in `draw()`: `o={moving,power,eat,flip:P.lastH<0,anim,dir:P.face??1}`.
   Directions: `P.face` 0=up 1=right 2=down 3=left; `DX=[0,1,0,-1]`, `DY=[-1,0,1,0]`; `P.lastH` = last horizontal.
@@ -571,7 +571,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | ID | Chunk | Needs | Model · effort | Status |
 |---|---|---|---|---|
 | B1a | Shared Web Audio loop player (`loopTrack`) + main menu track | [Q] symptom (answered) | Sonnet · medium | done (0.3_4, fixed 0.3_5) |
-| B1b | Move `bgmGam`/`prMusic` onto the shared loop player | B1a | Sonnet · medium | todo |
+| B1b | Move `bgmGam`/`prMusic` onto the shared loop player | B1a | Sonnet · medium | done (0.3_6) |
 | B2 | Battle music starts with battle transition | — | Sonnet · medium | done (0.3_1) |
 | B3 | Win/lose track right after the last faint | — | Sonnet · medium | done (0.3_2) |
 | B4 | Rocciamon card (G3) in Giochi after first real professor game | — | Sonnet · low | done (0.3_3) |
