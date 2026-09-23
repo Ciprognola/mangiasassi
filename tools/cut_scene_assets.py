@@ -133,8 +133,11 @@ def main():
     # with the left ~35% (plain facade + the horse/jockey window, the least
     # legible part at in-game size) cropped off so the CLUB sign and the
     # SNAI runner window read bigger at the same draw width
+    # kept close to the source sheet's own resolution (330px tall) and a much
+    # bigger palette than the other assets here -- the owner asked for this
+    # one at full legible detail rather than heavily pixelated/quantized
     club = cutout("punto snai.png", (858, 62, 1180, 392), tol=28, filter_thin=False)
-    pixelize(club, target_h=150, colors=32).save(os.path.join(OUT, "club_b.png"))
+    pixelize(club, target_h=300, colors=96).save(os.path.join(OUT, "club_b.png"))
 
     # moon sheet -> option 2 (cream, cratered, soft glow); crop excludes the
     # number label below each circle
@@ -176,18 +179,10 @@ def main():
     splash = splash.crop(splash.getbbox())
     pixelize(splash, target_w=150, colors=24).save(os.path.join(OUT, "splash.png"))
 
-    # additional assets sheet -> #2 trash can, #14 rope post, #18 tyre, #20 fast food
-    props = [
-        ("prop_trashcan.png", (168, 80, 272, 240), 40, 16),
-        ("prop_rope.png", (1100, 335, 1195, 490), 44, 16),
-        ("prop_tyre.png", (600, 575, 820, 742), 32, 16),
-        ("prop_food.png", (1160, 580, 1350, 725), 34, 20),
-    ]
-    for name, box, target_h, colors in props:
-        tol = 20 if "tyre" in name else 45
-        min_size = 8 if "tyre" in name else 15
-        im = cutout("additional assets.png", box, tol=tol, min_size=min_size)
-        pixelize(im, target_h=target_h, colors=colors).save(os.path.join(OUT, name))
+    # additional assets sheet -> #14 rope post only (the owner cut the loose
+    # tyre/trash/food cluster in 0.2_52 as randomly-placed clutter)
+    im = cutout("additional assets.png", (1100, 335, 1195, 490), tol=45, min_size=15)
+    pixelize(im, target_h=44, colors=16).save(os.path.join(OUT, "prop_rope.png"))
 
     print("done ->", OUT)
 

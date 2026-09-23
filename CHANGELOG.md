@@ -352,3 +352,36 @@ for anything not itemised below.
     still land correctly on the smaller puddle.
   - Not tested: real device/touch, in-game review by the owner. `node --check` passes both
     inline `<script>` blocks. No save-data shape changed.
+
+## 0.2_52 — 2026-09-23
+- Owner: proportions are fine now, but drop the loose props (they read as randomly scattered),
+  use a higher-resolution club asset, move the puddle fully back on screen, and let the
+  building itself bleed off the left edge for more room.
+  - **Dropped the tyre/trash/food cluster**: `prPropSpots` now only returns the rope post by
+    the door; the three-prop "pile" from 0.2_51 (which only existed because there wasn't
+    enough room to spread them out) is gone rather than kept awkward. Removed the now-unused
+    `prop_trashcan.png`/`prop_tyre.png`/`prop_food.png` from `refs/cut/scene/`, the extraction
+    tool, and the `PRSCN` embed (was dead weight in the build once nothing drew them).
+  - **Club asset at much higher quality**: `tools/cut_scene_assets.py`'s club pixelization went
+    from `target_h=150, colors=32` to `target_h=300, colors=96` -- close to the source crop's
+    own 330px resolution and a much bigger palette, so the neon text and the SNAI runner figure
+    are crisp instead of blocky/muddy at this size. Every other asset here stays at its original
+    small pixel-art scale; this one asset is the exception, per the owner's call.
+  - **Building anchored 30% off the left edge**: `prClubRect` draws at `x:-bw*.3` instead of
+    `x:0`, so only ~70% of its (still 82.5%-of-canvas-wide) render actually shows on screen.
+    Same on-screen sign/door size as 0.2_51, but the building's visible right edge moves from
+    ~82.5% of the canvas to ~57.75%, freeing real room for the puddle.
+  - **Puddle moved fully back on screen**: `prPuddleRect` now sizes and centers itself within
+    that freed room (`visRight` to the canvas edge) instead of the fixed-size, edge-clamped
+    version from 0.2_51 that ran past the right edge on both screen sizes tested. It's bigger
+    than before (up to 34% of canvas width) and fits with margin on both a phone and a wide
+    canvas.
+  - Verified with a headless Chrome probe: dumped `prClubRect`/`prPuddleRect`'s computed pixel
+    rects for a phone (390×780) and a wide (1100×700 -> 480-column) canvas -- confirmed the
+    puddle is now fully within `[0,W]` with margin on both sides at both sizes (previously it
+    ran 60-94px past the right edge); re-ran the same 5-screenshot, both-characters visual
+    check -- the building's left crop reads naturally as "part of the frame", the CLUB sign/
+    SNAI window are sharp, no loose props, and the puddle (plus the door-to-puddle throw arc
+    and splash) is fully visible.
+  - Not tested: real device/touch, in-game review by the owner. `node --check` passes both
+    inline `<script>` blocks. No save-data shape changed.
