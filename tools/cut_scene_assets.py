@@ -179,10 +179,8 @@ def main():
     splash = splash.crop(splash.getbbox())
     pixelize(splash, target_w=150, colors=24).save(os.path.join(OUT, "splash.png"))
 
-    # additional assets sheet -> #14 rope post only (the owner cut the loose
-    # tyre/trash/food cluster in 0.2_52 as randomly-placed clutter)
-    im = cutout("additional assets.png", (1100, 335, 1195, 490), tol=45, min_size=15)
-    pixelize(im, target_h=44, colors=16).save(os.path.join(OUT, "prop_rope.png"))
+    # (0.2_52 dropped the tyre/trash/food cluster as randomly-placed
+    # clutter; 0.2_53 dropped the rope post too -- no street props left)
 
     print("done ->", OUT)
 

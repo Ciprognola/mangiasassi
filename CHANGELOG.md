@@ -385,3 +385,33 @@ for anything not itemised below.
     and splash) is fully visible.
   - Not tested: real device/touch, in-game review by the owner. `node --check` passes both
     inline `<script>` blocks. No save-data shape changed.
+
+## 0.2_53 — 2026-09-23
+- Owner: scale the building up another 30%, reduce how much disappears off the left edge from
+  30% to 10%, drop the rope post too, and recalibrate the throw animation to match.
+  - **Building bigger again**: `prClubRect`'s draw width went from 82.5% to 107.25% of the
+    canvas (`× 1.3`), and the left-edge crop from 30% to 10% (`x:-bw*.1`, was `-bw*.3`) -- the
+    full "CLUB" word is now on screen (was cropped to "UB" before) at a noticeably bigger size.
+  - **Rope post removed**: `prPropSpots` is gone entirely along with its call site in
+    `prBgOut`; there are no street props left in the scene at all now. Cleaned the asset out of
+    `tools/cut_scene_assets.py` and the `PRSCN` embed the same way the tyre/trash/food cluster
+    was removed in 0.2_52.
+  - **Puddle recalibrated, with a floor**: at this building size there's very little canvas
+    width left over (as little as ~14px on a narrow phone), so `prPuddleRect`'s existing
+    "fit whatever room is left" formula would have shrunk it to almost nothing. Added a
+    `Math.max(W*.14, ...)` floor so it stays a small but visible puddle instead of vanishing --
+    it now runs slightly past the right edge on both screen sizes tested (~20-25px), which is
+    the trade-off of prioritizing the building at this size on a narrow canvas.
+  - **Throw animation**: no changes needed -- `prClubDoor`/the toss trajectory in `prSceneKick`
+    already read `prClubRect`/`prPuddleRect` live each frame, so the door position and the arc
+    endpoint recalculated automatically from the new building/puddle rects.
+  - Verified with a headless Chrome probe: dumped `prClubRect`/`prPuddleRect`/`prClubDoor`'s
+    computed pixel rects for a phone (390×780) and a wide (1100×700 -> 480-column) canvas;
+    re-ran the same 5-screenshot, both-characters visual check -- the full CLUB sign and SNAI
+    window are large and sharp, the throw arc still starts at the door and lands in the puddle,
+    and the splash still plays correctly on the smaller puddle.
+  - Flagging for the owner: the puddle is now quite small and clips slightly past the right
+    edge on a narrow phone -- worth a look to confirm this trade-off (bigger building vs.
+    smaller/partially-clipped puddle) is what's wanted before going further in this direction.
+  - Not tested: real device/touch, in-game review by the owner. `node --check` passes both
+    inline `<script>` blocks. No save-data shape changed.
