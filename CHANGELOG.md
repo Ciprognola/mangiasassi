@@ -152,3 +152,26 @@ for anything not itemised below.
     by the owner (these are tuning numbers -- a judgment call, not a fixed spec, so further
     adjustment after playtesting is expected). `node --check` passes both inline `<script>`
     blocks. No save-data shape changed.
+
+## 0.2_46 — 2026-09-23
+- Owner playtested 0.2_45 and asked for two corrections plus a real bug found along the way:
+  - **Trasformati was showing from girone 1**: `abilOn()` only checked the persistent
+    `S.p.sec` unlock flag, never the *current run's* girone -- so once a player had unlocked
+    the secret ability in any past run, the button showed starting from girone 1 of every
+    future run. `abilOn()` now also requires `G.stage>=7` in the current run (dev mode still
+    bypasses both checks, for testing). The unlock trigger itself (in the girone-clear handler)
+    moved from `G.stage>=6` to `G.stage>=7` to match. `S.p.sec` itself is untouched by this --
+    it's per-save player data, was never reset by a new run, and still isn't; only the
+    per-run *display* gate changed. Updated the dev "Salta al girone" panel's girone-6 jump
+    button to girone 7 to match (id `jg6`→`jg7`), including its label/description.
+  - **El Gamblador reverted to guaranteed-at-5, rare after**: 0.2_45's every-3-gironi/75%
+    checkpoint scheme was more aggressive than wanted. `bjAfterClear()` is back to a guaranteed
+    table at girone 5, then a flat 15% chance every girone after (no more checkpoint/score
+    scaling) -- the every-5-gironi `miniInterlude()` pacing beat when gambling doesn't trigger
+    is unchanged from before 0.2_45.
+  - Verified with a headless Chrome probe: `abilOn()` is false for every stage/sec combination
+    except `stage>=7 && sec` (or `dev:true`, which bypasses both); the unlock simulation fires
+    exactly on the girone 6→7 transition and not on 5→6; `bjAfterClear()` hits girone 5 at
+    100%, gironi 3-4 at 0%, and gironi 6/7/10/15 at ~15% each over 6000 trials/stage.
+  - Not tested: real device/touch, in-game review by the owner. `node --check` passes both
+    inline `<script>` blocks. No save-data shape changed.
