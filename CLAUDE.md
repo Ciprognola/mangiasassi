@@ -564,7 +564,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 |---|---|---|---|---|
 | B1 | Main menu music loop fix | [Q] symptom | Sonnet · medium | todo |
 | B2 | Battle music starts with battle transition | — | Sonnet · medium | done (0.3_1) |
-| B3 | Win/lose track right after the last faint | — | Sonnet · medium | todo |
+| B3 | Win/lose track right after the last faint | — | Sonnet · medium | done (0.3_2) |
 | B4 | Rocciamon card (G3) in Giochi after first real professor game | — | Sonnet · low | todo |
 | A0 | Built-in audio layer (IDB → built-in → synth) + matching export targets | — | Sonnet · medium | todo |
 | A1…An | One build per approved audio submission (roccia sounds, algidone sounds, BJ voiceover, professor voiceover, professor intro music) | submissions | Sonnet · medium | wait-assets |
@@ -600,6 +600,7 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 |---|---|---|---|
 | 2026-09-23 | R1 | Roadmap entry point | Icon button next to the trophy (`#trop`) in the home `.brand` bar, not a tile |
 | 2026-09-23 | R2 | Tile 5 unlock condition | **10** blackjack hands won in total (not 1); the new achievement triggers at 10 too |
+| 2026-09-23 | B1 | Main menu music loop symptom | The track restarts correctly at the loop point, but there's still silence/a gap right before it loops (not a click, not a screen-change restart, not double-playback) |
 
 **Built-in audio slots** (filled by A-chunks):
 

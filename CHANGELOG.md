@@ -654,3 +654,15 @@ for anything not itemised below.
   `pbTransition()` entirely — still gets battle music at the same point as before.
 - Tested: `node --check` passes both inline `<script>` blocks. Not tested: real playback/audio timing in
   a browser, real device/touch, in-game review by the owner. No save-data changes.
+
+## 0.3_2 — 2026-09-23
+- **v0.4 bugfix B3 — win/lose track now starts right after the last faint, not after the first
+  dialogue line.** In `pbEnding()`, both the win branch (`prMusicStop(400);prMusic("win",{fadeIn:300})`)
+  and the lose branch (`prMusicStop(400);prMusic("lose",{fadeIn:300})`) used to fire only after
+  `await pbSay(pb_ui_win1/lose1,{wait:true})` had already resolved — i.e. only once the player tapped
+  through the first result line, which could be an arbitrary delay after the battle was actually decided.
+  Both calls now run first, immediately when `pbEnding()` is entered for that branch, before either
+  dialogue line. `PR.test` behaviour (skips the girone-3 question / skips the throw-out animation) and
+  the flee (`res.run`) branch are untouched.
+- Tested: `node --check` passes both inline `<script>` blocks. Not tested: real playback/audio timing in
+  a browser, real device/touch, in-game review by the owner. No save-data changes.
