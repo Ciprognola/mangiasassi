@@ -630,3 +630,15 @@ for anything not itemised below.
 - Not tested: real device/touch, in-game review by the owner. `node --check` passes both inline
   `<script>` blocks. No save-data schema changes — the new dev-session flag lives outside the
   `mgs_v1` blob, so no `DEF`/migration entry was needed.
+
+## 0.3 — 2026-09-23
+- **Version numbering switched from `0.2_NN` to `0.3_NN`**, matching the `v0.3` release/tag cut this
+  session. `const VERSION` in `index.html` is bare `"0.3"` for this exact release build; every build
+  delivered from here on bumps `0.3_NN` starting at `0.3_1` (the counter resets rather than continuing
+  from `_59`) — CLAUDE.md §6 rule 3, the §9 delivery checklist, and the README's example were all
+  updated to match.
+- No gameplay/engine changes in this entry — purely the version-string and documentation update that
+  closes out the `v0.3` release housekeeping (see the `0.2_57`–`0.2_59` entries above for what actually
+  shipped in the milestone, and the "docs: reconcile version history..." commit for the CLAUDE.md/README
+  cleanup that came just before this).
+- Not tested beyond `node --check` on both script blocks (no logic touched). No save-data changes.

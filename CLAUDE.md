@@ -208,7 +208,9 @@ is it hardcoded into a new static-named build (e.g. `V.04_14`).
    medium for game-file changes, high only for genuinely hard debugging).
 2. **Minimal, surgical edits.** The file is huge. `grep -n` to locate, then targeted replacement. Never reformat
    or rewrite whole sections. Never print base64.
-3. **One chunk → one build → one commit** (`v0.2_NN: short description`). Bump `const VERSION="0.2_NN"` every time.
+3. **One chunk → one build → one commit** (`v0.3_NN: short description`). Bump `const VERSION="0.3_NN"` every time
+   (numbering switched from `0.2_NN` to `0.3_NN` at the v0.3 release; the release build itself is bare `"0.3"`,
+   the next delivered build is `"0.3_1"`, then `"0.3_2"`, and so on — see §7).
 4. **Syntax-check before committing**:
    ```bash
    python3 -c "import re;h=open('index.html',encoding='utf-8').read();[open(f'/tmp/s{i}.js','w',encoding='utf-8').write(b) for i,b in enumerate(re.findall(r'<script[^>]*>([\s\S]*?)</script>',h))]"
@@ -250,7 +252,15 @@ is it hardcoded into a new static-named build (e.g. `V.04_14`).
 | 0.2_57 → 0.2_58 | **v0.3 milestone closed**: **Chunk 6** — real Duskull sprite from owner reference, replacing the procedural placeholder; also fixed the professor leg-shadow bug (found during chunk-6 QA, no extra reference needed). **Chunk 7** — battle screen visual rework from the Emerald reference (dithered ground, sandy platforms, HP-box redesign with tail notch, height-aware sizing) |
 | 0.2_59 | Pre-release fixes: battle-win reward +40% and rerouted to seed the girone-3 run's active score instead of a silent sordi credit; maze-game sordi payout −30%; dev mode (`role`/`devOn`) now persists across reloads via a new `mgs_dev` key |
 
-**`v0.3` tag** points at 0.2_59 — the "Roccia no" professor mini-game, its balance pass, and the Emerald-style battle screen are all shipped as of this build. See `CHANGELOG.md` for full detail on every entry above.
+**`v0.3` tag** points at the doc-reconciliation commit right after 0.2_59 — the "Roccia no" professor mini-game,
+its balance pass, and the Emerald-style battle screen are all shipped as of that build. See `CHANGELOG.md` for
+full detail on every entry above.
+
+**Numbering switch at the v0.3 release**: the release build itself carries the bare version `"0.3"` (no
+suffix — that's what `const VERSION` reads in the tagged commit). Every build delivered **after** the release
+bumps `0.3_NN` starting at `0.3_1`, the same `V<base>_<n>` pattern as before with the base rolled from `0.2` to
+`0.3`; the counter resets rather than continuing the old `_59`. Rule 3 in §6 and the delivery checklist in §9
+already reflect this — update both again the next time the base rolls (0.4, ...).
 
 ---
 
@@ -310,4 +320,4 @@ by Claude (the planning side) before Claude Code executes them.
 - [ ] Italian text, in-universe wording, no cross-character assets
 - [ ] Historical log updated with this version's entry
 - [ ] Short patch note: what changed, how to test, what wasn't tested
-- [ ] Commit `v0.2_NN: …`, push (Pages redeploys automatically)
+- [ ] Commit `v0.3_NN: …`, push (Pages redeploys automatically)
