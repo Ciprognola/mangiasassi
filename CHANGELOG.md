@@ -98,3 +98,27 @@ for anything not itemised below.
   - Not tested: real device/touch input, in-game visual review by the owner (the probe renders
     the sprite functions directly, not the full running game). `node --check` passes on both
     inline `<script>` blocks. No save-data shape changed.
+
+## 0.2_44 — 2026-09-23
+- Bugfix: Uomo roccia's up/down eating still looked downscaled after 0.2_43's mapping/scale fix
+  (owner caught it after the build; directional mapping was already correct). Root cause was
+  different from 0.2_43's: `cut_sprites.py` independently normalizes every crop to the same
+  height regardless of how much extra rock art it contains, so `fd_e0`/`fd_e1`/`fu_e0`/`fu_e1`
+  (each = head + a floating rock chunk) squeeze the *head* itself into less than the walk frames'
+  full height to make room for the rock. Forcing the total image to match the walk frame's height
+  (0.2_43's fix) therefore still shrank the head whenever the rock was in shot.
+  - Per the owner's suggested options, went with the "static frame + rock debris" combination
+    instead of trying to rescale the mismatched dedicated crops: `drawHero` now draws the normal,
+    correctly-scaled walk frame for up/down even while eating, and a new `drawFaceEatFX` overlays
+    a small rock icon (reusing `rockFrames`/`artRock`, same as the side view's recolor) that
+    shrinks and fades near the mouth over the same 0.26s eat window, positioned near the top for
+    "up" and near the collar for "down" to match the rock-entry direction from 0.2_43. `fd_e0`/
+    `fd_e1`/`fu_e0`/`fu_e1` stay embedded but unused (same precedent as `fu1`/`fu2`).
+  - Left/right eating (`drawEat`, `e0`/`e1`) is untouched -- the `fu`/`fd` special case added in
+    0.2_43 was removed from `drawEat` since it's no longer called for those prefixes.
+  - Verified with the same headless-Chrome probe pattern, this time calling `drawHero` directly
+    (not `drawFace`/`drawEat` individually) so the screenshot matches what the game actually
+    calls: all 4 directions across idle/walk/three eat-progress points, both characters. Up/down
+    heads now stay full-size throughout eating; the rock icon visibly shrinks and fades.
+  - Not tested: real device/touch input, in-game visual review by the owner. `node --check`
+    passes both inline `<script>` blocks. No save-data shape changed.
