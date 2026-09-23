@@ -205,3 +205,35 @@ for anything not itemised below.
   - Not tested: real device/touch, in-game review by the owner (there's no player-visible
     surface yet -- this data isn't read by anything the player can reach). `node --check`
     passes both inline `<script>` blocks. No save-data shape changed.
+
+## 0.2_48 — 2026-09-23
+- **Chunk 9 — level-gated moves**: wires chunk 8's learnset data into the battle engine.
+  `pbMon()` now builds a fighter's actual battle-usable moves via a new `pbKnownMoves()`
+  instead of always using the fixed `sigs`+`lib` kit directly.
+  - The move-select box (`#pbmv`) is a hardcoded 4-row CSS grid (`grid-template-rows:repeat(4,1fr)`,
+    classic Game Boy-style layout) and a fighter can have up to 20 moves unlocked by level 100 --
+    asked the owner how to reconcile that, and per their call, kept the box at exactly 4 slots
+    (zero UI/CSS changes) rather than reworking it into a scrollable list. A fighter's usable kit
+    is always its 4 *highest-level* learnset moves at or below its current level; older moves get
+    replaced as it levels up, same default behavior as Pokemon without a move relearner.
+  - Both signature moves and the original 2 preferred library moves are still pinned to level ≤5
+    (chunk 8), which is `pbFoeLevel`'s minimum possible value -- so at the lowest real level (5)
+    the known-move set is exactly the old fixed 4-move kit (verified as an exact set match), and
+    every matchup only ever *gains* access to different/more advanced moves as it levels up, never
+    loses the ability to fight.
+  - `pbGen()` placeholder profiles (dev-added extra assets, outside chunk 8's scope) have no
+    learnset (`pbLearnset()` returns `null` for them), so `pbKnownMoves()` falls back to the
+    original fixed `sigs`+`lib` kit for them, unchanged.
+  - Verified with a headless Chrome probe: level 5 known-moves match the legacy fixed kit as a
+    set; every real level (5 and up, matching `pbFoeLevel`'s actual range) always yields exactly
+    4 moves; level 100 includes newly-learned moves beyond the original 4; placeholder profiles
+    are byte-for-byte unchanged; `pbMatch()` builds cleanly across a level spread (5/22/51/100);
+    a full headless `pbBattle`/`pbAI`/`pbTurn` fight runs to completion with no errors. Also ran
+    `pbSim()` (the existing balance simulator) across all 250 rock×plane pairs per character:
+    win rate lands at 56.8% (roccia) / 53.4% (algidone), close to the ~59%/58% documented after
+    the last balance pass -- a modest dip worth another dedicated balance pass later, but not a
+    regression severe enough to block this chunk.
+  - Not tested: real device/touch, in-game review by the owner (first chunk where the learnset
+    is actually player-reachable -- worth a firsthand look at how the kit evolves across a real
+    playthrough). `node --check` passes both inline `<script>` blocks. No save-data shape
+    changed.
