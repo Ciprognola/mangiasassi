@@ -598,3 +598,35 @@ for anything not itemised below.
   layout breakage.
 - Not tested: real device/touch, in-game review by the owner. `node --check` passes both inline
   `<script>` blocks. No save-data shape changed.
+
+## 0.2_59 — 2026-09-23
+- **Professor-battle reward boosted and rerouted into the maze game's active score**. Owner ask:
+  boost the win reward by at least +40%, and make it show up as the *active score* in the pac-man
+  game when continuing at girone 3, rather than a silent currency top-up.
+  - `pbReward(L)`: base multiplier raised from 50 to 70 (a clean ×1.4 on the whole formula, so
+    every level gets exactly +40%, e.g. level 5 goes from 96 to 134 sordi).
+  - `pbEnding`'s win branch no longer credits `S.p.sordi` immediately. If the player picks "sì" to
+    continue at girone 3, the reward is passed as the new run's starting score
+    (`startGame(false,{stage:3,score:M.reward})`, `startGame` gained a `opt.score` field) — it
+    shows up in the HUD instantly and converts to sordi on its own at the end of that run through
+    the normal scoring formula, same as any other points, so it's never double-credited. If the
+    player picks "no", the direct sordi credit (+ the `sordi` achievement counter) still happens
+    exactly as before, since there's no run left to carry it.
+  - Verified with a headless Chromium probe driving a full non-test win (real `prIntro()` flow,
+    not `prTestBattle`, since dev-test battles skip the girone-3 question entirely): confirmed
+    `G.score` lands on exactly `pbReward(foeLevel)` when continuing, `S.p.sordi` is untouched at
+    that moment (no double count), and declining still credits the full reward straight to sordi.
+- **Sordi earned from playing the maze game itself reduced by 30%**: `finishRun`'s score→sordi
+  conversion (`gain=Math.floor(score*(1-lim)*D.mult)`) now has an extra `*.7` factor. XP and the
+  achievement-reward economy are untouched — this only affects the core per-run payout.
+- **Dev mode now survives closing/reopening the app.** `role`/`devOn` used to live only in memory
+  and reset on every reload, so anyone who'd logged in as a developer had to log back in every
+  time. Added a small `mgs_dev` localStorage key (separate from the `mgs_v1` save blob, same
+  pattern as the existing `EXP_NAMEKEY` setting) holding `{role,devOn}`; read once at startup,
+  written on login, on the dev-mode toggle, on logout, and cleared on "cancella dati locali". Dev
+  mode now stays on until the user explicitly logs out or wipes local data, as asked.
+  - Verified with a headless probe: set role/devOn, reload the page, confirmed both survive and
+    `devUI()` is still true; logged out, reloaded again, confirmed both are cleared.
+- Not tested: real device/touch, in-game review by the owner. `node --check` passes both inline
+  `<script>` blocks. No save-data schema changes — the new dev-session flag lives outside the
+  `mgs_v1` blob, so no `DEF`/migration entry was needed.
