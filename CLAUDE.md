@@ -586,7 +586,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | P1 | Popup unlock framework + asset/ghost/character/mini-game triggers + old-save seeding + dev preview | [Q] wording, grouping (answered) | Sonnet · medium | done (0.3_8) |
 | R1 | Roadmap state, entry button, snake screen, regular girone tiles | [Q] per-character (answered) | Sonnet · medium | done (0.3_9) |
 | R2 | Special tiles 3 and 5 (10 hands won), `S.p.gam.won`, new blackjack achievement, "?" tiles | [Q] achievement, "?" (answered) | Sonnet · medium | done (0.3_10) |
-| R3 | Gift container (animated gift) + generic reward claim | [Q] reward mapping | Sonnet · medium | todo |
+| R3 | Gift container (animated gift) + generic reward claim | [Q] reward mapping (answered) | Sonnet · medium | done (0.3_11) |
 | R4 | Milestone popups wired to the roadmap | P1, R2 | Sonnet · low | todo |
 | K1 | Skin system: overlay hook in every draw path, `SPRITE_INVENTORY.md`, missing-frame warning | — | Sonnet · high | todo |
 | C1 | Customisation page ("Personalizza", skin selector, 2 placeholders) | K1, [Q] screen/modal | Sonnet · medium | todo |
@@ -624,6 +624,7 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-23 | R2 | "?" tiles unlock condition | Unlock with their girone like regular tiles; tapping shows "Premio in arrivo", not claimable yet — spec default confirmed |
 | 2026-09-23 | R3 | Reward mapping | Tile 3 → GEKA SNC hat (Uomo roccia), tile 5 → kebab costume (Algidone) — spec default confirmed |
 | 2026-09-23 | R2 | Tile 3/5 faces | Reuse existing art: the pixel pokéball from the professor throw scene for tile 3, existing El Gamblador card art for tile 5. "?" stays text (no new art needed) |
+| 2026-09-23 | R3 | Readiness gate | `ROAD_REWARDS` registry with a `ready:false` flag per reward, flipped to `true` only in K2/K3 (never elsewhere). A tile whose reward isn't ready behaves exactly like a "?" tile — unlocked, "Premio in arrivo", not claimable, no pulse — even once its own unlock condition (R2) is met. Only `ready:true` rewards can pulse/claim |
 
 **Built-in audio slots** (filled by A-chunks):
 

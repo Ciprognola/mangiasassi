@@ -1005,6 +1005,59 @@ for anything not itemised below.
   rather than per shop section (needed because levels 1/37/73 unlock a plane and a rock together), and
   skipping popups for items the player already owns on a fresh save.
 
+## 0.3_11 — 2026-09-23
+- **Pre-R3 questions, answered without needing any code** (all confirmed by direct inspection/probe, no
+  gaps found):
+  1. Can a SIM-mode blackjack win leak `S.p.gam.won` into the real save? **No** — `S.p.gam.won` lives under
+     `S.p`, and `simOn()`/`simOff()` already clone the whole `S.p` into a working copy and restore the
+     original wholesale on exit, the same mechanism that already protects every other stat (`sordi`, `lvl`,
+     …). Structurally impossible to leak, nothing to add.
+  2. Do natural blackjack and double-down wins increment the counter, and is a push excluded? **Yes and
+     yes** — `bjSettle()`'s `kind:"bj"` (natural) and `kind:"win"`/`"dbust"` (doubled hands resolve through
+     the same classification, just for a bigger stake) are all included in 0.3_10's `win` check;
+     `kind:"push"` is never included. This codebase has **no split mechanic** at all (`bjChoose`'s options
+     are only hit/stand/double/surrender), so that part didn't apply.
+  3. Does "Il banco trema" show "x/10" progress like other counter achievements? **Yes**, automatically —
+     it's just another entry in the shared `ACH` array, rendered by the same generic progress bar/text every
+     other achievement already uses. Verified via probe: shows "4 / 10" after 4 simulated wins.
+- **v0.4 R3 — gift container + generic reward claim, with a readiness gate.** New **`ROAD_REWARDS`**
+  registry: `{3:{type:"skin",id:"geka",char:"roccia",name:"Cappello GEKA SNC",ready:false},
+  5:{type:"skin",id:"kebab",char:"algidone",name:"Costume kebab",ready:false}}`. `ready` starts `false` for
+  both and is meant to flip to `true` **only** in K2/K3 respectively — nothing in this build ever sets it.
+- **Readiness gate**: `roadState(n)` now returns `"claimable"` (the pulsing-yellow state, CSS already
+  written in R1) only when a tile is unlocked, not yet claimed, **and** its `ROAD_REWARDS` entry has
+  `ready:true`. While `ready:false` (i.e. right now, for both tiles), an unlocked tile 3/5 behaves exactly
+  like a "?" tile: unlocked colour, no pulse, tapping toasts "Premio in arrivo", not claimable. Verified on a
+  fresh save with both unlock conditions satisfied (`pr.seen=true`, `gam.won=10`) that neither tile opens
+  the gift modal while `ready` stays `false`, and that flipping `ready` (simulating what K2 will do) is the
+  *only* thing that changes this.
+- **`skins:[]`/`skin:null`** added to `CHDEF()` and to the existing per-character migration loop (same
+  pattern as `gir`), since granting a reward needs somewhere to put it — C1 (customisation page) will read
+  these later, nothing reads `skin` (the equipped one) yet.
+- **Claim flow**: tapping a claimable tile opens a modal (not full-screen, reusing `openModal()`) showing a
+  small **procedural pixel gift box** (`giftCv()`, plain filled rectangles — box, ribbon, bow — memoized like
+  `prBallCv()`) with a CSS `giftwobble` keyframe animation (idle rotate + bounce, disabled under
+  `prefers-reduced-motion`). Tapping the box swaps in the reveal panel: the reward's name and, since neither
+  skin has real art yet, **the character's normal portrait** (reuses the existing `hero:<char>` canvas
+  dispatch already used elsewhere) — exactly the fallback the owner specified. Closing calls
+  **`roadGrantReward(rw)`** (generic on `rw.type`, today only handles `"skin"`: pushes `rw.id` into
+  `S.p.ch[rw.char].skins` if not already present) and sets `S.p.road.claimed[n]=true`, **always against
+  `rw.char`**, regardless of which character is currently selected/being played.
+- **Dev panel**: one "Anteprima regalo" button per `ROAD_REWARDS` entry (Strumenti di test → Regali del
+  percorso), calling `roadPreviewGift(n)` — runs the identical gift-box/reveal animation but skips the
+  grant/claim/`persist()` entirely.
+- **Verified in headless Chromium**: on a fresh save, satisfied both unlock conditions but confirmed no gift
+  modal opens while `ready:false`; flipped `ready` and confirmed the tile becomes `claimable`; claimed it —
+  reveal showed the correct name and roccia's portrait, `S.p.ch.roccia.skins` became `["geka"]`,
+  `S.p.ch.algidone.skins` stayed untouched, `S.p.road.claimed[3]` became `true`, and re-tapping the now-
+  claimed tile is a safe no-op (no modal, no re-grant); ran the dev preview for tile 5 and confirmed
+  `S.p.road.claimed[5]` and `S.p.ch.algidone.skins` were both untouched afterward. Screenshots confirm the
+  gift box and reveal panel render correctly. Also ran the standing smoke test (menu renders, no console
+  errors, a run starts) — passed.
+- Not tested: real device/touch (the perpetual wobble animation made Playwright's own actionability check
+  refuse a "natural" click in testing — had to force it; worth a quick real-finger check that the wobble
+  doesn't make tapping awkward on an actual phone), C1 (nothing reads `skins`/`skin` yet, by design).
+
 ## 0.3_2 — 2026-09-23
 - **v0.4 bugfix B3 — win/lose track now starts right after the last faint, not after the first
   dialogue line.** In `pbEnding()`, both the win branch (`prMusicStop(400);prMusic("win",{fadeIn:300})`)
