@@ -952,6 +952,59 @@ for anything not itemised below.
 - Not tested: real device/touch, R2/R3's actual claim flow (not built yet), whether the placeholder
   ⬤/♠ glyphs read well against the game's existing pixel art style.
 
+## 0.3_10 — 2026-09-23
+- **v0.4 R2 — special tiles 3 and 5, `S.p.gam.won`, new achievement, "?" tiles.** Two pre-checks the owner
+  asked for before building, both confirmed rather than assumed:
+  - `cs().gir` really is what R1 needed it to be: incremented only at the one real girone-clear site
+    (guarded `if(!G.dev)`, so dev/test runs are excluded), and never reset anywhere — not by `startGame()`,
+    not by "Nuovo gioco"/Hardcore (those only touch the current run's `G.stage`, a completely separate
+    field). Confirmed cumulative and correct as-is; no new counter needed.
+  - The achievements screen with a 5th category tab was checked visually in headless Chromium at 320/360/
+    390px width (the injected tab, not yet committed, just for the fit check): all 5 fit on one row down to
+    320px (the narrowest common phone width), with only the longer "Uomo roccia" label wrapping to two
+    lines — still fully readable and tappable, no overflow/clipping/scrollbar. Proceeded rather than
+    stopping to report, since it genuinely fit.
+- **Tile 3** now unlocks on `S.p.pr.seen` (a real professor battle) — **not** `S.p.pr.visits` (the
+  "No"-branch kick-out alone), per the owner's answer. **Tile 5** unlocks on the new **`S.p.gam.won>=10`**.
+  Both conditions are in `roadUnlocked(n)`, special-cased ahead of the fallback `cs().gir>=n` used by the
+  other 48 tiles (including the "?" ones, unchanged from R1: they still unlock with their girone, tap shows
+  "Premio in arrivo", not claimable — confirmed as the spec default, no change needed there). Both tile 3
+  and 5's conditions are **global**, not per-character (they're shared, character-independent features),
+  consistent with the owner's R1 answer that special/reward tiles are global.
+- **`S.p.gam.won`** (new counter, `DEF.p.gam` + migration: `{visits,seen,won:0}`) increments in `bjHand()`
+  the moment a hand resolves as a win (`kind==="win"||"dbust"||"bj"`), gated on `!B.dbg` — `B.dbg` is set by
+  `bjMake({dbg:!o.run,...})`, and the only call site that ever passes `run:false` is the dev-panel's
+  `#mggam` quick-test button, so this reliably excludes dev/test hands the same way `G.dev` does for the
+  maze game.
+- **New achievement** (31st): **`{id:"m1",n:"Il banco trema",c:"min",ev:"bjwon",m:"max",goal:10,r:[200,120]}`**
+  — same reward tier as the closest comparable "reach 10" achievement (`g6`, Collezionista). Fires via
+  `ach("bjwon",{n:S.p.gam.won})` right after the counter increments, same pattern every other counter
+  achievement already uses (`m:"max"` because the event passes the *current total*, not a delta — using
+  `"sum"` here would have double-counted). **New category "Minigiochi" (key `min`)** added to `ACH_CATS`,
+  for this and future mini-game achievements (per the owner's decision).
+- **Tile faces for 3 and 5 reuse existing art, no new art drawn**: tile 3 draws `prBallCv()` (the exact
+  pixel-art pokéball already used in the professor's throw-scene animation, memoized so this doesn't
+  redecode/redraw it, just reuses the cached canvas); tile 5 draws `cardCv(1,0)` (the same playing-card
+  canvas generator El Gamblador's own table art and the G2 Giochi-card icon already use). Wired through a
+  new `"road"` case in `paintCanvases()`'s existing dispatcher, matching how every other screen's small
+  icon canvases already work (`data-draw="road:N:100"`).
+- **Verified in headless Chromium**: tile 3 stays locked with `pr.visits=5,pr.seen=false` and unlocks the
+  moment `pr.seen=true`; tile 5 stays locked at `gam.won=9` and unlocks at `gam.won=10`; firing `ach("bjwon",
+  {n:10})` correctly completes achievement `m1` and it shows up under the new "Minigiochi" tab; a screenshot
+  confirms the reused pokéball/card art renders correctly on the roadmap tiles. Also ran the **new standing
+  headless smoke test** (menu renders, zero console errors, a run starts) added to CLAUDE.md §6 rule 4 in
+  this same commit, per the owner's instruction — it passed.
+- **CLAUDE.md §6 rule 4 updated**: the headless Chromium smoke test (load `index.html`, menu renders, no
+  console errors, start a run) is now a standing step after `node --check`, specifically called out as the
+  thing that would have caught 0.3_9's unterminated-comment bug immediately (a syntax-valid but
+  runtime-broken file `node --check` cannot detect on its own).
+- Not tested: real device/touch, a real 10-hand blackjack session played through actual UI turns (the
+  counter logic itself is simple and directly verified above, but not exercised via real gameplay), R3's
+  actual claim flow for tiles 3/5 (still not built).
+- **Queued for R4, not done here** (per the owner's instruction): grouping popups per Lista-desideri *tab*
+  rather than per shop section (needed because levels 1/37/73 unlock a plane and a rock together), and
+  skipping popups for items the player already owns on a fresh save.
+
 ## 0.3_2 — 2026-09-23
 - **v0.4 bugfix B3 — win/lose track now starts right after the last faint, not after the first
   dialogue line.** In `pbEnding()`, both the win branch (`prMusicStop(400);prMusic("win",{fadeIn:300})`)

@@ -258,6 +258,12 @@ into `submissions/<name>/<YYYY-MM-DD>/` through a PR. Once the `validate` check 
    ```
    Where logic can be isolated, run a small Node stub test too. For UI-level verification, headless
    Playwright/Chromium has worked before (probe.py pattern).
+   **Standing step, after `node --check` passes, before every commit:** a trivial headless Chromium smoke
+   test — load `index.html`, confirm the menu screen actually renders, confirm zero console errors, start a
+   run. `node --check` only validates syntax; it cannot catch a runtime-only failure like an unterminated
+   `/* */` block comment silently swallowing real code into a comment (still syntactically valid JS, but
+   throws — or worse, just silently breaks something — the moment the page runs), which is exactly what
+   happened and was caught this way during 0.3_9.
 5. **Save compatibility is mandatory.** New state fields go in `DEF` *and* in the load/migration block
    (follow the `S.p.gam` / `S.p.pr` pattern). Old saves must keep loading.
 6. **Say plainly what was and wasn't tested.** Real-device behaviour — iOS/Safari, touch input, audio output,
@@ -579,7 +585,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | A1…An | One build per approved audio submission (roccia sounds, algidone sounds, BJ voiceover, professor voiceover, professor intro music) | submissions | Sonnet · medium | wait-assets |
 | P1 | Popup unlock framework + asset/ghost/character/mini-game triggers + old-save seeding + dev preview | [Q] wording, grouping (answered) | Sonnet · medium | done (0.3_8) |
 | R1 | Roadmap state, entry button, snake screen, regular girone tiles | [Q] per-character (answered) | Sonnet · medium | done (0.3_9) |
-| R2 | Special tiles 3 and 5 (10 hands won), `S.p.gam.won`, new blackjack achievement, "?" tiles | [Q] achievement, "?" | Sonnet · medium | todo |
+| R2 | Special tiles 3 and 5 (10 hands won), `S.p.gam.won`, new blackjack achievement, "?" tiles | [Q] achievement, "?" (answered) | Sonnet · medium | done (0.3_10) |
 | R3 | Gift container (animated gift) + generic reward claim | [Q] reward mapping | Sonnet · medium | todo |
 | R4 | Milestone popups wired to the roadmap | P1, R2 | Sonnet · low | todo |
 | K1 | Skin system: overlay hook in every draw path, `SPRITE_INVENTORY.md`, missing-frame warning | — | Sonnet · high | todo |
@@ -614,9 +620,10 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-23 | P1 | Grouping when several unlocks fire at once | Grouped per type (one popup per unlock type, not one per item) — spec default confirmed |
 | 2026-09-23 | R1 | Roadmap tiles per-character or combined | Regular tiles (`cs().gir`) are **per-character**. Special/reward-tile claimed state stays **global** in `S.p.road.claimed` — claiming once marks it claimed on both characters' roadmaps, never claimable twice |
 | 2026-09-23 | R2 | Does the professor "No" branch count for tile 3 | **No** — only `S.p.pr.seen` (a real battle) unlocks tile 3, `S.p.pr.visits` alone does not |
-| 2026-09-23 | R2 | New achievement (31st, 10 BJ hands won) name/category | Name **"Il banco trema"**. Category: **blocked** — none of the 4 existing categories (`gen`/`roc`/`alg`/`gio`) is blackjack-specific; no existing achievement mentions El Gamblador/blackjack at all. Asked the owner to pick before this achievement is added (see R2 chunk note) |
+| 2026-09-23 | R2 | New achievement (31st, 10 BJ hands won) name/category | Name **"Il banco trema"**, in a **new category "Minigiochi"** (key `min`), which will also hold future mini-game achievements. Must confirm the achievements screen still fits phone width with 5 sections before implementing — if not, stop and report rather than redesign |
 | 2026-09-23 | R2 | "?" tiles unlock condition | Unlock with their girone like regular tiles; tapping shows "Premio in arrivo", not claimable yet — spec default confirmed |
 | 2026-09-23 | R3 | Reward mapping | Tile 3 → GEKA SNC hat (Uomo roccia), tile 5 → kebab costume (Algidone) — spec default confirmed |
+| 2026-09-23 | R2 | Tile 3/5 faces | Reuse existing art: the pixel pokéball from the professor throw scene for tile 3, existing El Gamblador card art for tile 5. "?" stays text (no new art needed) |
 
 **Built-in audio slots** (filled by A-chunks):
 
