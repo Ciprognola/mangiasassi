@@ -415,3 +415,32 @@ for anything not itemised below.
     smaller/partially-clipped puddle) is what's wanted before going further in this direction.
   - Not tested: real device/touch, in-game review by the owner. `node --check` passes both
     inline `<script>` blocks. No save-data shape changed.
+
+## 0.2_54 — 2026-09-23
+- Owner: keep the building's size/proportions as they are, move it 15% further into the left
+  margin, and resize the puddle so it fits nicely.
+  - **Left crop 10% → 15%**: `prClubRect`'s draw width is untouched (still 107.25% of the
+    canvas); only `x` changed from `-bw*.1` to `-bw*.15`, so 85% of the sprite shows instead of
+    90%. This frees a little more room on the right without shrinking the building at all.
+  - **Puddle rebuilt to fit the room, not sized independently then clipped**: 0.2_53's
+    `prPuddleRect` picked a size first (with a floor so it wouldn't vanish) and only then
+    checked it against the available space -- worked out to running 38-47px past the canvas
+    edge, or briefly *overlapping the building* before a follow-up fix in the same session. The
+    formula is rewritten to size the puddle from the room actually available
+    (`avail = W - visibleBuildingRight`) minus a small margin on each side, so by construction
+    it sits fully on screen next to the building rather than needing to be clamped afterward.
+    It's necessarily small given how much of the canvas the building now covers -- flagged
+    below.
+  - Verified with a headless Chrome probe: dumped `prClubRect`/`prPuddleRect`'s computed pixel
+    rects for a phone (390×780) and a wide (1100×700 -> 480-column) canvas and confirmed the
+    puddle no longer overlaps the building and stays within (or very close to) `[0,W]` at both
+    sizes; re-ran the same 5-screenshot, both-characters visual check -- building crop/size
+    unchanged as intended, puddle is fully visible (or clipped by only a few px on the phone
+    size) rather than mostly off-canvas.
+  - Flagging for the owner again: even sized to fit, the puddle reads quite small at this
+    building size -- there just isn't much canvas width left over once the building covers
+    ~85-90% of it. If it should read as more prominent, the building's draw width itself
+    (currently 107.25% of canvas, `prClubRect`) is the lever to pull, since "keep it this big
+    and also make the puddle bigger" isn't geometrically possible on a narrow phone.
+  - Not tested: real device/touch, in-game review by the owner. `node --check` passes both
+    inline `<script>` blocks. No save-data shape changed.
