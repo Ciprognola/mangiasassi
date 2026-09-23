@@ -473,3 +473,50 @@ for anything not itemised below.
     through the toss and splash.
   - Not tested: real device/touch, in-game review by the owner. `node --check` passes both
     inline `<script>` blocks. No save-data shape changed.
+
+## 0.2_56 — 2026-09-23
+- Owner's last request for this cutscene revamp before handing off: double the puddle size,
+  move it left so it stays fully on screen, and stop the thrown character from fading away --
+  it should settle half-submerged and stay that way.
+  - **Puddle doubled**: `prPuddleRect` now takes the same "fit the leftover gap" size as 0.2_55
+    and doubles it (`pw=base*2`). At that size it no longer fits in the gap without also
+    running off the right edge, so its position is clamped to stay fully within `[0,W]`
+    (shifting left, over part of the building's footprint, rather than off the canvas) --
+    exactly the "move it left so it doesn't cut outside the setting" ask. Visually the overlap
+    with the building reads fine since the building's own art has empty facade space there and
+    the puddle draws on top.
+  - **Character stops disappearing**: the splash-phase draw had an unbounded downward drift
+    (`pr.cy+t*70`, kept moving for the whole 2s phase) and a fade to `alpha:0` over 0.8s -- the
+    character fully vanished well before the scene ends. Replaced with a capped sink
+    (`Math.min(t,.35)*46`, settles after a third of a second and holds) and no fade at all; a
+    clip rect at the character's own vertical centre keeps exactly its top half visible for the
+    rest of the phase, reading as "lying half-in the puddle" instead of sinking away.
+  - Verified with a headless Chrome probe: dumped `prPuddleRect`'s computed pixel rect for a
+    phone (390×780) and a wide (1100×700 -> 480-column) canvas -- confirmed it stays within
+    `[0,W]` with margin at both sizes even at double size; re-ran the same 5-screenshot,
+    both-characters visual check -- puddle is clearly bigger and fully visible with no edge
+    clipping at either size, and at the settle frame both Uomo roccia and Algidone are still
+    visible half-in the puddle (not faded out) with a believable "sitting in it" read.
+  - **Chunks remaining before the v0.3 milestone** (see `CLAUDE.md` §8 for the full detail;
+    listed here so the next session picks up cleanly):
+    - Chunks 4+5 (pub sprite, dirty-pond sprite+splash) -- **superseded**: this whole cutscene
+      revamp (0.2_49-0.2_56) already replaced the pond/splash placeholder art these chunks were
+      originally scoped around with real reference art. Worth re-scoping or closing rather than
+      executing as originally written.
+    - Chunk 6 (Duskull sprite), Chunk 7 (battle background/layout rework), and the professor-
+      sprite-shadow bugfix all still need reference art/screenshots from the owner before they
+      can be executed -- none were provided this session.
+    - Movepicker (choose equipped moves out of the 20-move learnset, menu or pre-battle) --
+      raised by the owner 2026-09-23, not yet broken into approved chunks.
+    - Rebalance simulation pass for the professor fight -- `pbSim()` win rate sits at 56.8%
+      (roccia) / 53.4% (algidone) as of 0.2_48, down from the ~59%/58% documented after the
+      last balance pass; not yet scheduled.
+    - Ability balancing (8s active / 25s cooldown for Cinghiale/Acciaio) -- deferred, no owner
+      direction yet on target numbers.
+    - Audio pending from the owner: a better-fitting intro track (current one was cut in half
+      and looped).
+    - Later-phase items untouched this session: B/C "Esporta modifiche" (export UI + validation
+      pass), D/E Firebase login + cloud save (owner's console setup, **D**, must happen before
+      any in-game work, **E**).
+  - Not tested: real device/touch, in-game review by the owner. `node --check` passes both
+    inline `<script>` blocks. No save-data shape changed.
