@@ -642,3 +642,15 @@ for anything not itemised below.
   shipped in the milestone, and the "docs: reconcile version history..." commit for the CLAUDE.md/README
   cleanup that came just before this).
 - Not tested beyond `node --check` on both script blocks (no logic touched). No save-data changes.
+
+## 0.3_1 — 2026-09-23
+- **v0.4 bugfix B2 — battle music now starts with the battle transition, not after it.** Previously
+  `prBattleStart()` stopped the menu/dialogue music, ran the full 2-second `pbTransition()` sweeping-bars
+  animation, and only then started `prMusic("battle",…)` at the top of `pbFight()` — a silent gap for the
+  whole transition. `prMusic("battle",{fadeIn:700})` is now called at the very start of `pbTransition()`
+  itself (it already crossfades out whatever was playing, so the separate `prMusicStop(700)` call in
+  `prBattleStart()` was removed as redundant). `pbFight()` keeps its own `prMusic("battle",…)` call as a
+  guard (`if(PRM.slot!=="battle")`) so `prTestBattle()`'s dev quick-battle button — which skips
+  `pbTransition()` entirely — still gets battle music at the same point as before.
+- Tested: `node --check` passes both inline `<script>` blocks. Not tested: real playback/audio timing in
+  a browser, real device/touch, in-game review by the owner. No save-data changes.

@@ -563,7 +563,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | ID | Chunk | Needs | Model · effort | Status |
 |---|---|---|---|---|
 | B1 | Main menu music loop fix | [Q] symptom | Sonnet · medium | todo |
-| B2 | Battle music starts with battle transition | — | Sonnet · medium | todo |
+| B2 | Battle music starts with battle transition | — | Sonnet · medium | done (0.3_1) |
 | B3 | Win/lose track right after the last faint | — | Sonnet · medium | todo |
 | B4 | Rocciamon card (G3) in Giochi after first real professor game | — | Sonnet · low | todo |
 | A0 | Built-in audio layer (IDB → built-in → synth) + matching export targets | — | Sonnet · medium | todo |
