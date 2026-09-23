@@ -520,3 +520,52 @@ for anything not itemised below.
       any in-game work, **E**).
   - Not tested: real device/touch, in-game review by the owner. `node --check` passes both
     inline `<script>` blocks. No save-data shape changed.
+
+## 0.2_57 — 2026-09-23
+- **Chunk 6 — real Duskull sprite**: the professor's "sending out" cutscene (`prSceneProf`,
+  triggered from `prSendOut`) drew a small procedurally-generated placeholder ghost. Replaced it
+  with the owner-supplied `refs/duskull.png` reference (post-pokéball appearance):
+  - Reference was a pixel-art render over a baked-in checkerboard (not real alpha — the PNG's own
+    alpha channel was fully opaque). Keyed the checker out with a border-seeded flood fill
+    (tolerant of the two checker grays, careful not to eat the skull's similarly-pale cream color
+    since that's a distinct hue), cropped to content, downscaled 3× with nearest-neighbour to a
+    native pixel-art resolution (120×110), and quantized to a 48-colour palette — final asset is
+    ~4.6 KB before base64.
+  - Added as a new `"dusk"` entry in `PRSPR` (loaded automatically through the existing
+    `prLoadImgs()`/`PRIMG` pipeline, no loader changes needed). `prDuskCv()` now returns
+    `PRIMG.dusk[0]` instead of drawing pixels by hand; the white "materializing" silhouette is
+    still derived at runtime via `source-in` compositing, unchanged. Removed the ~14 lines of
+    procedural skull-drawing code.
+  - Draw call in `prSceneProf` switched from `scale()` + fixed `-20,-22` offsets (tuned for the
+    old 40×44 canvas) to explicit destination width/height centred on the anchor, so the new
+    120px-wide source image renders at the same on-screen size and position the placeholder used;
+    guarded against the frame being drawn before the image finishes loading.
+  - Verified with a headless Chromium probe (`prTest()` → advance dialogue → pick "Sì" → wait for
+    `PR.sc.dusk`): screenshotted the emerge animation mid-materialize and fully-formed — sprite
+    renders at the right size/position with the purple glow and white-flash fade both intact.
+- **Professor-sprite shadow bugfix** (found while QA-ing the above, not blocked on new reference
+  after all): the owner-supplied `refs/duskull.png` and `refs/UI_emerald.png` were provided for
+  chunks 6/7 only, but reviewing the emerge cutscene surfaced the actual shape of the long-flagged
+  "shadow" bug well enough to fix without further reference art.
+  - Root cause: extracting `PRSPR.idle`/`PRSPR.walk` from the source photo (background removal +
+    convex-hull fill, per CLAUDE.md §2) left a warm reddish-brown blob filling the gap between the
+    legs on every full-body frame — fully *opaque* (not a transparent hole connected to the
+    background), so it reads as a leftover ground shadow baked into the sprite rather than a
+    render-time drop shadow. Confirmed by extracting and upscaling the embedded frames; not
+    present in the bust-only frames (`blink`/`angry`/`point`/`shoo`), which have no legs.
+  - Fixed by inpainting: for each `idle`/`walk` frame, flagged pixels in the lower half (legs
+    only — hair, face and hands are never touched, both by color heuristic and a hard y-cutoff)
+    whose color reads as that warm brown rather than the suit's navy, then iteratively replaced
+    each with the most common color among its already-fixed opaque neighbours (mode, not a blended
+    average, so the palette stays the small flat-color set the rest of the art uses) until the
+    patch was gone. Re-encoded as indexed-palette PNGs with a single transparent index (alpha in
+    these sprites is binary, no antialiasing) to match the original encoding — net size change for
+    all 16 fixed frames combined was about −1.4 KB, not the +25 KB a naive RGBA re-save produced
+    first.
+  - Verified visually: upscaled every `idle` frame and all affected `walk` frames before/after —
+    gap now reads as ordinary inner-thigh trouser shading, no residual off-color patch; a headless
+    probe re-rendered the intro dialogue and walk/kick cutscene to confirm nothing else regressed.
+- Chunk 7 (battle background/layout rework, using `refs/UI_emerald.png`) not done in this entry —
+  see the next changelog entry.
+- Not tested: real device/touch, in-game review by the owner. `node --check` passes both inline
+  `<script>` blocks. No save-data shape changed; no new `DEF`/migration fields needed.
