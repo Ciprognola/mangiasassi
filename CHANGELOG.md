@@ -237,3 +237,58 @@ for anything not itemised below.
     is actually player-reachable -- worth a firsthand look at how the kit evolves across a real
     playthrough). `node --check` passes both inline `<script>` blocks. No save-data shape
     changed.
+
+## 0.2_49 — 2026-09-23
+- **Night-street cutscene revamp** (the "Roccia no" club-ejection scene, `prThrowOut`/
+  `prSceneKick`): replaced every procedurally-drawn element with real art cropped from the
+  owner's new reference sheets in `refs/` (`punto snai.png`, `moon.png`, `pond.png`,
+  `additional assets.png`), plus rain and a reworked throw arc. New `tools/cut_scene_assets.py`
+  (same flood-fill + tight-trim approach as `tools/cut_sprites.py`, plus a small/thin-component
+  filter for the sheets' crosshair grid-guide lines) produced the 8 cleaned, palette-reduced
+  PNGs now in `refs/cut/scene/` and embedded as `PRSCN`/`PRSCNIMG` (lazy-loaded alongside
+  `PRIMG` in `prRender`, ~31KB total added to the build).
+  - **Building**: "Option B" from the club sheet, standing on the ground line on the left,
+    sized as a fraction of the canvas (`prClubRect`) so it holds at any screen size. Its exit
+    point is `CLUB_DOOR_XF`/`CLUB_DOOR_YF` (fractions of the sprite, since this scene has no
+    fixed pixel grid) resolved per-frame by `prClubDoor(W,H)` -- the one thing chunk 5's throw
+    arc depends on.
+  - **Moon**: reference option 2 (cream, cratered), same spot, with a soft translucent radial
+    glow blending into the sky gradient.
+  - **Puddle**: reference option 2 (muddy rim, cigarette butts) via `prPuddleRect`, to the
+    right of the building where the player lands.
+  - **Splash**: rather than faking multiple frames out of the single crown-splash reference
+    (option 5), animated it in code -- a scale/fade envelope (rise 0-.16s, fall .16-.55s) layered
+    under the existing procedural ripple-rings and flying-drop code, which already carried the
+    settle. No new frame data needed.
+  - **Street props**: 4 of the suggested items (#2 rusty trash can, #14 velvet rope post, #18
+    tyre, #20 fast-food rubbish) from the props sheet, laid out by `prPropSpots` -- rope post by
+    the door, the rest clustered past the puddle -- clear of the door, the puddle and the throw
+    arc between them.
+  - **Player thrown out**: the toss trajectory now runs `prClubDoor(W,H)` -> `prPuddleRect(W,H)`
+    instead of the old fixed fractions, so it still lands correctly if the building/puddle
+    layout or screen size changes. Still reads the character through the existing
+    `prPlayerCv()` (never hardcoded -- draws whichever of Uomo roccia/Algidone is selected).
+  - **Rain + sound**: `prDrawRain` draws 3 parallax streak layers (46 short lines/frame total)
+    with tiny drip splashes at the ground line, overlaid whenever the outdoor background is
+    drawn (toss/splash phases -- the walk phase is still indoors in `prBgHall`). `prRainStart`/
+    `prRainStop` loop filtered white noise via Web Audio (bandpass + lowpass, gain fade in/out),
+    started at the very beginning of `prThrowOut` (so it's audible faintly through the door
+    before the player is even outside) and faded out at the end; also stopped from `prCleanup`
+    if the scene is abandoned mid-cutscene (dev "Esci dalla prova"). Respects `S.opts.sound`
+    like the rest of the game's audio; the existing `prSplash()` impact sound is unchanged.
+  - Verified with a headless Chrome probe (Playwright, system Chrome) running the full
+    `prTestKick()` cutscene to completion with no runtime errors, screenshotted at 5 points
+    (walk/toss/splash-rise/splash-fall/settle) for both characters and at both a phone-portrait
+    viewport (390×780) and a wide desktop one (1100×700, exercising the scaled 480px column);
+    building/moon/puddle/props/splash/rain and the door-to-puddle arc all rendered correctly in
+    every case. Also spot-checked frame pacing during the rain-heavy settle phase (~144fps in
+    headless Chrome, no stalls).
+  - Guessed/adapted from the brief: `CLUB_DOOR_X`/`CLUB_DOOR_Y` became `CLUB_DOOR_XF`/
+    `CLUB_DOOR_YF` (fractions, not literal pixels) since this scene already sizes everything by
+    canvas fraction rather than a fixed pixel grid; door position within the sprite (62%
+    across, 74% down, between the two lit glass panels) and prop placement were eyeballed
+    against the reference art rather than specified. `refs/betting_shop`, `refs/moon`,
+    `refs/pond` and `refs/README_assets.md` mentioned in the brief as prior guide art don't
+    exist in this repo (only the new sheets do), so nothing there was consulted or removed.
+  - Not tested: real device/touch input, in-game review by the owner. `node --check` passes
+    both inline `<script>` blocks. No save-data shape changed.
