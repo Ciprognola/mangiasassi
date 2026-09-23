@@ -169,6 +169,9 @@ in-universe — never use developer words like "asset" or "fantasma" in player-f
 - **Hero drawing**: `drawFace(ctx,cx,cy,w,frame,flip)`, `drawEat`, `drawAlg(ctx,X,Y,c,o)`, `drawHero(…)`.
   Render object built in `draw()`: `o={moving,power,eat,flip:P.lastH<0,anim,dir:P.face??1}`.
   Directions: `P.face` 0=up 1=right 2=down 3=left; `DX=[0,1,0,-1]`, `DY=[-1,0,1,0]`; `P.lastH` = last horizontal.
+  Roccia's `fd*`/`fu*` frames are named by crop **row**, not by what they show: moving **UP** uses the
+  `fd*` set and moving **DOWN** uses `fu*` (`drawHero`). `fu1`/`fu2` and Algidone's `al_r7` are defined but
+  never referenced by the maze walk/roll cycles (skipped/out-of-range on purpose, not dead weight to prune).
 - **Menu/UI**: `shell, go, renderMenu, bindMenu, tileAction, careerModal, cardHTML, paintCanvases, renderWish,
   renderOpt, loginModal, openModal/closeModal/confirmBox, toast`.
 - **Core loop**: `startGame, buildGameDOM, update, loop, draw, step, chooseP/chooseE, activatePower, smash,
@@ -314,16 +317,6 @@ already reflect this — update both again the next time the base rolls (0.4, ..
 ---
 
 ## 8. Backlog — post-0.3
-
-### Open bug: Algidone/Uomo roccia up/down sprites
-Not part of the 0.3 milestone's own chunk list, but still open from 0.2_41–0.2_44 — **owner last reported
-Algidone's DOWN view still broken** (UP is fine, roccia's up/down views were reverted entirely in 0.2_42 and
-never revisited). Reference sheets are already in `refs/` (`algidone_sheet.jpeg`, `uomoroccia_sheet.jpeg`;
-crop coordinates recorded in git history around 0.2_41–0.2_44 if needed again).
-Likely next step: check that `P.face` is really `2` when moving down and that `dir` is passed at *every*
-`drawAlg`/`drawHero` call site (the menu preview call `drawAlg(ctx,0,c*.33,c,{…})` was missing it as of
-0.2_42) — needs re-confirming against the current code before another attempt, and probably a fresh
-screenshot from the owner showing what "still broken" looks like now.
 
 ### Queued — need reference art/screenshots from the owner
 - **Chunks 4+5** — pub sprite (professor's "cacciata") and dirty-pond sprite with splash sound/animation.
@@ -587,7 +580,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | R1 | Roadmap state, entry button, snake screen, regular girone tiles | [Q] per-character (answered) | Sonnet · medium | done (0.3_9) |
 | R2 | Special tiles 3 and 5 (10 hands won), `S.p.gam.won`, new blackjack achievement, "?" tiles | [Q] achievement, "?" (answered) | Sonnet · medium | done (0.3_10) |
 | R3 | Gift container (animated gift) + generic reward claim | [Q] reward mapping (answered) | Sonnet · medium | done (0.3_11) |
-| R4 | Milestone popups wired to the roadmap | P1, R2 | Sonnet · low | todo |
+| R4 | Milestone popups wired to the roadmap | P1, R2 | Sonnet · low | done (0.3_12) |
 | K1 | Skin system: overlay hook in every draw path, `SPRITE_INVENTORY.md`, missing-frame warning | — | Sonnet · high | todo |
 | C1 | Customisation page ("Personalizza", skin selector, 2 placeholders) | K1, [Q] screen/modal | Sonnet · medium | todo |
 | K2 | GEKA SNC hat (Uomo roccia) | asset sheet | Sonnet · medium | wait-assets |

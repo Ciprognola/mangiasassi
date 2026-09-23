@@ -1058,6 +1058,55 @@ for anything not itemised below.
   refuse a "natural" click in testing — had to force it; worth a quick real-finger check that the wobble
   doesn't make tapping awkward on an actual phone), C1 (nothing reads `skins`/`skin` yet, by design).
 
+## 0.3_12 — 2026-09-23
+- **v0.4 R4 — milestone popups wired to the roadmap, plus three queued fixes.**
+- **Milestone popups**: `scanNewUnlocks()` (called on every home-menu render, same as every other popup
+  type) now also checks every `ROAD_REWARDS` entry — fires a `{type:"milestone",items:[...]}` popup **once
+  ever per tile**, the moment that tile is both unlocked (R2's condition) **and** its registry entry has
+  `ready:true`. Deliberately does **not** mark the tile "seen" until both conditions are actually met, so a
+  future build flipping `ready:true` (K2/K3) is what actually fires it for players who met the unlock
+  condition long before — verified: with `pr.seen=true` but `ready` still `false`, no milestone is queued
+  on repeated menu visits; flipping `ready` (test-only, see below) on a *later* visit fires it immediately.
+  "?" tiles and not-ready rewards never fire (there's no registry entry for "?" tiles, and the `ready` check
+  gates the only two that exist). Guarded by the same `if(SIM()||(G&&G.dev))return` every other popup type
+  already uses — verified SIM mode enqueues nothing even with the tile-5 condition fully met, and turning
+  SIM back off correctly lets the real save's own state fire it independently afterward.
+- **"Guarda" → roadmap, scrolled and highlighted**: `popGoto` for `milestone` sets a one-shot
+  `roadHighlightTile` and navigates to `screen="road"`; `renderRoad()` auto-scrolls to that tile instead of
+  the usual "current girone" tile and adds a new `.hl` outline class (distinct from `.cur`, so "here's what
+  the popup was about" doesn't get confused with "here's your progress") — cleared immediately after that
+  one render. Enter/Esc reuse the existing popup keydown handler unchanged (no popup-type-specific code
+  there). Verified with a screenshot: tile 3 shows both the `claimable` pulse and the `.hl` ring together.
+- **Fix — popup grouping per Lista-desideri *tab*, not per shop.** `scanNewUnlocks()` used to collect every
+  newly-unlocked plane *and* rock into one combined `"asset"` group; since levels 1, 37 and 73 unlock a
+  plane and a rock at the same time (found during the P1 review), "Guarda" could land on a tab that didn't
+  show every item the popup listed. Now collects planes and rocks into two separate arrays and pushes up to
+  two separate queue entries, so every group is single-kind and `popGoto`'s existing
+  `items[0].kind==="plane"?"planes":"rocks"` is now always correct for every item in that group, not just
+  the first one. Verified at level 37 (which unlocks both): two separate popups appeared, back to back,
+  each landing on the correct tab in turn.
+- **Fix — skip items the player already owns.** Same function: an unlocked plane/rock is only added to the
+  popup's `items` array if `!cs().ownP.includes(i)` / `!cs().ownR.includes(i)` — it's still marked "seen"
+  either way (so it's never re-checked), just not shown if already owned. Fixes a fresh save's starting
+  plane+rock (unlocked from level 1, and already owned by `CHDEF()`) triggering a nonsensical "you can now
+  buy the thing you already have" popup on the very first menu visit. Verified: a freshly wiped save's queue
+  is empty right after the wipe.
+- **Fix — gift modal click target.** The wobble animation used to be on `#giftbox` itself (the click
+  target), which made the box perpetually "not stable" — Playwright's own actionability check refused a
+  natural click in 0.3_11's testing and had to be forced. Restructured: `#giftbox` is now a static outer
+  container (slightly larger than the gift), with a new inner `.giftwrap` div carrying the `giftwobble`
+  animation and the canvas; the click handler still attaches to the now-static `#giftbox`. Verified: a
+  *natural*, unforced Playwright click on `#giftbox` now succeeds and opens the reveal.
+- **CLAUDE.md doc fixes, same commit**: §4 code map now notes that roccia's `fd*` frames are used moving
+  **up** and `fu*` moving **down** (named by crop row, not content — verified directly in `drawHero`), and
+  that `fu1`/`fu2` and Algidone's `al_r7` are intentionally unused in the maze cycles (verified via the
+  exact modulo/sequence arithmetic in `drawHero`/`drawAlg`), not dead code to prune. §8's "Algidone/Uomo
+  roccia up/down sprites" open-bug entry is **removed entirely** — the owner confirmed in-game that
+  Algidone's DOWN view looks right; no code change was needed, it was a stale report. §10.8 now shows R1–R4
+  all `done`.
+- Not tested: real device/touch, K1/K2/K3 (nothing flips `ROAD_REWARDS[n].ready` in the committed build —
+  every `ready:true` state used above was set only inside the headless test, never shipped).
+
 ## 0.3_2 — 2026-09-23
 - **v0.4 bugfix B3 — win/lose track now starts right after the last faint, not after the first
   dialogue line.** In `pbEnding()`, both the win branch (`prMusicStop(400);prMusic("win",{fadeIn:300})`)
