@@ -444,3 +444,32 @@ for anything not itemised below.
     and also make the puddle bigger" isn't geometrically possible on a narrow phone.
   - Not tested: real device/touch, in-game review by the owner. `node --check` passes both
     inline `<script>` blocks. No save-data shape changed.
+
+## 0.2_55 — 2026-09-23
+- Owner gave a concrete crop target this time (previous attempts were percentage guesses):
+  move the building left until the left door is half cut off, so the puddle has real room and
+  can be fully visible; scale down the thrown-character animation to match if needed.
+  - **Crop point measured directly off the asset**: found the left door panel's pixel bounds on
+    the 291×300 `club_b.png` (roughly x=48-100, center x=74) and set a new `CLUB_CROP_XF=74/291`
+    (~25.4%) used as the left-edge fraction in `prClubRect`, replacing the arbitrary 15% from
+    0.2_54. Building's own size is untouched, same as every version since 0.2_53.
+  - **Puddle now fully on screen**: with the extra room this crop frees up (~20% of canvas
+    width vs. ~9% before), `prPuddleRect`'s existing "fill the available room with a margin"
+    formula (from 0.2_54, unchanged in shape) now produces a puddle that fits with margin on
+    both sides at every size tested, instead of needing the floor that caused clipping before.
+    Added an upper cap (`Math.min(W*.3, ...)`) so it can't overgrow if a lot of room ever opens
+    up.
+  - **Thrown-character size now follows the puddle**: was a flat `Math.min(W*.28,120)` that
+    dwarfed the smaller puddle from 0.2_53/54; now `Math.min(pr.w*1.4, W*.28)`, so it scales
+    with whatever the puddle's actual size is instead of needing separate manual tuning next
+    time the puddle changes.
+  - Verified with a headless Chrome probe: dumped `prClubRect`/`prPuddleRect`'s computed pixel
+    rects for a phone (390×780) and a wide (1100×700 -> 480-column) canvas -- puddle is fully
+    within `[0,W]` with ~10-12px margin on both sides at both sizes, no overlap with the
+    building; re-ran the same 5-screenshot, both-characters visual check -- the left door panel
+    reads as roughly half-cut (its icon and "Vincendo/Benvenuti" text are visibly split), the
+    right door and SNAI/runner window are fully visible, the puddle is clearly readable (not a
+    speck) with no clipping, and the smaller thrown character reads as proportioned to it
+    through the toss and splash.
+  - Not tested: real device/touch, in-game review by the owner. `node --check` passes both
+    inline `<script>` blocks. No save-data shape changed.
