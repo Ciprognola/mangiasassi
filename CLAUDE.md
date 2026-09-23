@@ -565,7 +565,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | B1 | Main menu music loop fix | [Q] symptom | Sonnet · medium | todo |
 | B2 | Battle music starts with battle transition | — | Sonnet · medium | done (0.3_1) |
 | B3 | Win/lose track right after the last faint | — | Sonnet · medium | done (0.3_2) |
-| B4 | Rocciamon card (G3) in Giochi after first real professor game | — | Sonnet · low | todo |
+| B4 | Rocciamon card (G3) in Giochi after first real professor game | — | Sonnet · low | done (0.3_3) |
 | A0 | Built-in audio layer (IDB → built-in → synth) + matching export targets | — | Sonnet · medium | todo |
 | A1…An | One build per approved audio submission (roccia sounds, algidone sounds, BJ voiceover, professor voiceover, professor intro music) | submissions | Sonnet · medium | wait-assets |
 | P1 | Popup unlock framework + asset/ghost/character/mini-game triggers + old-save seeding + dev preview | [Q] wording, grouping | Sonnet · medium | todo |

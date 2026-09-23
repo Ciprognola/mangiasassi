@@ -655,6 +655,19 @@ for anything not itemised below.
 - Tested: `node --check` passes both inline `<script>` blocks. Not tested: real playback/audio timing in
   a browser, real device/touch, in-game review by the owner. No save-data changes.
 
+## 0.3_3 — 2026-09-23
+- **v0.4 bugfix B4 — "Rocciamon" card (G3) now appears unlocked in Lista desideri › Giochi after the
+  first real professor game.** `gamesHTML()` previously only recognised G1 (Mangiaroccia, always on) and
+  G2 (El Gamblador, unlocked via `S.p.gam.seen`); every other slot rendered as a permanently locked "???".
+  Slot index 2 (G3) is now unlocked when `S.p.pr.seen` is true (or in `SIM()` mode), same pattern as G2 —
+  `S.p.pr.seen` is only ever set by a real professor battle (`prBattleStart()`, guarded by `!PR.test`), so
+  dev-test battles don't unlock the card. Added a matching canvas icon (reuses the existing `profImg()`
+  professor portrait, same draw code already used for the locked "Il Professore" character card) and
+  honoured `S.ov["game_2"]` label/colour overrides and the dev-mode card-edit dialog, exactly like G1/G2.
+- No new state: reuses the existing `S.p.pr.seen` flag from chunk 1 (0.2_40) — no `DEF`/migration changes.
+- Tested: `node --check` passes both inline `<script>` blocks. Not tested: real playback/in-game review by
+  the owner, whether the Duskull/pokéball icon (vs. the professor portrait reused here) is what's wanted.
+
 ## 0.3_2 — 2026-09-23
 - **v0.4 bugfix B3 — win/lose track now starts right after the last faint, not after the first
   dialogue line.** In `pbEnding()`, both the win branch (`prMusicStop(400);prMusic("win",{fadeIn:300})`)
