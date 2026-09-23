@@ -783,6 +783,59 @@ for anything not itemised below.
 - Not tested: real device/iOS, a full real professor battle played end-to-end through actual UI turns
   (gameplay/RNG correctness is `pbSim`'s job, not this chunk's).
 
+## 0.3_7 — 2026-09-23
+- **v0.4 A0 — built-in audio layer.** Added `const BUILTIN_AUD={}` (empty until the first approved
+  submission is hardcoded into it): a middle tier between a developer's own per-browser IndexedDB upload
+  and the game's shipped defaults. Lookup order everywhere is now **IndexedDB override → `BUILTIN_AUD` →
+  original default** (a synthesized sound for character/table SFX and the achievement jingle, silence for
+  voice lines — unchanged from today — or the embedded `*_B64` track for music).
+- **Keys are identical to export `target` strings** (`sound.uomoRoccia.eat`, `music.pr.battle`, …, exactly
+  as `expAudioItems()`/`exportTargetsMd()` already generate them), so an approved submission's manifest
+  entry pastes straight into `BUILTIN_AUD` with no renaming. Added `sndTarget(c,s)` (the shared
+  target-string builder) and `decodeSlotAudio(idbKey,builtinTarget)` (the shared 3-tier decode used by
+  `loadSounds()` and by the "Rimuovi suono personalizzato" dev-panel handler, which used to hard-null the
+  slot instead of falling back to a built-in). `initMusic()`, `gamMusicInit()`, and `prMusUrl()` each gained
+  one line checking `BUILTIN_AUD` before their existing embedded-track default. `wipeData()` now calls
+  `loadSounds()` again after clearing IndexedDB instead of manually nulling every SFX slot, so a wipe
+  correctly falls back to a built-in track/sound if one exists, not straight to silence/synth.
+- Full key table (target · what it is · original default) added to **DEVELOPERS.md** under a new "Audio
+  target names" section, and repeated below for the record:
+
+  | `target` | What it is | Original default |
+  |---|---|---|
+  | `sound.uomoRoccia.eat/.foe/.power/.die` | Uomo roccia's 4 character sounds | Synthesized |
+  | `sound.algidone.eat/.foe/.power/.die` | Algidone's 4 character sounds | Synthesized |
+  | `sound.ach` | Achievement jingle | Synthesized |
+  | `sound.gam.<13 slots>` (`deal,flip,shuffle,chip,win,lose,push,bj,bust,lighter,select,confirm,collect`) | El Gamblador table SFX | None (silent) |
+  | `sound.vo.<24 ids>` (El Gamblador dealer lines) | Dealer voice lines | None (silent) |
+  | `sound.vo.<9 ids>` (`pr_q,pr_c_no,pr_c_yes,pr_no,pr_y1,pr_y2,pr_y3,pr_pk,pr_ang`) | Professor voice lines | None (silent) |
+  | `music.menu` | Main menu music | Embedded `MUSIC_B64` |
+  | `music.gam` | El Gamblador table music | Embedded `GAM_MUSIC_B64` |
+  | `music.pr.intro/.battle/.win/.lose` | Professor music (4 slots) | Embedded `PR_*_B64` per slot |
+
+- **Memory: `loopTrack().release()`** — drops a track's decoded `AudioBuffer` (a menu-length MP3 decodes
+  to tens of MB of PCM) while keeping the lightweight instance alive; the next `play()`/`preload()`
+  transparently redecodes from the same URL. Wired into `bjExit()` for `bgmGam` (released every time
+  blackjack is left) and into `prExit()` for every cached `PR_TRACKS[slot]` (released on exit;
+  `prWarmMusic()` redecodes them the next time the professor scene starts). The main menu track is
+  deliberately **not** released — it's cheap to keep and is the one track played most often. Known gap:
+  the professor **win-and-decline-to-continue** path (`pbEnding`'s `else{...go("menu")}` branch) returns to
+  the menu without calling `prExit()`, so that specific exit doesn't release `PR_TRACKS` — flagging this
+  since only `prExit()` was in scope for this chunk.
+- **Verified in headless Chromium**, with two synthetic test WAV clips (0.3 s and 0.6 s, injected into
+  `BUILTIN_AUD`/IndexedDB only for the test, not committed): confirmed override beats built-in beats
+  default for one SFX key (`sound.uomoRoccia.eat`, decoded-buffer duration distinguishes which tier
+  actually won: null → 0.3 s → 0.6 s → back to 0.3 s → null) and for one music key (`music.menu`, confirmed
+  via which source `initMusic()` actually reads: the built-in `data:` URI when no override exists, an
+  IndexedDB blob once one is added). Also confirmed the memory-release mechanism functionally: entering
+  blackjack decodes `bgmGam` once, `bjExit()` releases it, re-entering redecodes and plays correctly
+  (`paused` goes back to `false`); the professor flow's 4 `PR_TRACKS` slots all end up `paused` after
+  `prExit()`, and playing a slot again afterward redecodes and works fine. (This confirms the release
+  mechanism behaves correctly — it does not measure actual heap/GC memory reclaimed, which headless
+  probing isn't well suited to.)
+- Not tested: real device/iOS, an actual approved submission going through this path end-to-end (no
+  submissions exist yet — `BUILTIN_AUD` ships empty).
+
 ## 0.3_2 — 2026-09-23
 - **v0.4 bugfix B3 — win/lose track now starts right after the last faint, not after the first
   dialogue line.** In `pbEnding()`, both the win branch (`prMusicStop(400);prMusic("win",{fadeIn:300})`)

@@ -75,5 +75,29 @@ Each change:
 - **One submission per topic.** Smaller packages are reviewed faster.
 - If the live build has moved on since you started (`VERSION` changed), you'll get a warning. That's fine, the reviewer checks for conflicts.
 
+## Audio target names (`type: audio`)
+When you upload audio in dev mode, **the export fills in `target` for you** — you never type it by
+hand. This table exists so you know which slot each `target` refers to, and what it sounds like until a
+submission for it is approved. Every `target` here doubles as the key used internally once a submission
+is hardcoded in (`BUILTIN_AUD`), so what you see in your exported `manifest.json` is exactly the name that
+ends up shipped.
+
+**Lookup order** (in every browser, for every one of these): your own dev-mode upload (stored locally,
+until you tap "Ripristina" or wipe local data) → the shipped built-in track/sound (once a submission for
+it has been approved and hardcoded into a build) → the game's original default (a synthesized sound
+effect, or silence for voice lines, or the original embedded music track).
+
+| `target` | What it is | Original default (before any submission) |
+|---|---|---|
+| `sound.uomoRoccia.eat` / `.foe` / `.power` / `.die` | Uomo roccia's 4 character sounds | Synthesized |
+| `sound.algidone.eat` / `.foe` / `.power` / `.die` | Algidone's 4 character sounds | Synthesized |
+| `sound.ach` | Achievement-unlocked jingle | Synthesized |
+| `sound.gam.deal` / `.flip` / `.shuffle` / `.chip` / `.win` / `.lose` / `.push` / `.bj` / `.bust` / `.lighter` / `.select` / `.confirm` / `.collect` | El Gamblador's 13 table SFX | None (silent) |
+| `sound.vo.<id>` — El Gamblador lines: `intro, pricefirst, pricenext, lighter, shuffle, deal, checkbj, turn, stand, double, surrender, playerbj, dealerbj, bust, dealerbust, win, lose, push, again, raise, raiseok, raiseback, broke, leave` | The dealer's 24 voice lines | None (silent) |
+| `sound.vo.<id>` — Il Professore lines: `pr_q, pr_c_no, pr_c_yes, pr_no, pr_y1, pr_y2, pr_y3, pr_pk, pr_ang` | The professor's 9 voice lines | None (silent) |
+| `music.menu` | Main menu music | The game's original menu track |
+| `music.gam` | El Gamblador table music | The game's original table track |
+| `music.pr.intro` / `.battle` / `.win` / `.lose` | Professor mini-game music (4 slots) | The game's original tracks for each |
+
 ## Questions
 Open an issue on the repo or contact the maintainer directly.

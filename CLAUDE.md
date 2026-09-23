@@ -575,7 +575,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | B2 | Battle music starts with battle transition | — | Sonnet · medium | done (0.3_1) |
 | B3 | Win/lose track right after the last faint | — | Sonnet · medium | done (0.3_2) |
 | B4 | Rocciamon card (G3) in Giochi after first real professor game | — | Sonnet · low | done (0.3_3) |
-| A0 | Built-in audio layer (IDB → built-in → synth) + matching export targets | — | Sonnet · medium | todo |
+| A0 | Built-in audio layer (IDB → built-in → synth) + matching export targets | — | Sonnet · medium | done (0.3_7) |
 | A1…An | One build per approved audio submission (roccia sounds, algidone sounds, BJ voiceover, professor voiceover, professor intro music) | submissions | Sonnet · medium | wait-assets |
 | P1 | Popup unlock framework + asset/ghost/character/mini-game triggers + old-save seeding + dev preview | [Q] wording, grouping | Sonnet · medium | todo |
 | R1 | Roadmap state, entry button, snake screen, regular girone tiles | [Q] per-character | Sonnet · medium | todo |
@@ -610,6 +610,8 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-23 | R1 | Roadmap entry point | Icon button next to the trophy (`#trop`) in the home `.brand` bar, not a tile |
 | 2026-09-23 | R2 | Tile 5 unlock condition | **10** blackjack hands won in total (not 1); the new achievement triggers at 10 too |
 | 2026-09-23 | B1 | Main menu music loop symptom | The track restarts correctly at the loop point, but there's still silence/a gap right before it loops (not a click, not a screen-change restart, not double-playback) |
+| 2026-09-23 | P1 | Popup accept/dismiss wording | "Guarda" (accept) / "Non ora" (dismiss) |
+| 2026-09-23 | P1 | Grouping when several unlocks fire at once | Grouped per type (one popup per unlock type, not one per item) — spec default confirmed |
 
 **Built-in audio slots** (filled by A-chunks):
 
