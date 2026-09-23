@@ -175,3 +175,33 @@ for anything not itemised below.
     100%, gironi 3-4 at 0%, and gironi 6/7/10/15 at ~15% each over 6000 trials/stage.
   - Not tested: real device/touch, in-game review by the owner. `node --check` passes both
     inline `<script>` blocks. No save-data shape changed.
+
+## 0.2_47 — 2026-09-23
+- **Chunk 8 — movesets**: 20-move learnset spread over levels 1-100 for the professor
+  mini-game's battle profiles, scoped to just the 70 hand-authored `PB_DATA` entries (25
+  aircraft + 10 rocks per character) per the owner's call -- not the `pbGen()` fallback used
+  for arbitrary dev-added extra assets, which keeps its original 2-move generated kit.
+  - Owner chose the deterministic/procedural option over hand-authoring ~1400 entries: a new
+    `pbLearnset(ck,kind,idx)` reuses `pbGen()`'s hash-seeded technique to pick the extra moves
+    from the existing ~50-move `PB_LIB`, biased towards the profile's own type(s) (STAB) first
+    and falling back to off-type moves (mostly Normal-type utility/status moves, since `PB_LIB`
+    has the most coverage there) once a type's pool runs out.
+  - Both signature moves and the profile's original 2 preferred library moves are pinned to
+    level ≤5 (`sig0`/`lib0` at 1, `sig1`/`lib1` at 5) -- at or below `pbFoeLevel`'s minimum
+    possible value (5) -- so the moveset only ever *adds* moves at higher levels; the kit a
+    matchup uses today can't shrink once a future chunk wires level-gating in. The remaining 16
+    moves spread evenly from level 10 to 100.
+  - **Pure data, no behaviour change**: `pbMon()` (what the battle engine actually uses) is
+    untouched and still builds the fixed 4-move kit from `sigs`+`lib` exactly as before --
+    confirmed identical move names/count before and after this change. Exposing the learnset in
+    the engine/move menu is a separate, not-yet-started chunk (backlog's "chunk 9").
+  - Verified with a headless Chrome probe: all 70 real profiles (roccia plane/rock, algidone
+    plane/rock) produce exactly 20 entries with non-decreasing levels in 1-100, no duplicate
+    move names within a learnset, and every slot resolves to a real move object; an
+    out-of-range index (past the real profile lists, i.e. `pbGen()` territory) correctly
+    returns `null`; a sample learnset was eyeballed for thematic sense (a NOR/FLY plane's
+    learnset leads with FLY/FIG moves, fills the midgame with NOR utility moves, and closes
+    with varied off-type flavor moves at the top end).
+  - Not tested: real device/touch, in-game review by the owner (there's no player-visible
+    surface yet -- this data isn't read by anything the player can reach). `node --check`
+    passes both inline `<script>` blocks. No save-data shape changed.
