@@ -565,7 +565,36 @@ for anything not itemised below.
   - Verified visually: upscaled every `idle` frame and all affected `walk` frames before/after —
     gap now reads as ordinary inner-thigh trouser shading, no residual off-color patch; a headless
     probe re-rendered the intro dialogue and walk/kick cutscene to confirm nothing else regressed.
-- Chunk 7 (battle background/layout rework, using `refs/UI_emerald.png`) not done in this entry —
-  see the next changelog entry.
 - Not tested: real device/touch, in-game review by the owner. `node --check` passes both inline
   `<script>` blocks. No save-data shape changed; no new `DEF`/migration fields needed.
+
+## 0.2_58 — 2026-09-23
+- **Chunk 7 — battle screen visual rework**, readapted from `refs/UI_emerald.png`. The existing
+  layout already matched Emerald's *structure* (foe box top-left, own box bottom-right above the
+  message panel, foe smaller/upper-right on a distant platform, own bigger/lower-left and closer)
+  so this was a polish pass on top of that structure rather than a rebuild:
+  - `pbBg`: sky gradient softened toward the horizon (was a flat two-stop blue/white), grass
+    recolored more saturated, and the random speckle "grass blade" dashes replaced with a banded
+    checkerboard dither (alternating tinted cells in 4-row bands) closer to the actual GBA
+    battle-background dither look.
+  - `pbPlat`: platform ellipses recolored to a warmer sandy/khaki palette and given a thin dark
+    rim stroke for a crisper cel-shaded edge, instead of the previous soft brown gradient blob.
+  - `.pbbox` (the HP nameplates): border recolored to a dark olive-green (was slate gray),
+    background warmed toward parchment cream, and added a small triangular "tail" (`:after`,
+    mirrored between the two boxes) pointing down-and-toward its combatant — the speech-bubble
+    notch Emerald's own HP boxes have. HP bar fill and housing given a two-tone gradient (light
+    top edge, darker bottom) for a beveled look instead of flat color.
+  - `pbLayout`: combatant/platform size now also scales with the available field height
+    (`sh`, not just canvas width), with the size ceiling raised — so on a tall phone or a
+    desktop-scaled window the field actually uses the extra room instead of just leaving more
+    empty grass around the same small sprites. Mobile-portrait sizing is unaffected (still
+    width-gated there); verified the size increase kicks in on a 1280×820 and a 400×900 viewport
+    without breaking the HUD layout.
+  - Left the position/HP-box/message-panel structure itself alone — it was already the right
+    shape for Emerald's layout, so this stayed a recolor/redraw pass, not a rearrange.
+- Verified with a headless Chromium probe (`prTestBattle`) across four viewports (480×800,
+  1280×820, 400×900, plus the original baseline) and through the command screen, move-select
+  panel and a mid-animation attack impact frame — all read correctly with the new theme, no
+  layout breakage.
+- Not tested: real device/touch, in-game review by the owner. `node --check` passes both inline
+  `<script>` blocks. No save-data shape changed.
