@@ -129,8 +129,11 @@ def pixelize(im, target_h=None, target_w=None, colors=32):
 def main():
     os.makedirs(OUT, exist_ok=True)
 
-    # club building asset sheet -> "Option B" (top-right of the 2x2 grid)
-    club = cutout("punto snai.png", (720, 62, 1180, 392), tol=28, filter_thin=False)
+    # club building asset sheet -> "Option B" (top-right of the 2x2 grid),
+    # with the left ~35% (plain facade + the horse/jockey window, the least
+    # legible part at in-game size) cropped off so the CLUB sign and the
+    # SNAI runner window read bigger at the same draw width
+    club = cutout("punto snai.png", (858, 62, 1180, 392), tol=28, filter_thin=False)
     pixelize(club, target_h=150, colors=32).save(os.path.join(OUT, "club_b.png"))
 
     # moon sheet -> option 2 (cream, cratered, soft glow); crop excludes the

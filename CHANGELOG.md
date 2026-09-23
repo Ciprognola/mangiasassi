@@ -320,3 +320,35 @@ for anything not itemised below.
     still all render correctly at the new sizes/positions.
   - Not tested: real device/touch, in-game review by the owner. `node --check` passes both
     inline `<script>` blocks. No save-data shape changed.
+
+## 0.2_51 — 2026-09-23
+- Owner: still too small, "asset details are not visible" -- scale the club building up 50%
+  more and crop at least 30% off its left margin; resize everything else to match.
+  - **Re-cropped the source asset**: `tools/cut_scene_assets.py`'s club crop box now starts
+    ~35% further right in the reference sheet, dropping the plain facade + the horse/jockey
+    window (the least legible part of the sprite at in-game size) so the CLUB sign and the SNAI
+    runner window -- the parts that actually read -- fill more of the same draw width. New
+    native aspect 145:150 (was 209:150), re-embedded via the same `refs/cut/scene/` ->
+    `PRSCN` pipeline as 0.2_49.
+  - **Render width up 50%**: `prClubRect` now draws at 82.5% of canvas width (55% × 1.5, was
+    55%). Combined with the narrower crop this makes the sign/doors noticeably bigger rather
+    than just filling more of the same small render.
+  - **Moon bigger too**: diameter up from 13% to 19% of canvas width (~1.5×).
+  - **Puddle and props resized to fit what's left**: a building at 82.5% width leaves very
+    little room on a narrow phone, so `prPuddleRect` now guarantees a non-overlapping position
+    (`cr.w+pw/2+margin`, not just "centered in leftover space" -- that formula let the puddle
+    sit *under* the building once the building got this big) at a modestly bigger fixed size
+    (27% of canvas width, was 24%). `prPropSpots` clamps the tyre/trash/food cluster into
+    whatever gap is actually left between the building and the puddle (`at(f) = gapL + (gapR-
+    gapL)*f`) rather than fixed canvas fractions that could land past either edge -- on a
+    narrow phone that gap is only a few pixels wider than the icons themselves, so the three
+    end up close together as one small pile rather than spread out; still clear of the door,
+    the puddle's main body and the throw arc.
+  - Verified with a headless Chrome probe: dumped the actual computed pixel rects for a phone
+    (390×780) and a wide (1100×700 -> 480-column) canvas and confirmed the building and puddle
+    no longer overlap (the bug in the first attempt at "bigger building" last version) at
+    either size; re-ran the same 5-screenshot, both-characters visual check -- CLUB sign and
+    SNAI window are now clearly legible at both sizes, the door-to-puddle throw arc and splash
+    still land correctly on the smaller puddle.
+  - Not tested: real device/touch, in-game review by the owner. `node --check` passes both
+    inline `<script>` blocks. No save-data shape changed.
