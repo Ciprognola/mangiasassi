@@ -122,3 +122,33 @@ for anything not itemised below.
     heads now stay full-size throughout eating; the rock icon visibly shrinks and fades.
   - Not tested: real device/touch input, in-game visual review by the owner. `node --check`
     passes both inline `<script>` blocks. No save-data shape changed.
+
+## 0.2_45 — 2026-09-23
+- Gameplay tuning trio (backlog §8 "Queued", all three approved together, one build):
+  - **El Gamblador spawns sooner/more often**: `bjAfterClear()` used to gate the table behind a
+    guaranteed appearance at girone 5, then a 70% checkpoint chance every 5 gironi after (7-55%
+    otherwise, score-scaled) -- meaning zero chance before girone 5. Now guarantees the first
+    table at girone 3, checkpoints every 3 gironi at 75%, and raises the in-between base odds to
+    12-60%. Verified with a headless-Chrome probe calling `bjAfterClear()` 4000×/stage with score
+    fixed at 0: girone 3 hits 100% of the time (previously 0%), gironi 6/9/12 hit ~75%, and the
+    non-checkpoint gironi in between hit ~11-12% each (previously 0% before girone 5).
+  - **Ability cooldown now survives death**: `resetActors()` unconditionally set `G.st=null` on
+    every call, including the life-loss respawn path (`resetActors(true)`, called from `update()`
+    when `G.lives--` without hitting zero) -- refunding the remaining Cinghiale/Acciaio cooldown
+    every time the player died. `resetActors` now only clears `G.st` to `null` on a real new
+    game/girone reset; on a life-loss respawn (`keep=true`) it cancels any active ability
+    (`on:false`) but carries the existing `cd` over. Verified: seeding `G.st.cd=17` before
+    `resetActors(true)` leaves `cd===17` after; a plain `resetActors()` (new game/girone) still
+    clears `G.st` to `null` as before.
+  - **Big maps appear more often after level 10**: `pickMap()` picked uniformly across all of
+    `MAPS` once unlocked (5 standard + 10 big = 15), so the 10 big maps only got their plain
+    10/15 (~67%) share. Now explicitly rolls a 75% chance to draw from the big-map pool and 25%
+    from the standard pool once the level-10 achievement (`g4`) is unlocked; locked players are
+    unaffected (still `STDMAPS`-only). Verified over 20000 draws: ~74.9% landed on a big map
+    (previously ~67% naturally), and a locked run never went past index 4.
+  - Verified with a headless Chrome probe (Playwright, system Chrome) exercising all three
+    functions directly with mocked `G`/`S` state and stubbed `startGamblador`/`miniInterlude`/
+    `bjPrice`, rather than a full playthrough. Not tested: real device/touch, in-game feel review
+    by the owner (these are tuning numbers -- a judgment call, not a fixed spec, so further
+    adjustment after playtesting is expected). `node --check` passes both inline `<script>`
+    blocks. No save-data shape changed.
