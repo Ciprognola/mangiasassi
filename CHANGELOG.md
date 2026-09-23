@@ -292,3 +292,31 @@ for anything not itemised below.
     exist in this repo (only the new sheets do), so nothing there was consulted or removed.
   - Not tested: real device/touch input, in-game review by the owner. `node --check` passes
     both inline `<script>` blocks. No save-data shape changed.
+
+## 0.2_50 — 2026-09-23
+- Owner reviewed 0.2_49 and asked for a layout pass: the club building read as "barely visible"
+  and the 3 non-door props were scattered randomly.
+  - **Building scaled up**: `prClubRect` was sizing the sprite off width (42% of the canvas)
+    with height following the sprite's own aspect ratio -- on the portrait-ish canvas this game
+    actually runs at, that made the *height* tiny (well under the old placeholder block's
+    `H*.5`), which is what read as "barely visible" even though the width looked reasonable.
+    Now sized at 55% of canvas width (up from 42%), which reads clearly larger at any aspect
+    ratio since it's the dominant dimension here.
+  - **Ground strip shrunk**: the plain sidewalk band below the scene dropped from 28% to 16% of
+    the canvas height (new `GROUND_YF=.84`, was an inline `.72`), freeing vertical room so the
+    bigger building doesn't crowd the sky/moon.
+  - **Puddle and props repositioned**: `prPuddleRect` now sits in the outer part of whatever
+    width is actually left over past the building (`avail=W-clubWidth`), instead of a fixed
+    `W*.66` that could land under the (now bigger) building. `prPropSpots` places the tyre/
+    trash/food cluster inside that same leftover gap (at 28%/60%/86% across it) instead of
+    always past the puddle; the rope post stays on the building's own footprint next to the
+    door. This removes the width-budgeting bug in the first attempt at this same fix, where the
+    computed prop gap collapsed to ~0px and all three props landed on top of each other.
+  - Verified with a headless Chrome probe: dumped `prClubRect`/`prPuddleRect`/`prClubDoor`/
+    `prPropSpots`' actual computed pixel rects for both a phone-portrait (390×780) and a wide
+    (1100×700 -> 480-column) canvas and confirmed no overlap between the building, puddle and
+    props in either case; re-ran the same 5-screenshot, both-characters visual check as 0.2_49
+    to confirm the building, moon, puddle, splash, props, rain and the door-to-puddle throw arc
+    still all render correctly at the new sizes/positions.
+  - Not tested: real device/touch, in-game review by the owner. `node --check` passes both
+    inline `<script>` blocks. No save-data shape changed.
