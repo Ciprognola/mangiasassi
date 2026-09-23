@@ -265,24 +265,28 @@ flip front or back views** — and reposition the eating overlay per direction; 
 `drawAlg(ctx,0,c*.33,c,{…})` has no `dir`).
 
 ### Queued
-**Gameplay tuning trio** (small, can share one build if the owner approves):
-- **El Gamblador spawns sooner** — currently triggered after girone 5. Reduce the wait so it comes up
-  earlier / more often. Trigger lives in `nextMinigame` (and the girone counter `cs().gir`).
-- **Ability cooldown must survive death** — the special ability (Cinghiale / Acciaio) cooldown currently
-  resets when the player loses a life. It must carry over: losing a life should not refund the 25 s.
-  Check where cooldown state is re-initialised on respawn (`resetActors`, `startGame`, `updateAbil`,
-  `steelOn/Off`, `boarOn/Off`) and move it out of the per-life reset.
-- **Bigger maps appear more often after level 10** — the 10 extra hand-authored maps unlock with the
-  level-10 achievement; raise their weight in the per-girone random map pick so big maps show up more
-  frequently once unlocked.
+Done since this section was last reconciled — see `CHANGELOG.md` for detail: the gameplay tuning trio
+(El Gamblador timing 0.2_45→0.2_46, ability cooldown surviving death 0.2_45, bigger-map weighting 0.2_45),
+chunk 8 movesets (0.2_47), and chunk 9 level-gated moves (0.2_48).
 
-- **Chunk 8 — movesets**: 20-move learnset per asset and ghost spread over levels 1–100 (pure data).
-- **Chunk 9 — level-gated moves**: engine + move menu expose everything unlocked at or below current level.
 - **Chunks 4+5** — pub sprite (professor's "cacciata") and dirty-pond sprite with splash sound/animation.
 - **Chunk 6** — Duskull sprite. **Chunk 7** — battle background/layout rework. **Bugfix** — remove shadows under
   professor sprites. *(These four need references/screenshots from the owner.)*
-- Deferred: El Gamblador extra intro sprite; ability balancing (8 s / 25 s); a dedicated audio-and-balance pass.
+- Deferred: El Gamblador extra intro sprite; ability balancing (8 s / 25 s).
 - Audio pending from the owner: a better-fitting intro track (the current one was cut in half and looped).
+
+### New feature ideas — not yet planned into chunks
+Raised by the owner directly in a Claude Code session (2026-09-23); need breakdown into approved chunks
+by Claude (the planning side) before Claude Code executes them.
+- **Movepicker** — let the player choose which moves to equip out of the 20-move learnset (chunk 8/9,
+  0.2_47/0.2_48), either before a battle or as asset configuration in the menu for each selectable
+  asset/ghost. Today a fighter's 4 battle moves are auto-picked (its 4 highest-level learnset moves at or
+  below current level, oldest dropped first as it levels up); this would let the player choose instead.
+- **Rebalance simulation pass for the professor fight** — `pbSim()`'s win rate drifted after 0.2_48 wired
+  level-gated moves into the battle engine: 56.8% (roccia) / 53.4% (algidone) over all 250 rock×plane pairs
+  per character, down from the ~59%/58% documented in §2 "Balance history" after the last pass. Not treated
+  as a blocking regression at the time, but worth a dedicated rebalance once the movepicker (if built) and
+  any other pending battle changes land, rather than chasing a moving target.
 
 ### Later phases
 - **B/C — "Esporta modifiche"**: finish the export UI and verify a real export against
