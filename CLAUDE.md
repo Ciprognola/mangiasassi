@@ -242,51 +242,53 @@ is it hardcoded into a new static-named build (e.g. `V.04_14`).
 | 0.2_30 → 0.2_39 | "Roccia no" chunks 1–9 complete: professor sprites, dialogue box, no-branch, sì-branch, 70 battle profiles, engine, battle screen, endings, export/dev-tools integration + 3 music tracks; plus quick fixes (dev quick-battle button, quit flow returns to "Roccia sì o roccia no?", typo, in-universe win/lose text, snack DEF/SpD rebalance) |
 | 0.2_40 | **Chunk 1** — professor menu-lock parity: `S.p.pr={visits,seen}` + migration, `profImg()` using `PRSPR.blink`, `"prof"` case in `paintCanvases`, locked "Il Professore" card, `seen` set only on real battles |
 | 0.2_41 | **Chunk 2** — procedural up/down views (`drawFaceUD`, `drawAlgUD`), `dir` added to the render object |
-| 0.2_42 | Revert: roccia procedural up/down removed (looked bad; `drawFaceUD` left defined but unused). Algidone UP kept; DOWN flip fix attempted — **owner reports DOWN still broken** |
+| 0.2_42 | Revert: roccia procedural up/down removed (looked bad; `drawFaceUD` left defined but unused). Algidone UP kept; DOWN flip fix attempted — owner reported DOWN still broken |
+| 0.2_43 → 0.2_44 | Up/down sprite bugfixes: swapped `fd`/`fu` mapping, fixed a separate downscale bug in `cut_sprites.py`'s crop normalization |
+| 0.2_45 → 0.2_46 | Gameplay tuning: El Gamblador timing, ability cooldown surviving death, bigger-map weighting, further El Gamblador timing pass |
+| 0.2_47 → 0.2_48 | **Chunk 8** — full 20-move learnsets per fighter; **Chunk 9** — level-gated move selection wired into the battle engine (`pbSim` win rate drifted to 56.8%/53.4%, flagged for a future rebalance pass) |
+| 0.2_49 → 0.2_56 | Night-street cutscene revamp (`prThrowOut`/`prSceneKick`): real cropped art from owner reference sheets replacing every procedural element (club building, moon, puddle, props), then seven owner-driven layout/size/crop iteration passes |
+| 0.2_57 → 0.2_58 | **v0.3 milestone closed**: **Chunk 6** — real Duskull sprite from owner reference, replacing the procedural placeholder; also fixed the professor leg-shadow bug (found during chunk-6 QA, no extra reference needed). **Chunk 7** — battle screen visual rework from the Emerald reference (dithered ground, sandy platforms, HP-box redesign with tail notch, height-aware sizing) |
+| 0.2_59 | Pre-release fixes: battle-win reward +40% and rerouted to seed the girone-3 run's active score instead of a silent sordi credit; maze-game sordi payout −30%; dev mode (`role`/`devOn`) now persists across reloads via a new `mgs_dev` key |
+
+**`v0.3` tag** points at 0.2_59 — the "Roccia no" professor mini-game, its balance pass, and the Emerald-style battle screen are all shipped as of this build. See `CHANGELOG.md` for full detail on every entry above.
 
 ---
 
-## 8. Backlog — v0.3 milestone
+## 8. Backlog — post-0.3
 
-### ▶ In progress: real up/down sprites from reference art
-Reference sheets (place in `refs/` if not already committed):
-- **Algidone** (1024×1024): FRONT/DOWN walk rows at y≈80–270 (frames 1–4) and y≈300–490 (frame 5 front,
-  6–8 turn/back); **BACK/UP walk** at y≈560–760, 6 frames at x ≈ (47–201) (224–361) (381–517) (542–672)
-  (698–828) (853–982). Roll row y≈820–960 (not needed yet). Background ≈ rgb(13,13,13).
-- **Uomo roccia** (1376×768): rows 1–2 side view (existing style); **row 3 = facing UP** (mouth toward top,
-  4 walk frames + 3 eat frames with the rock entering from the top); **row 4 = facing DOWN** (mouth toward
-  bottom, eat frames with the rock at the bottom). Row 4 frames 2–3 look inconsistent — confirm before using.
+### Open bug: Algidone/Uomo roccia up/down sprites
+Not part of the 0.3 milestone's own chunk list, but still open from 0.2_41–0.2_44 — **owner last reported
+Algidone's DOWN view still broken** (UP is fine, roccia's up/down views were reverted entirely in 0.2_42 and
+never revisited). Reference sheets are already in `refs/` (`algidone_sheet.jpeg`, `uomoroccia_sheet.jpeg`;
+crop coordinates recorded in git history around 0.2_41–0.2_44 if needed again).
+Likely next step: check that `P.face` is really `2` when moving down and that `dir` is passed at *every*
+`drawAlg`/`drawHero` call site (the menu preview call `drawAlg(ctx,0,c*.33,c,{…})` was missing it as of
+0.2_42) — needs re-confirming against the current code before another attempt, and probably a fresh
+screenshot from the owner showing what "still broken" looks like now.
 
-Chunks: (1) `tools/cut_sprites.py` — crop, key out the dark background to alpha, trim, scale to match existing
-sprite heights, export a preview contact sheet for approval; (2) embed as new `SPR2` keys (`al_u*`, `al_d*`,
-`fu*`, `fd*`, eat variants), watching file size; (3) wire into `drawAlg` / `drawHero` — **never horizontally
-flip front or back views** — and reposition the eating overlay per direction; (4) fix Algidone DOWN: check that
-`P.face` is really 2 when moving down and that `dir` is passed at every call site (the menu preview call
-`drawAlg(ctx,0,c*.33,c,{…})` has no `dir`).
-
-### Queued
-Done since this section was last reconciled — see `CHANGELOG.md` for detail: the gameplay tuning trio
-(El Gamblador timing 0.2_45→0.2_46, ability cooldown surviving death 0.2_45, bigger-map weighting 0.2_45),
-chunk 8 movesets (0.2_47), and chunk 9 level-gated moves (0.2_48).
-
+### Queued — need reference art/screenshots from the owner
 - **Chunks 4+5** — pub sprite (professor's "cacciata") and dirty-pond sprite with splash sound/animation.
-- **Chunk 6** — Duskull sprite. **Chunk 7** — battle background/layout rework. **Bugfix** — remove shadows under
-  professor sprites. *(These four need references/screenshots from the owner.)*
-- Deferred: El Gamblador extra intro sprite; ability balancing (8 s / 25 s).
-- Audio pending from the owner: a better-fitting intro track (the current one was cut in half and looped).
+  **Superseded**: the night-street cutscene revamp (0.2_49–0.2_56) already replaced this placeholder art
+  with real reference art end-to-end. Worth explicitly closing rather than carrying forward, unless the
+  owner wants a further pass on it specifically.
+- Deferred: El Gamblador extra intro sprite; ability balancing (8 s / 25 s Acciaio/Cinghiale — no target
+  numbers yet).
+- Audio pending from the owner: a better-fitting intro track for the professor mini-game (the current one
+  was cut in half and looped).
 
 ### New feature ideas — not yet planned into chunks
 Raised by the owner directly in a Claude Code session (2026-09-23); need breakdown into approved chunks
 by Claude (the planning side) before Claude Code executes them.
-- **Movepicker** — let the player choose which moves to equip out of the 20-move learnset (chunk 8/9,
-  0.2_47/0.2_48), either before a battle or as asset configuration in the menu for each selectable
+- **Movepicker** — let the player choose which moves to equip out of the 20-move learnset (built in chunks
+  8/9, 0.2_47/0.2_48), either before a battle or as asset configuration in the menu for each selectable
   asset/ghost. Today a fighter's 4 battle moves are auto-picked (its 4 highest-level learnset moves at or
   below current level, oldest dropped first as it levels up); this would let the player choose instead.
-- **Rebalance simulation pass for the professor fight** — `pbSim()`'s win rate drifted after 0.2_48 wired
-  level-gated moves into the battle engine: 56.8% (roccia) / 53.4% (algidone) over all 250 rock×plane pairs
-  per character, down from the ~59%/58% documented in §2 "Balance history" after the last pass. Not treated
-  as a blocking regression at the time, but worth a dedicated rebalance once the movepicker (if built) and
-  any other pending battle changes land, rather than chasing a moving target.
+- **Rebalance simulation pass for the professor fight** — `pbSim()`'s win rate sits at 56.8% (roccia) /
+  53.4% (algidone) over all 250 rock×plane pairs per character as of 0.2_48, down from the ~59%/58%
+  documented in §2 "Balance history" after the last pass. Not treated as a blocking regression, but worth a
+  dedicated rebalance once the movepicker (if built) lands, rather than chasing a moving target. The 0.2_59
+  economy changes (reward +40%, maze sordi −30%) don't affect this win-rate number — they're currency, not
+  battle-engine balance.
 
 ### Later phases
 - **B/C — "Esporta modifiche"**: finish the export UI and verify a real export against
