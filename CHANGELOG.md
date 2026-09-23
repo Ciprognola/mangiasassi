@@ -668,6 +668,44 @@ for anything not itemised below.
 - Tested: `node --check` passes both inline `<script>` blocks. Not tested: real playback/in-game review by
   the owner, whether the Duskull/pokéball icon (vs. the professor portrait reused here) is what's wanted.
 
+## 0.3_4 — 2026-09-23
+- **v0.4 bugfix B1a — real gapless Web Audio loop player, wired to the main menu track.** Confirmed during
+  0.3_3 planning that `makeLoopPlayer`, described in older docs as already shipped in 0.2_28→0.2_29, never
+  actually existed in the code (`git log --all -S makeLoopPlayer` returns nothing) — `initMusic()`/`bgm` was
+  a plain `new Audio(url)` with `.loop=true` the whole time, which is exactly what leaves an audible gap at
+  the loop point on MP3 (the owner's reported B1 symptom: "restarts correctly but there's still silence
+  right before the loop").
+- Added **`trimSilence(buf,thresh,capSec)`**: scans a decoded `AudioBuffer` from both ends across all
+  channels for the first/last sample at or above `thresh` (`0.001`), capped at `capSec` (`500ms`) per side
+  so a deliberately quiet intro/outro isn't eaten. Verified with a Node stub test (4 synthetic-buffer cases:
+  normal head/tail silence, silence longer than the cap, no silence, and an all-silent buffer as a
+  degenerate-safety case) — all matched expected trim points.
+- Added **`loopTrack(url,{vol,loop})`**: fetches + `decodeAudioData`s the track via the existing `getAC()`,
+  plays a single `AudioBufferSourceNode` (→ `GainNode` → destination) with `loop=true` and
+  `loopStart`/`loopEnd` set to the trimmed range, so there's exactly one seamless loop point instead of a
+  restart. Exposes an `<audio>`-like surface (`play()` returning a Promise, `pause()`, a `volume`
+  getter/setter mapped to the gain, `paused`, and a `currentTime=0` setter for the existing "restart from
+  the top" call site) so every `bgm.*` call site needed no changes beyond `initMusic()` itself. `pause()`
+  remembers position (modulo the loop range) and `play()` resumes from it, matching `<audio>`'s behaviour.
+  Falls back to plain `new Audio(url)` + `loop=true` if there's no `AudioContext` or decoding throws. The
+  decoded buffer is cached per URL, so switching screens doesn't re-decode; loading a custom "menuMusic"
+  IndexedDB override or resetting to the built-in track both still go through `initMusic()` → a fresh
+  `loopTrack`, so the override path is unaffected.
+- Swapped only `initMusic()`/`bgm`. `syncMusic()`, the periodic `bgm.paused` watchdog, the
+  `visibilitychange` handler, and the dev-panel "▶ preview" / "restart" buttons all kept working unchanged
+  against the new object's `<audio>`-like surface.
+- **Trimmed silence amounts are not known from this session** — there's no `decodeAudioData` outside a real
+  browser (no `ffmpeg`/`ffprobe` available here to cross-check offline), so the actual head/tail trim for
+  the embedded `MUSIC_B64` track and any custom-uploaded menu track can only be measured live. Added a
+  `window.__mgsAudioDebug` flag: when set truthy in the browser console before the track first plays,
+  `loopTrack` logs the trimmed head/tail ms via `console.debug`. **Ask the owner to check the console with
+  that flag set** to get the real numbers for this track.
+- Not tested: real playback/loop-point audio in a browser, real device. **iOS flag for the owner**: Web
+  Audio (`AudioContext`) is muted by the hardware silent switch, whereas HTML `<audio>` was not — this is a
+  behaviour change on iPhone specifically and should be checked there.
+- Docs: corrected CLAUDE.md §4's Audio line and the §7 `0.2_28 → 0.2_29` row, which both incorrectly stated
+  the loop player already shipped in that range under the name `makeLoopPlayer`.
+
 ## 0.3_2 — 2026-09-23
 - **v0.4 bugfix B3 — win/lose track now starts right after the last faint, not after the first
   dialogue line.** In `pbEnding()`, both the win branch (`prMusicStop(400);prMusic("win",{fadeIn:300})`)

@@ -159,8 +159,13 @@ in-universe — never use developer words like "asset" or "fantasma" in player-f
   `CHDEF()` = `{ownP,ownR,selP,selR,lvl,exp,gir}` per character.
   Roles `role` (`null|'dev1'|'master'`), `devOn`, `devUI()`; sim mode `simOn/simOff/SIM()` (lv 100, 999999 sordi,
   preserves real save). Globals: `screen` (`menu|game|bj|pr|over`), `G` (run), `P` (player actor).
-- **Audio**: `beep, noiseBurst, initMusic, syncMusic, playSnd, loadSounds`, `SND` buckets, and a Web Audio
-  buffer loop player (`makeLoopPlayer`) used because HTML `<audio>` loops leave a gap in MP3.
+- **Audio**: `beep, noiseBurst, initMusic, syncMusic, playSnd, loadSounds`, `SND` buckets, and a gapless
+  Web Audio loop player (`loopTrack`, built on `trimSilence`) added in 0.3_4 — a single
+  `AudioBufferSourceNode` with `loopStart`/`loopEnd` trimmed to the decoded buffer's non-silent range,
+  because HTML `<audio loop>` leaves an audible gap on MP3. Exposes an `<audio>`-like surface
+  (`play/pause/volume/paused/currentTime`) and falls back to plain `<audio>` if there's no `AudioContext`
+  or decoding fails. `initMusic()`/`bgm` use it as of 0.3_4; `bgmGam`/`prMusic` are planned to move onto
+  it in B1b (§10.8).
 - **Hero drawing**: `drawFace(ctx,cx,cy,w,frame,flip)`, `drawEat`, `drawAlg(ctx,X,Y,c,o)`, `drawHero(…)`.
   Render object built in `draw()`: `o={moving,power,eat,flip:P.lastH<0,anim,dir:P.face??1}`.
   Directions: `P.face` 0=up 1=right 2=down 3=left; `DX=[0,1,0,-1]`, `DY=[-1,0,1,0]`; `P.lastH` = last horizontal.
@@ -275,7 +280,10 @@ into `submissions/<name>/<YYYY-MM-DD>/` through a PR. Once the `validate` check 
 | 0.1_1 → 0.2_5 | The OG Chat: whole game built — both characters, progression, difficulties, power-up, 5 maps, menu scene, 30 achievements, El Gamblador, dev mode |
 | 0.2_7 → 0.2_19 | 1st patch: desktop scaling + shortcuts + Hardcore split + locked El Gamblador card (0.2_8); 50 quotes per character (0.2_9); BJ table rebuild (0.2_10); steel ability (0.2_11); dev girone-jump buttons (0.2_12); boar ability (0.2_13); boar 4-direction sprites, smoke, wall-break particles (0.2_14); per-map dimensions, water/lava streams, following camera, map hardening, 10 new maps (0.2_15–0.2_19) |
 | 0.2_20 → 0.2_27 | Fix 2: BJ pause fix, dealer centring, raise logic, raise UI, dealer lines, options redesign with tabs (Generali/Sviluppatore) + accordions, ZIP writer + manifest builder, export dialog UI |
-| 0.2_28 → 0.2_29 | Menu music swap ×2; gapless Web Audio loop player |
+| 0.2_28 → 0.2_29 | Menu music swap ×2. A gapless Web Audio loop player was planned for this range but
+  never actually shipped — `initMusic()`/`bgm` stayed a plain `<audio loop>` element until 0.3_4, which is
+  when `loopTrack`/`trimSilence` were really built (§4, §10.8 B1a/B1b). The `makeLoopPlayer` name in older
+  notes never existed in the code. |
 | 0.2_30 → 0.2_39 | "Roccia no" chunks 1–9 complete: professor sprites, dialogue box, no-branch, sì-branch, 70 battle profiles, engine, battle screen, endings, export/dev-tools integration + 3 music tracks; plus quick fixes (dev quick-battle button, quit flow returns to "Roccia sì o roccia no?", typo, in-universe win/lose text, snack DEF/SpD rebalance) |
 | 0.2_40 | **Chunk 1** — professor menu-lock parity: `S.p.pr={visits,seen}` + migration, `profImg()` using `PRSPR.blink`, `"prof"` case in `paintCanvases`, locked "Il Professore" card, `seen` set only on real battles |
 | 0.2_41 | **Chunk 2** — procedural up/down views (`drawFaceUD`, `drawAlgUD`), `dir` added to the render object |
@@ -562,7 +570,8 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 
 | ID | Chunk | Needs | Model · effort | Status |
 |---|---|---|---|---|
-| B1 | Main menu music loop fix | [Q] symptom | Sonnet · medium | todo |
+| B1a | Shared Web Audio loop player (`loopTrack`) + main menu track | [Q] symptom (answered) | Sonnet · medium | done (0.3_4) |
+| B1b | Move `bgmGam`/`prMusic` onto the shared loop player | B1a | Sonnet · medium | todo |
 | B2 | Battle music starts with battle transition | — | Sonnet · medium | done (0.3_1) |
 | B3 | Win/lose track right after the last faint | — | Sonnet · medium | done (0.3_2) |
 | B4 | Rocciamon card (G3) in Giochi after first real professor game | — | Sonnet · low | done (0.3_3) |
