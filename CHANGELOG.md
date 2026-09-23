@@ -60,3 +60,41 @@ for anything not itemised below.
   - Not tested: real device/touch input, and in-game visual review by the owner (the probe renders
     the sprite functions directly on an offscreen canvas, not the full running game).
   - `node --check` passes on both inline `<script>` blocks. No save-data shape changed.
+
+## 0.2_43 — 2026-09-23
+- Bugfix pass on the four sprite regressions the owner found in 0.2_42 (left/right untouched):
+  - **Uomo roccia up/down swapped**: `fd0..3`/`fu0..3` were cropped in sheet-row order, not by
+    what they show — `fd` is the front-face row (rock enters from the top) and `fu` is the
+    back-of-head row (rock enters near the collar). CLAUDE.md §8's original reference notes say
+    row 3 = UP, row 4 = DOWN, which makes UP the front-face set and DOWN the back-of-head set —
+    the opposite of what 0.2_42 wired. Fixed by swapping the `dir→prefix` mapping in `drawHero`
+    (and moving the `fu1`/`fu2` turn-transition frame-skip so it follows whichever direction now
+    resolves to `fu`, not a hardcoded `dir===0`). No embedded sprite data touched — pure mapping
+    fix.
+  - **Up/down larger than left/right**: `drawFace`/`drawEat` scaled the new portrait-shaped
+    `fu`/`fd` crops by forcing them to the side view's *width*, then deriving height from their
+    own aspect ratio — but a front/back head crop is narrower than a side-profile silhouette at
+    the same height, so this over-stretched their height. Both functions now match the side
+    view's on-screen *height* for `fu`/`fd` and derive width from the crop's own aspect ratio
+    instead, and `drawEat`'s overlay is now centered (`-iw/2`) for `fu`/`fd` rather than
+    left-anchored like the side view (which needs the offset because its mouth sits toward one
+    side; a front/back head doesn't).
+  - **Up/down chewing looked like a plain mouth open/close**: this was mostly the two bugs above
+    — once the eat overlay is the right scale and centered under the head instead of shifted and
+    oversized, the existing two-frame "rock enters → crumb burst" pair reads as a continuous bite
+    like the side view's `e0`/`e1`, not a jarring pop. No new art, same frame count (2) and the
+    same `.13`s toggle threshold as left/right.
+  - **Algidone roll animation missing up/down**: `drawAlg`'s vertical branch always picked a walk
+    frame (`al_u*`/`al_d*`) and never checked `o.power`, so Cinghiale's roll froze on a walk pose
+    when moving vertically. There's no dedicated up/down roll art, so restored the pre-0.2_41
+    behaviour: whenever rolling, fall back to the side-view roll sprite (`al_r*`, flippable)
+    regardless of direction, same as when every direction used that side view before the up/down
+    sprites existed.
+  - Verified with a headless Chrome probe (system Chrome via Playwright's `channel:"chrome"`,
+    no browser download needed): called `drawFace`/`drawEat`/`drawAlg` directly for all
+    dir×moving×eat/power combinations for both characters, screenshotted the grid, confirmed
+    up/down now matches side-view scale, rock-entry direction matches CLAUDE.md's UP/DOWN notes,
+    and Algidone's roll sprite now renders (flippable) in all 4 directions instead of only 2.
+  - Not tested: real device/touch input, in-game visual review by the owner (the probe renders
+    the sprite functions directly, not the full running game). `node --check` passes on both
+    inline `<script>` blocks. No save-data shape changed.
