@@ -706,6 +706,42 @@ for anything not itemised below.
 - Docs: corrected CLAUDE.md §4's Audio line and the §7 `0.2_28 → 0.2_29` row, which both incorrectly stated
   the loop player already shipped in that range under the name `makeLoopPlayer`.
 
+## 0.3_5 — 2026-09-23
+- **v0.4 bugfix B1a-fix — `loopTrack().play()` is now idempotent (fixes a real bug found in review of
+  0.3_4).** `<audio>.play()` on an already-playing element is a no-op; the 0.3_4 `loopTrack()` did not
+  match that — every call created a **new** `AudioBufferSourceNode` and overwrote `st.src`, orphaning
+  whatever was already playing (it kept sounding and could never be reached to stop). This was live and
+  reachable: `syncMusic()` calls `bgm.play()` on every screen change within menu/wish/opt/dev, and the
+  dev-panel restart button does `currentTime=0` (which itself replayed) immediately followed by another
+  `.play()` call — two stacking, un-stoppable copies of the menu track per press. Same race if two
+  `play()` calls overlapped while the buffer was still mid-decode.
+- Fix: added a play token (`st.tk`) and an in-flight flag (`st.pending`). `play()` now no-ops immediately
+  if already playing or already starting; otherwise it claims a token and re-checks `st.paused` and the
+  token **after every `await`** (buffer decode, `ac.resume()`) before creating a source, so a `pause()` or
+  a newer `play()`/`currentTime=0` that happened while waiting cancels the stale attempt instead of letting
+  it finish and orphan a source. `startSource()` also stops any existing `st.src` immediately before
+  creating a new one, as a second, unconditional guard. `pause()` bumps the token too, so nothing pending
+  can complete after a pause. Added `get currentTime()` for `<audio>` parity, and fixed position-tracking
+  math (`capturePos()` now re-bases its elapsed-time origin on every read, so repeated reads while playing
+  no longer double-count elapsed time — a bug the fix introduced and caught while writing it).
+  `currentTime=0` now restarts exactly once (stop the live source, `pos=0`, replay if not paused); the
+  dev-panel restart button's own trailing `.play()` call correctly becomes a no-op against the guard above,
+  matching what real `<audio>` already did.
+- **Verified in headless Chromium** (Playwright, `sync_playwright`, matching the `probe.py` pattern from
+  earlier builds): wrapped `AudioBufferSourceNode.prototype.start`/`stop` to track live (started,
+  not-yet-stopped) sources, then drove the exact scenario from review — `go('menu')`, five rounds of
+  `go('wish')` → `go('opt')` → `go('menu')`, then the dev restart button's exact statement
+  (`bgm.currentTime=0;bgm.play()`) fired twice back to back. Result: **exactly 1 live source** throughout
+  and after the double restart-press, **0 live sources** after `go('game')` (menu music correctly stops
+  once the screen leaves menu/wish/opt/dev). Re-ran the probe a second time to confirm it wasn't a fluke —
+  same result both times.
+- **Real trim numbers for the embedded menu track** (measured live via the same probe, `window.__mgsAudioDebug`
+  console output — this is the number 0.3_4 couldn't get without a browser): **57 ms head / 9 ms tail**,
+  both well under the 500 ms cap.
+- Not tested: real playback/device audio, iOS (Web Audio muted by the silent switch, flagged in 0.3_4,
+  still applies), a custom-uploaded menu-music override's actual trim amount (will vary per file — check
+  the same `window.__mgsAudioDebug` console line after uploading one).
+
 ## 0.3_2 — 2026-09-23
 - **v0.4 bugfix B3 — win/lose track now starts right after the last faint, not after the first
   dialogue line.** In `pbEnding()`, both the win branch (`prMusicStop(400);prMusic("win",{fadeIn:300})`)

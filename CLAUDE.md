@@ -570,7 +570,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 
 | ID | Chunk | Needs | Model · effort | Status |
 |---|---|---|---|---|
-| B1a | Shared Web Audio loop player (`loopTrack`) + main menu track | [Q] symptom (answered) | Sonnet · medium | done (0.3_4) |
+| B1a | Shared Web Audio loop player (`loopTrack`) + main menu track | [Q] symptom (answered) | Sonnet · medium | done (0.3_4, fixed 0.3_5) |
 | B1b | Move `bgmGam`/`prMusic` onto the shared loop player | B1a | Sonnet · medium | todo |
 | B2 | Battle music starts with battle transition | — | Sonnet · medium | done (0.3_1) |
 | B3 | Win/lose track right after the last faint | — | Sonnet · medium | done (0.3_2) |
