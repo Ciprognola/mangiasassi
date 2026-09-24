@@ -1458,3 +1458,12 @@ for anything not itemised below.
 - Not tested: touch feel on a real phone, real-device performance, other skins on the climber (only GEKA), iOS/Safari.
 - **Heads-up for the owner**: girder-to-girder gaps are 62/63/85/106–107 px depending on the end, so with the 95 px threshold the
   edge steps g3-left→g2 and g2-right→g1 (107 px) are fatal while the others are survivable. Same as D3's geometry; tuning is M9.
+
+## 0.3_23 — 2026-09-24
+- Owner feedback on M2. **Climbing view by direction**: UP (ArrowUp/W, on-screen ▲) uses the `fd` set, DOWN (ArrowDown/S, ▼) the `fu` set —
+  the same convention as the maze (`drawHero`, fix 0.2_43; names follow the crop row, not what the frame shows). `fd` shows an upside-down
+  face, `fu` the back of the head. Standing still on a ladder keeps the last direction (`FA.p.cdir`).
+- **Scale +20%**: climber head 30→36 px, hitbox 22×31 (`FA_PHYS.hw/hh`, drawn in the debug overlay), Algidone ×0.5→×0.6 (≈74×95).
+  World height 560→600, whole level shifted down 40 px; gaps between girders, jump and physics untouched. Algidone's head top is at y≈23.
+- **Fall threshold 95→115 px** (largest single-floor drop is 107; a 2-floor fall is ≥125, still fatal). M9 may retune.
+- **`index.html` size delta: about +0.9 KB** (code only). Real-click/key tests (30 checks) re-run and pass; 107 px steps now survive.

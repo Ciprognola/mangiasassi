@@ -3,7 +3,7 @@
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
 ## SESSION HANDOFF (2026-09-24 → next session)
-**M0, M1, the 0.3_20 dev-button bugfix, the 0.3_21 layout change and M2 (build `0.3_22`) are done and pushed to `main`.**
+**M0, M1, the 0.3_20 dev-button bugfix, the 0.3_21 layout change and M2 (build `0.3_23`) are done and pushed to `main`.**
 
 - **0.3_21**: Algidone top right facing left (mirrored at draw time), bottom girder flipped (§10.9 row "0.3_21 layout").
 - **0.3_22 / M2**: player walk/climb/jump/falls, keyboard + on-screen pad, `faDie` stub, goal flag. See CHANGELOG 0.3_22.
@@ -758,6 +758,7 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-24 | M0 (art tracking) | 3 open art issues from the package README (owner decides; **do not edit/recolour/redraw/regenerate**) | (1) `fa_salsiccia` is pink/raw vs the brown/cooked sausage in Algidone's hands (`fa_alg_throw0-1`) — accept or owner regenerates. (2) `fa_alg_eat1`/`eat2`: face looks beardless/different — acceptable, owner may regenerate. (3) `fa_alg_kick1`: duplicate cap (still wearing one while another flies off) — comedic, minor. (Macelleria backdrop issue already resolved: regenerated 9:16.) Package validation also noted: the `project` string in `ferma_algidone_frames.json` has mojibake in its em dash — cosmetic, JSON is otherwise valid |
 | 2026-09-24 | 0.3_21 layout | Algidone position | **Algidone top right, facing left, mirrored at draw time** (`ctx.scale(-1,1)`; PNGs never edited; every `fa_alg_*` animation mirrors the same way, so mirrored text on his belt is expected). Items start from the right; top girder slopes down-left; goal zone beside him (215–275); ladder to the top at x=60. **Bottom girder flipped to slope down-right** (grill at bottom right is the sink; items never roll onto the spawn). Spawn, safe zone x<90, flame x≥150, walls and grill unchanged. Items dropping from girder 1's right end land at the grill edge (M3 detail) |
 | 2026-09-24 | M2 | Player implementation choices | Climber always Uomo roccia head-only (`drawFace`, GEKA hat via the skin hook, whatever character is selected). D3 physics values (`FA_PHYS`) kept as-is; ladder snap 28 px; grab only in the direction the ladder serves (up from `gBot`, down from `gTop`, never down onto a broken ladder). Walking off an edge falls; a girder can't be re-landed once left (the D3 demo's ±8 px landing margin let the player stand on an invisible extension of the girder end). Fall threshold 95 px unchanged, so the 107 px steps (g3-left→g2, g2-right→g1) are fatal — flagged to the owner, tune in M9. `faDie` is a stub (respawn + debug label) until M4 |
+| 2026-09-24 | 0.3_23 (M2 feedback) | Scale, threshold, climb view | Climber head 36 px + hitbox 22×31, Algidone ×0.6, world 360×600 (level shifted +40, gaps unchanged, top space for M4 HUD). **Fall threshold raised 95→115 px** (all single-floor drops survivable, 2-floor fatal; M9 may retune). Climb view: up=`fd`, down=`fu` (maze convention), last direction kept when still |
 | 2026-09-24 | M0 → M1 | M0 closed | All rounds/demos done and signed off; M1 (engine skeleton) starts |
 
 **Built-in audio slots** (filled by A-chunks):
