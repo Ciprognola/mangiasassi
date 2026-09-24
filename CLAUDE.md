@@ -3,48 +3,38 @@
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
 ## SESSION HANDOFF (2026-09-24 → next session)
-**M0 is closed; M1 is done and shipped (build `0.3_19`, committed and pushed to `main`).** Owner approved the
-playability fix, D4 and the art package (`refs/ferma_algidone/`, spec in §10.7, decisions in §10.9 "round 4 amendments").
+**M0, M1, the 0.3_20 dev-button bugfix, the 0.3_21 layout change and M2 (build `0.3_22`) are done and pushed to `main`.**
 
-- Done through K3, M0 and M1 in the §10.8 table. Both roadmap skin rewards are live.
-- **M1** = the `screen="fa"` skeleton: `FA_LEVELS` data, `startFerma`/`faExit`, fixed-timestep loop, code-drawn
-  girders/ladders, embedded `fa_bg_coccia` backdrop. Dev-panel entry only ("Ferma Algidone!" row); no gameplay yet.
-- **Next: M2** (player movement — walk/climb/jump/gravity/collisions; climber = head-only `fu0`–`fu3` animated in code,
-  no new art; acceptance criteria for fall damage are in the M2 row). Then M3 items (real art from the package),
-  M4 (death rules + HUD + stock pile art), M5, M6, M7, M8, M9, REL.
+- **0.3_21**: Algidone top right facing left (mirrored at draw time), bottom girder flipped (§10.9 row "0.3_21 layout").
+- **0.3_22 / M2**: player walk/climb/jump/falls, keyboard + on-screen pad, `faDie` stub, goal flag. See CHANGELOG 0.3_22.
+- **Waiting on the owner:** phone test of M2 (touch feel, pad size/placement, jump feel, whether the 107 px edge steps feel
+  unfair). Address feedback first. **Do not start M3 before the owner signs M2 off.** M3 = Algidone thrower + item types (Sonnet · high).
 - Open, owner-only: 3 art issues in §10.9 (pink sausage, beardless `eat1/eat2`, duplicate cap `kick1`) — never edit the art.
-- Watch: the Coccia backdrop is busy behind the girders; if legibility is poor, darken/outline the code-drawn girders,
-  don't touch the art. The M1 demo values (stock 90 s, physics from D3) are starting points; tuning is M9.
-- The package `60c07bf` and any other owner commits may land via the GitHub web UI — always `git pull --ff-only` first (§1).
+- Mirrored idle shows his belt text reversed ("ALGIDONE"); accepted as a consequence of mirroring, art untouched.
+- M3 detail to remember: girder 1's right end drops items right next to the grill at the bottom-right (the sink, since the
+  bottom girder now slopes down-right); the M0 safe-zone/flame rules (§10.9) still apply.
+- Package `60c07bf` and other owner commits may land via the GitHub web UI — always `git pull --ff-only` first (§1).
 
-**State at handoff:** `git status` clean, everything pushed to `main`, HEAD `81a40d5` (plus this note's own docs commit), `VERSION` = `0.3_19`.
-Commits this session (oldest → newest): `6eccdfe` M0-fix (D2/D3/D5 playable, DK death rules) · `27254ce` M0-D4 floor map ·
-`1053d06` round 4 answers · `60c07bf` art package (owner, web upload) · `a8cfba5` M0 closed + art spec · `81a40d5` M1 build.
-
-**Waiting on the owner:** they will reply to the M1 report — expect feedback on M1 (esp. whether the Coccia backdrop is
-too busy behind the girders) and/or "go ahead with M2". Address feedback first; if it is just "go", start M2 (Sonnet · high).
-Do not start M3+ before M2 is signed off.
-
-**Demos (all live on Pages, never linked from the game):** `prototypes/algidone/` `01-level-layout`, `02-climb-jump-feel`
-(D3, tuning sliders), `03-items` (D2), `04-hud` (D5, canonical fixed version), `05-floor-map` (D4). The M0-fix root causes
-(x-only collision, unsafe spawn, no item clearing on death) are documented in §10.9 — do not re-introduce them in M2–M4:
+**Demos (live on Pages, never linked from the game):** `prototypes/algidone/` 01–05. Rules from the M0-fix (§10.9) hold:
 hit tests need vertical overlap on the same level; respawn clears all items; spawn area is safe.
 
 **Practical notes for the next session:**
-- Verification pattern that worked: Playwright (Python, headless Chromium) with `page.evaluate` on top-level `let`/`const`
-  globals (e.g. `screen`, `FA`, `P`); keep helper scripts in the scratchpad, not in the repo. `node --check` on each
-  `<script>` block first, then the smoke test (menu renders, run starts, zero console errors, new screen loads).
-- Build patches to `index.html` with a Python script that asserts each anchor appears exactly once; never print base64.
-  Embed art via script (read PNG → base64), like `fa_bg_coccia` in `FA_IMG_SRC`.
-- **Smoke tests must click the UI entry point, not call the function** (0.3_19's dev-panel button was dead because
-  `bindOpt` forwards only whitelisted selectors to `bindDev`; a direct `startFerma()` call passed anyway). New dev-panel
-  buttons: add the selector to that whitelist in `bindOpt`. Path: splash `#rsi` → `[data-tile=opt]` → `[data-otab=dev]` →
-  open the accordion (`details.acc:has(#id) > summary`) → click; run desktop + mobile touch (`has_touch`, `tap`).
+- Verification pattern: Playwright (Python, headless Chromium) with `page.evaluate` on top-level `let`/`const` globals (`screen`, `FA`,
+  `FA.p`); keep helper scripts in the scratchpad, not in the repo. `node --check` on each `<script>` block first, then the smoke test.
+- **Smoke tests must click the UI entry point, not call the function** (0.3_19's dev-panel button was dead because `bindOpt`
+  forwards only whitelisted selectors to `bindDev`; a direct `startFerma()` call passed anyway). New dev-panel buttons: add the
+  selector to that whitelist in `bindOpt`. Path: splash `#rsi` → `[data-tile=opt]` → `[data-otab=dev]` → open the accordion
+  (`details.acc:has(#id) > summary`) → click; run desktop + mobile touch (`has_touch`, `tap`). Play tests with real key presses
+  (`keyboard.down/up`) and real touch (CDP `Input.dispatchTouchEvent`) for the pad. Set dev mode with
+  `store.set('mgs_dev',{role:'master',devOn:true})` + reload.
+- Build patches to `index.html` with a Python script that asserts each anchor appears exactly once (the working copy is CRLF —
+  read/write with `newline=""` and convert); never print base64. Embed art via script like `fa_bg_coccia` in `FA_IMG_SRC`.
+  Measure the size delta against `git show HEAD:index.html` with CRLF normalised (raw `wc -c` is off by the CRLFs).
 - Long Bash heredocs containing quotes have broken on this machine (Git Bash) — write longer scripts with the Write tool.
-- M1 logical world is 360×560 (D2's coordinates); Algidone art (124×158 cell at ×0.5 = 62×79) needs the ≥79 px headroom
-  above girder 5 that the layout already gives (girder y=90). The `FA.debug` overlay shows safe/goal/grill zones.
-- Each further chunk: bump `VERSION` to `0.3_NN`, append a `CHANGELOG.md` entry with the `index.html` size delta, update the
-  §10.8 row, commit `v0.3_NN: …`, push. Embed each art frame in the chunk that first draws it (§10.9 round 4 amendment).
+- M1/M2 logical world is 360×560; climber head is drawn 30 px wide (`FA_PHYS.head`); the `FA.debug` overlay shows safe/goal/grill zones,
+  Algidone's footprint, "Ultimo danno" and the goal-reached text.
+- Each further chunk: bump `VERSION` to `0.3_NN`, append a `CHANGELOG.md` entry with the size delta, update the §10.8 row, commit
+  `v0.3_NN: …`, push. Embed each art frame in the chunk that first draws it (§10.9 round 4 amendment).
 
 This note can be deleted at the start of the next session as part of confirming the sync.
 
@@ -691,7 +681,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | K3 | Costume BK (Algidone) | asset sheet | Sonnet · medium | done (0.3_18) |
 | M0 | Design rounds + demos D1–D5 (may span several sessions) | [Q] bank | Sonnet · medium | done (prototypes only, no build) |
 | M1 | Engine skeleton: new `screen`, level data format, girders/ladders render, fixed-timestep loop (+ Coccia backdrop art) | M0 | Sonnet · high | done (0.3_19) |
-| M2 | Player movement: walk, climb, jump, gravity, collisions; climb = head-only `fu0`–`fu3` animated in code (§10.9 Q12 amendment). **Acceptance (§10.9 DK death rules):** fall damage measured only from where the player left the ground in free fall (~1 floor threshold), reset on landing / ladder grab / respawn; walking slopes, stepping between girder segments and leaving a ladder never count | M1 | Sonnet · high | todo |
+| M2 | Player movement: walk, climb, jump, gravity, collisions; climb = head-only `fu0`–`fu3` animated in code (§10.9 Q12 amendment). **Acceptance (§10.9 DK death rules):** fall damage measured only from where the player left the ground in free fall (~1 floor threshold), reset on landing / ladder grab / respawn; walking slopes, stepping between girder segments and leaving a ladder never count | M1 | Sonnet · high | done (0.3_22) |
 | M3 | Algidone thrower + item types and behaviours | M2 | Sonnet · high | todo |
 | M4 | Lives, hits/death, stock bar, scoring, HUD, pause. **Acceptance (§10.9 DK death rules):** death = short pause/blink → clear ALL items and flames → respawn at start → ~2 s blinking invulnerability → throws resume after a grace delay; spawn area is safe (no flame patrol, no item hits during invulnerability); item hits require vertical overlap on the same level (never compare x alone); stock drain gives tens of seconds per floor and costs a life only when it truly empties; reaching the goal zone shows a win message | M3 | Sonnet · medium | todo |
 | M5 | Floor 1 "Coccia": building art + kick-out win sequence | Coccia building + backdrop **arrived** (`refs/ferma_algidone/`, §10.7) | Sonnet · medium | todo |
@@ -767,6 +757,7 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-24 | M0 (amendment to round 3 "item art") | Item art timing | **Supersedes** "placeholder through M0–M4": the art has arrived early (`refs/ferma_algidone/`). Use the **real art in whichever chunk first draws that thing**: M1 backdrop, M3 items, M4 stock pile, M5 Coccia card/kick-out, M6 floors 2–3. No placeholders where real art exists. Package committed on its own as `60c07bf` (web upload, no VERSION bump, `index.html` untouched) |
 | 2026-09-24 | M0 (art tracking) | 3 open art issues from the package README (owner decides; **do not edit/recolour/redraw/regenerate**) | (1) `fa_salsiccia` is pink/raw vs the brown/cooked sausage in Algidone's hands (`fa_alg_throw0-1`) — accept or owner regenerates. (2) `fa_alg_eat1`/`eat2`: face looks beardless/different — acceptable, owner may regenerate. (3) `fa_alg_kick1`: duplicate cap (still wearing one while another flies off) — comedic, minor. (Macelleria backdrop issue already resolved: regenerated 9:16.) Package validation also noted: the `project` string in `ferma_algidone_frames.json` has mojibake in its em dash — cosmetic, JSON is otherwise valid |
 | 2026-09-24 | 0.3_21 layout | Algidone position | **Algidone top right, facing left, mirrored at draw time** (`ctx.scale(-1,1)`; PNGs never edited; every `fa_alg_*` animation mirrors the same way, so mirrored text on his belt is expected). Items start from the right; top girder slopes down-left; goal zone beside him (215–275); ladder to the top at x=60. **Bottom girder flipped to slope down-right** (grill at bottom right is the sink; items never roll onto the spawn). Spawn, safe zone x<90, flame x≥150, walls and grill unchanged. Items dropping from girder 1's right end land at the grill edge (M3 detail) |
+| 2026-09-24 | M2 | Player implementation choices | Climber always Uomo roccia head-only (`drawFace`, GEKA hat via the skin hook, whatever character is selected). D3 physics values (`FA_PHYS`) kept as-is; ladder snap 28 px; grab only in the direction the ladder serves (up from `gBot`, down from `gTop`, never down onto a broken ladder). Walking off an edge falls; a girder can't be re-landed once left (the D3 demo's ±8 px landing margin let the player stand on an invisible extension of the girder end). Fall threshold 95 px unchanged, so the 107 px steps (g3-left→g2, g2-right→g1) are fatal — flagged to the owner, tune in M9. `faDie` is a stub (respawn + debug label) until M4 |
 | 2026-09-24 | M0 → M1 | M0 closed | All rounds/demos done and signed off; M1 (engine skeleton) starts |
 
 **Built-in audio slots** (filled by A-chunks):

@@ -1435,3 +1435,26 @@ for anything not itemised below.
 - `FA.debug` zones updated (Algidone footprint added, zones follow the slopes).
 - **`index.html` size delta: +39,644 bytes** (two idle frames + code).
 - Verified by real clicks (desktop + mobile touch), zero console errors. Not tested: real device.
+
+## 0.3_22 — 2026-09-24
+- **M2 — Ferma Algidone! player movement** (dev entry only, no save changes, no items/HUD/lives).
+  - Climber = Uomo roccia head only, always (whatever character is selected): side `f0`–`f3` walking, `fu0`–`fu3` climbing with a
+    code-driven tilt/squash, jump = code-only stretch/squash. Drawn through `drawFace`, so the equipped **GEKA** hat shows via the
+    existing skin hook.
+  - Physics from D3 (`FA_PHYS`: g 980, walk 120, climb 105, jump -330, snap 28, coyote 80 ms, buffer 100 ms, fall 95 px), fixed
+    timestep (accumulator already clamped: hidden tab / lag spike can't teleport).
+  - DK rules: no jump on a ladder; grab only within the snap tolerance and only in the direction the ladder serves; broken ladders
+    stop at the gap and can't be entered from above; walking off an edge = fall (a girder can't be re-landed once left);
+    walls at the bottom-girder ends.
+  - Fall damage measured only from where the ground was left in free fall (reset on landing/ladder grab/respawn); threshold 95 px.
+    Fatal → stub `faDie(cause)` = respawn at start + debug label "Ultimo danno". Slopes, girder steps, leaving a ladder never count.
+  - Goal zone: sets `FA.goal` + debug text only (win message is M4).
+  - Input: arrows/WASD + Space/Z, and an on-screen portrait pad (▲ ◀ ▼ ▶ + Salta, hold via pointer events).
+- **`index.html` size delta: +6,283 bytes** (code only, no art).
+- Verified headless (real key presses / real touch events via CDP, desktop + mobile, 30 checks, zero console errors): walk, jump apex
+  (~53 px measured vs 55.6 theoretical), no jump on ladder, broken ladder, snap tolerance, full climb g0→g4 and goal flag,
+  1-floor drops survive (62/63 px), the two 107 px steps are fatal, synthetic 2-floor fall fatal, walls, lag-spike clamp, GEKA hat
+  drawn, ✕ returns to the menu. Maze run still starts.
+- Not tested: touch feel on a real phone, real-device performance, other skins on the climber (only GEKA), iOS/Safari.
+- **Heads-up for the owner**: girder-to-girder gaps are 62/63/85/106–107 px depending on the end, so with the 95 px threshold the
+  edge steps g3-left→g2 and g2-right→g1 (107 px) are fatal while the others are survivable. Same as D3's geometry; tuning is M9.
