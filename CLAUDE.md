@@ -612,7 +612,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | K1b | Skin system, part 2 — overlay hook wired into every draw path per §10.9's Acciaio/Cinghiale/`al_r*` decisions | K1a | Sonnet · high | done (0.3_15) |
 | C1 | Customisation page ("Personalizza", skin selector, 2 placeholders) | K1, [Q] screen/modal (answered: full screen) | Sonnet · medium | done (0.3_16) |
 | K2 | GEKA SNC hat (Uomo roccia) | asset sheet | Sonnet · medium | done (0.3_17) |
-| K3 | Kebab costume (Algidone) | asset sheet | Sonnet · medium | wait-assets |
+| K3 | Costume BK (Algidone) | asset sheet | Sonnet · medium | done (0.3_18) |
 | M0 | Design rounds + demos D1–D5 (may span several sessions) | [Q] bank | Sonnet · medium | todo |
 | M1 | Engine skeleton: new `screen`, level data format, girders/ladders render, fixed-timestep loop | M0 | Sonnet · high | todo |
 | M2 | Player movement: walk, climb, jump, gravity, collisions (placeholder frames) | M1 | Sonnet · high | todo |

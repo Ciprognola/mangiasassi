@@ -1363,3 +1363,36 @@ for anything not itemised below.
     `S.p.ch.roccia.skin="geka"`, persisted to `localStorage` → a fresh run started afterward shows the
     character wearing it. Zero console errors across the entire run.
 - Not tested: real device/touch, in-game review by the owner, K3 (Algidone's costume — next).
+
+## 0.3_18 — 2026-09-24
+- **v0.4 K3 — Costume BK (Algidone), second real skin, same pipeline as K2.** Frames arrived pre-cut in
+  `refs/skins/bk/frames/` + `bk_frames.json`, nothing to cut. `al_r7` intentionally absent from the 27
+  frames — it's never shown in game (unused index in the rolling animation's `%7` cycle, documented since
+  K1a), so there's nothing to draw a costume variant for.
+- **`SKINS.bk`** embedded: `char:"algidone"`, `mode:"replace"`, `name:"Costume BK"`, all 27 real frames
+  (`al_st`, `al_w0-7`, `al_d_st`, `al_d0-3`, `al_u0-5`, `al_r0-6`) as `{b64,ox,oy}` — reusing the exact same
+  offset-aware compositing (`drawSkinLayer`) K2 built, no code changes needed beyond the embed itself.
+  `ROAD_REWARDS[5].ready` flipped to `true` — tile 5 now actually claims and grants the costume.
+- **`index.html` size delta: +380,195 bytes (+371.3 KB)** — 27 embedded PNG frames (larger than GEKA's 10:
+  full-body art vs. head crops), essentially all base64.
+- **Verified in headless Chromium**, extensively:
+  - Registration sanity: `SKINS.bk` has the right mode/char/27 frames, confirmed `al_r7` is **not** in the
+    registry and never got an `IMG.sk_bk_al_r7` entry; `al_w3`'s declared offset (`w:76,h:100,ox:1,oy:0`)
+    matches what actually loaded.
+  - Maze, all 4 directions + the two side-walk frames that actually carry a 1px offset (`al_w3`, `al_w7`,
+    the ones the task flagged specifically) — **verified both facings of each**, confirming the mirror math
+    holds even for a small offset, not just GEKA's larger ones.
+  - **Rolling during power-up** (`al_r0-6`) shows the costume's compact rolling-ball pose correctly.
+  - **Power-up reversal tint** (Algidone's Acciaio-equivalent — same `drawTinted` path, green instead of
+    roccia's red) confirmed tinting the whole replace-mode costume, rolling pose included.
+  - Menu scene, Lista desideri card, splash logo (algidone selected), HUD lives icons, the C1 Personalizza
+    preview (all 4 directions), the pond-throw cutscene (phase-polled), and the professor dialogue portrait
+    (reached via the real intro → "sì" flow, polled for `spk:"plr"`) all show the costume correctly.
+  - **Full real (non-dev) claim flow from a wiped save**: `S.p.gam.won=10` → tile 5 `claimable` → milestone
+    popup correctly queued behind the save's other pending popups → "Guarda" opens the roadmap on tile 5 →
+    claiming opens the gift modal → opening it marks `S.p.road.claimed[5]` and adds `"bk"` to
+    `S.p.ch.algidone.skins` → the real Personalizza button appears → selecting "Costume BK" sets
+    `S.p.ch.algidone.skin="bk"`, persisted to `localStorage` → a fresh run shows the character wearing it,
+    HUD lives icons included. Zero console errors across the entire run.
+- Not tested: real device/touch, in-game review by the owner. Both roadmap skin rewards (K2, K3) are now
+  fully shipped — remaining v0.4 work is M0-M9 (Algidone's mini-game) and REL.
