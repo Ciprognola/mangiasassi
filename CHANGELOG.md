@@ -1614,3 +1614,29 @@ Owner feedback 3 after the phone test of 0.3_29/0.3_30 (all OK).
 - Verified headless (real clicks + touch): the BK/GEKA paths above, popup/gift screenshots (`review/reward_preview_m.png`), sim on/off round trip incl. the Giochi card and a floor-2 launch, row-2 stop on both floors, floor 1/2 regressions
   (intro, Avanti/Riprova/Rigioca, belts, spawn-to-goal), 0 console errors.
 - Not tested: playing 10 real blackjack hands through a real run (the increment line was read, not exercised), the Obiettivi screen text for "Il banco trema".
+
+## 0.3_32 — 2026-09-24
+M6b — Ferma Algidone! floor 3 "Fabbrica di salsicce" + the final win.
+- **Progression**: the floor-2 win panel now has **Avanti** -> floor 3 intro card (`fa_bld_fabbrica` at x1, natural 280x218, "Piano 3 — Fabbrica di salsicce" + "Algidone ha rilevato la Fabbrica di salsicce! Svita tutti i bulloni:
+  senza, la sua fabbrica crolla."). Score/lives carry, stock 90 s, Riprova = current floor. Only floor 3 ends the run: its panel is Rigioca (from floor 1) / Esci.
+- **Level** (`FA_LEVELS[2]`, `last:true`): backdrop `fa_bg_fabbrica`, building `fa_bld_fabbrica` in-level x0.6 on the top girder, the floor-1 six-row structure/ladders, hazard-yellow girders / light-blue ladders, row-2 player stop kept.
+  No goal zone: **removing the last bolt wins**.
+- **Bolts** (DK "100m" style, `lv.bolts`): 8 (two on each of rows 1-4, away from the ladder tops). Walking over one on the ground removes it (+50 points, sparks); **0.5 s later a 26 px hole opens in the girder** (`FA.gaps`), so it is a
+  gap to jump over. Standing still on a fresh bolt drops you through the hole; falling through follows the normal fall rules (single-row drops are survivable). Items fall through holes too (rolling items, meat over a hole).
+  Bolts are drawn in code (pulsing silver hexagon); girders are drawn in segments; HUD shows the bolts left (small hex + number between score and stock). Holes stay after a death; Riprova/Rigioca restore all bolts.
+- **Hazards**: sausages + porchetta as before; **bouncing meat** (`fa_carne0-1` with the squash frame; hop unchanged at 34 px: it clears the girder above by about 5 px at the tightest spot, no retune); **grill ON the bottom
+  girder at its low end** (x1.2 = 54x40, `fa_griglia0-1`, coals brighten on a hit; it is an obstacle: the player stops beside it, items slide into it). Every item that reaches the grill spawns a **flame** (`fa_fiamma0-3`, max 3, speed 60,
+  6 s life) that patrols the bottom girder between x=150 and the grill, never near the spawn. **Proposal (implemented, tunable): flames may climb the ladder at x=210 to the second girder** with 35 percent chance per pass, never higher.
+- **Final win**: last bolt -> state `collapse`: stock/throws frozen, items cleared, no hits. The structure shakes (1 s, growing), girders fall top-first (all except the bottom girder and the one the player stands on), ladders and
+  the building fall with them, dust; Algidone (angry frames while it shakes) falls with `fa_alg_kick1` from the top girder to the bottom girder (x=190, away from the grill) and lands sitting dazed (`fa_alg_kick2`, small squash);
+  the climber celebrates with two hops; 3.7 s in total. Then the victory panel **"Algidone è a terra!" / "Coccia, Macelleria e Fabbrica sono di nuovo al sicuro."** with the total score and the stock bonus counting up (Rigioca / Esci).
+  The old headbutt kick-out (M5) is removed (`kick0` stays embedded, unused; `kick1/kick2` are used by the collapse). "Test cacciata finale" now plays this real sequence on floor 3 (holes already open).
+- **Dev**: new "Piano 3 (bulloni)" button (dev run, saves nothing, in the whitelist); "Test cacciata finale" = the collapse; "Test uscita Algidone" = floor 1 climb-away; the "Sblocca tutto" Ferma card now lists floors 1-3.
+- **Engine fixes** found on the way: items falling now land on the first girder below that actually supports them at that x (skips shorter girders and holes; before, an item leaving the left end of a belt row landed on the shorter girder
+  below at a clamped position); items riding a belt can no longer be pushed backwards (porchetta 34 px/s against a 45 px/s belt drifted to -11): minimum 12 px/s toward the exit end (floor 2).
+- **Proposed values, tunable in M9**: 8 bolts, +50 each, hole width 26, hole delay 0.5 s, flame speed 60 / life 6 s / max 3 / climb 35 percent, meat hop 34 px, weights 3/1/2, throw pause 1.4-2.6 s, collapse 3.7 s.
+- Layout: `refs/ferma_algidone/review/m6b_layout.png` (390x844 and 360x800), collapse strips `m6b_collapse_d.png` / `m6b_collapse_m.png`. Embedded `fa_bg_fabbrica`, `fa_bld_fabbrica`. **`index.html` size delta: +155513 bytes.**
+- Verified headless (real clicks, keys and touch): dev floor-1 exit -> Avanti -> floor 2 exit -> Avanti -> floor 3 intro (natural size) -> play -> game over -> Riprova -> last bolt by really walking onto it (keys and touch) -> collapse -> final panel
+  -> Rigioca; the scripted all-8-bolts run; bolt pick / hole timing / jump over a hole / walking into a hole / standing on a bolt; sausage falling through a hole; meat clearance; flames (range, spawn, climb, cap; 0 safe-zone frames);
+  floor 1/2 regressions (belts, stops, girder hits, sausage window 0.229 s, ladder grab, sim card); 0 console errors.
+- Not tested: real-phone feel (bolt spacing, hole width, flame difficulty, the collapse timing and shake), floor-3 difficulty balance.

@@ -3,34 +3,34 @@
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
 ## SESSION HANDOFF (2026-09-24 → next session)
-**State:** `VERSION` = `0.3_30`, everything pushed to `main`, `git status` clean.
-**Done through M6a** (§10.8): M0-M5 + M6a. 0.3_29 = owner feedback 2 (cooked sausage, full eat0-2, ladder grab ±8, Up = climb/jump, extra bottom row, Algidone climbs away on floors 1-2),
-0.3_30 = floor 2 "Macelleria" with conveyor belts + floor progression (Avanti). Decisions in §10.9 and `CHANGELOG.md`.
+**State:** `VERSION` = `0.3_32`, everything pushed to `main`, `git status` clean.
+**Done through M6b** (§10.8): M0-M6b — **all three floors of Ferma Algidone! exist and are playable end to end** (dev entry points + the "Sblocca tutto" Giochi card). 0.3_31 = owner feedback 3 (skin reward previews worn, Sblocca tutto covers
+skins/tiles/Ferma card, row-2 left stop, locked-tile toast; the BK path is fine, the owner just hadn't won 10 REAL blackjack hands), 0.3_32 = floor 3 (bolts + holes, grill + flames, bouncing meat) + the collapse final win. Decisions in §10.9 and `CHANGELOG.md`.
 
-**Waiting on the owner:** phone test of 0.3_29 and 0.3_30 (belt feel/readability, the tighter ladder grab, Up-key jump, the new bottom row, climb-away, floor-2 difficulty). Address their feedback first.
-**Next chunk: M6b** (floor 3 "Fabbrica di salsicce": the last mechanic = elevators or rivets-to-remove, still open — ask/propose with a demo; bouncing meat returns (`meatHop`), grill + flame spawns, `fa_bld_fabbrica` +
-`fa_bg_fabbrica`, the **final kick-out** = mark the level `last:true` and the existing kick code runs; victory screen; decide the grill placement: it does not fit below the new bottom girder in the 610 world —
-grow the world ~35 px or use a smaller grill) — **only after the owner's sign-off**, Sonnet · high. Then M7 audio placeholders, M8 integration (unlock/entry, Giochi card, popup, rewards, achievements, roadmap tile 10), M9 polish.
+**Waiting on the owner:** phone test of 0.3_31 and 0.3_32 (bolt spacing, hole width/delay, flame difficulty and ladder climbing, the collapse timing/shake, floor-3 difficulty, the intro card at x1 on phones). Address their feedback first.
+**Next chunks (only after the owner's sign-off):** M7 audio placeholders (synth SFX set + stock-low beep, slots matching export targets), then M8 integration (unlock/entry = random encounter from girone 5 + forced by girone 10, Giochi card
+"Ferma Algidone!", popup, rewards via sordi/exp, "Minigiochi" achievements, roadmap tile 10 = first real clear of floor 1, dev test buttons, save migration), then M9 (mobile controls polish + balance of every tunable in §10.9), then REL (0.4).
 
-**Open items the owner has to judge:** belt speed 45 / reversal 5 s / warning 0.7 s; Riprova = current floor vs floor 1; stock 90 s; eat frequency 22 percent; the fatal chasm under the left part of floor-1/2's second girder;
-all M9 tuning. Art issues: `eat1/eat2` (beardless, accepted for now; §8 backlog), `kick1` double cap (accepted); cooked sausage resolved.
+**Open items the owner has to judge:** every "proposed, tunable" value in §10.9 (belts, bolts, flames, collapse); stock 90 s; eat frequency 22 percent; the fatal chasm under row 2's left part (row 2 now has a player stop); art issues: `eat1/eat2` (beardless, §8 backlog),
+`kick1` double cap (accepted); `kick0` is embedded but unused (the headbutt kick-out was replaced by the collapse).
 
-**Ferma Algidone! code map** (`index.html`, `grep -n 'FA_\|fa[A-Z]'`): data `FA_LEVELS[0..1]` (floor fields: `title/blurb/introArt`, `girders` with optional `flow`/`conveyor:{v,rev,dir}`, `items` incl. `meatHop`, `last`);
-world 360×610; `FA_PHYS`; loop `faLoop` → `faStep` → `faDraw`; items `faSpawn/faItemsStep/faCollide/faSeparated/faGrillHit`; belts `faInitBelts/faBeltV/faBeltStep/faDrawBelt`; HUD `faHud`; panels `faPanel`;
-state `FA.state` = `intro|play|dying|kick|climb|win|over` + `FA.paused`; floors `faLoadFloor(i,lives,score)`, `faRestart` (Riprova), `faNextFloor` (Avanti), `faAct` (`retry|next|replay|exit|resume`);
-`faIntro/faIntroEnd`, `faDie(cause,force)`, `faFinishDeath`, `faOver`, `faWin` → `faKickStep` (final) or `faClimbStep` (floors 1-2) → `faWinPanel` (+`faCountStep`), `faAlgPose`. Demos (Pages, never linked):
-`prototypes/algidone/` 01–05. Review images: `refs/ferma_algidone/review/` (reference only).
+**Ferma Algidone! code map** (`index.html`, `grep -n 'FA_\|fa[A-Z]'`): data `FA_LEVELS[0..2]` (fields: `title/blurb/introArt`, `girders` with optional `flow`/`conveyor:{v,rev,dir}`, `ladders`, `bolts`, `grill:{x1}`, `stopLeft`, `items` incl. `meatHop`/`grill`/`flameClimb`, `last`, `goal` (floors 1-2 only));
+world 360×610; `FA_PHYS`; loop `faLoop` → `faStep` → `faDraw`; items `faSpawn/faItemsStep/faCollide/faSeparated/faGrillHit`; belts `faInitBelts` (also inits bolts/holes) `faBeltV/faBeltStep/faDrawBelt`; bolts `faBoltPick/faBoltsStep/faInGap/faDrawBolts/faDrawGirder`;
+grill `faGrill()`; HUD `faHud`; panels `faPanel`; state `FA.state` = `intro|play|dying|climb|collapse|win|over` + `FA.paused`; floors `faLoadFloor(i,lives,score)`, `faRestart` (Riprova), `faNextFloor` (Avanti), `faAct` (`retry|next|replay|exit|resume`);
+`faIntro/faIntroEnd`, `faDie(cause,force)`, `faFinishDeath`, `faOver`, `faWin` → `faClimbStep` (floors 1-2) → `faWinPanel` (+`faCountStep`); `faFinalWin` → `faCollapseStep` → `faFinalPanel` (floor 3), `faColOff` (falling girders), `faAlgPose`.
+Demos (Pages, never linked): `prototypes/algidone/` 01–05. Review images: `refs/ferma_algidone/review/` (reference only).
 
 **Practical notes:**
 - **Verification = real clicks.** Playwright (Python, headless Chromium): click the UI entry point, never call the function (`bindOpt` forwards only whitelisted selectors to `bindDev`; new dev-panel buttons must be added
-  to that whitelist). Path: splash `#rsi` → `[data-tile=opt]` → `[data-otab=dev]` → open the accordion (`details.acc:has(#id) > summary`) → click (`#mgfa` floor 1, `#mgfa2` floor 2, `#mgfk` exit test, `#mgfk2` kick-out test);
-  desktop + mobile touch (`has_touch`, `tap`). Dev mode: `store.set('mgs_dev',{role:'master',devOn:true})` + reload. For deterministic logic: freeze with `window.requestAnimationFrame=()=>0;cancelAnimationFrame(FA.raf)`
-  (cancelling alone is NOT enough) and call `faStep(1/60)`; silence throws with `Object.assign(FA.cfg,{sausage:0,porchetta:0,meat:0,ladderP:0});FA.alg.wait=1e9`. `faRestart()` now leads to the intro card (`faIntroEnd()` to skip).
-  Scratch scripts are NOT in the repo and are lost between sessions — rebuild them; they go stale when the level indices change (a sausage only rolls toward a DR girder; index 0 is the spawn girder, 5 the top).
+  to that whitelist). Path: splash `#rsi` → `[data-tile=opt]` → `[data-otab=dev]` → open the accordion (`details.acc:has(#id) > summary`) → click (`#mgfa` floor 1, `#mgfa2` floor 2, `#mgfa4` floor 3, `#mgfk` floor-1 exit test,
+  `#mgfk2` collapse test); desktop + mobile touch (`has_touch`, `tap`). Dev mode: `store.set('mgs_dev',{role:'master',devOn:true})` + reload ("Sblocca tutto" = role master, `[data-sim="1"]`). For deterministic logic: freeze with
+  `window.requestAnimationFrame=()=>0;cancelAnimationFrame(FA.raf)` (cancelling alone is NOT enough) and call `faStep(1/60)`; silence throws with `Object.assign(FA.cfg,{sausage:0,porchetta:0,meat:0,ladderP:0});FA.alg.wait=1e9`;
+  `faLoadFloor(i,3,0);faIntroEnd()` jumps to a floor. Scratch scripts are NOT in the repo and are lost between sessions — rebuild them; they go stale when level indices change (index 0 = spawn girder, 5 = top; a sausage only rolls
+  toward a down-right girder; never name a page-side variable `L` or another global const in `evaluate`).
   `node --check` every `<script>` block first, then the smoke test. Real-time polling is flaky under CPU load.
 - **Patch scripts:** edit `index.html` with a Python script that asserts each anchor appears exactly once; the working copy is CRLF, so read with `newline=""`, normalise `chr(13)+chr(10)`→`chr(10)` for multi-line anchors and convert back on write.
-  JS `\u00e8` in a Python non-raw string becomes a real `è` and won't match the file: double the backslash. Never print base64; embed art in the chunk that first draws it. Measure size deltas against `git show HEAD:index.html` with CRLF normalised.
-- **Git Bash heredocs with quotes break on this machine** — write longer scripts with the Write tool. Console output of non-ASCII needs `PYTHONIOENCODING=utf-8`.
+  Use raw strings (`r'''...'''`) for JS containing `\u00e8`-style escapes. Never print base64; embed art in the chunk that first draws it. Measure size deltas against `git show HEAD:index.html` with CRLF normalised.
+- **Git Bash heredocs with quotes break on this machine** — write longer scripts with the Write tool (avoid `\n` inside one-line `python -` patches: it becomes a real newline). Console output of non-ASCII needs `PYTHONIOENCODING=utf-8`.
 - **Docs are committed together with the code.** Build doc text with `.replace` (no `%` formatting), and check `git diff --stat` shows CHANGELOG/CLAUDE.md before committing.
 - Each chunk: bump `VERSION` to `0.3_NN`, CHANGELOG entry with size delta, update the §10.8 row, commit `v0.3_NN: …`, push. A push can fail transiently — retry; follow §1 only if `origin/main` really moved.
 - Owner commits often land via the GitHub web UI (art uploads land at odd paths, e.g. `refs/ferma_algidone/fa_salsiccia.png` instead of `frames/`) — always `git pull --ff-only` first (§1).
@@ -647,12 +647,12 @@ elevators/rivets stay **code-drawn** (recoloured per floor); sausage roll-rotati
 | `fa_porchetta1` | 88×56 | alternative: roll with a slice cut off (optional, not a squash frame) | ×0.5 if used |
 | `fa_carne0-1` | 44×32 | bouncing meat: normal / squashed on landing (floor 3) | ×0.6 → 26×19 (0.3_25) |
 | `fa_fiamma0-3` | 25×32 | flame flicker (floor 3) | ×0.6 → 15×19 (0.3_25) |
-| `fa_griglia0-1` | 45×33 | grill at the bottom: coals dim / bright | fill D1's 80-px grill zone → ×1.78 (≈80×59) |
+| `fa_griglia0-1` | 45×33 | grill ON the bottom girder at its low end (floor 3): coals dim / bright | ×1.2 → 54×40 (0.3_32; supersedes the ×1.78 zone) |
 | `fa_scorte0-3` | 55×58 | stock pile: full → 2/3 → 1/3 → empty (stock bar / Algidone's crate) | ×0.5 → 27×29 |
 | `fa_scorte_b0-3` | 56×60 | alternative stock-pile set | same as above (pick one set in M4) |
 | `fa_bld_coccia` | 294×215 | floor-1 **in-level layer** (behind the girders, in front of the backdrop, ×0.6 = 176×129, bottom on the top girder at x=270; 0.3_25) **+ intro card** (M5, ×1) | ×0.6 in level / ×1 on the card |
 | `fa_bld_macelleria` | 213×126 | floor-2 in-level layer (0.3_30, same recipe, includes the delivery van) + intro card | ×0.6 in level / ×1 on the card (both in use) |
-| `fa_bld_fabbrica` | 280×218 | floor-3 in-level layer (M6, same recipe) + intro card | ×0.6 in level / ×1 on the card |
+| `fa_bld_fabbrica` | 280×218 | floor-3 in-level layer (0.3_32, same recipe) + intro card | ×0.6 in level / ×1 on the card (both in use) |
 | `fa_bg_coccia` / `fa_bg_macelleria` / `fa_bg_fabbrica` | 270×480 | level backdrops (portrait), behind the code structure | scale to 360 px wide (×1.33, cover-cropped vertically) — painted scenery, only non-integer case |
 
 The climber (Uomo roccia, head only) has **no new art**: see the Q12 row in §10.9. Sizes are decisions for M1+ and may be
@@ -687,7 +687,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | M4 | Lives, hits/death, stock bar, scoring, HUD, pause. **Acceptance (§10.9 DK death rules):** death = short pause/blink → clear ALL items and flames → respawn at start → ~2 s blinking invulnerability → throws resume after a grace delay; spawn area is safe (no flame patrol, no item hits during invulnerability); item hits require vertical overlap on the same level (never compare x alone); stock drain gives tens of seconds per floor and costs a life only when it truly empties; reaching the goal zone shows a win message | M3 | Sonnet · medium | done (0.3_26) |
 | M5 | Floor 1 "Coccia": building art + kick-out win sequence | Coccia building + backdrop **arrived** (`refs/ferma_algidone/`, §10.7) | Sonnet · medium | done (0.3_28) |
 | M6a | Floor 2 "Macelleria": floor progression (Avanti), belts that carry player/items and reverse, meat riding belts, climb-away exit | M5, art (arrived) | Sonnet · high | done (0.3_30) |
-| M6b | Floor 3 "Fabbrica di salsicce": elevators or rivets, bouncing meat, grill + flames, **final kick-out win** (`lv.last`, code exists), victory screen; decide the grill placement (does not fit under the new bottom girder in 610) | M6a, art (arrived) | Sonnet · high | todo |
+| M6b | Floor 3 "Fabbrica di salsicce": bolts + holes, bouncing meat, grill on the bottom girder + flames, final collapse win + victory screen | M6a, art (arrived) | Sonnet · high | done (0.3_32) |
 | M7 | Audio: synth placeholders + music/sfx slots that match export targets | A0 | Sonnet · medium | todo |
 | M8 | Integration: unlock/entry, Giochi card, popup, rewards, achievements, dev test buttons, save migration | P1 | Sonnet · medium | todo |
 | M9 | Mobile controls polish + balance pass | M8 | Sonnet · medium | todo |
@@ -769,6 +769,9 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-24 | 0.3_27 | Hit through girders | Root cause: box overlap only. Rule: an item hits only if no girder surface lies between its base and the player's feet (body centre on a ladder) at that x (`faSeparated`). Ladder-drop hits, refuge and jump windows unchanged |
 | 2026-09-24 | 0.3_27 | Eat frames | Draw path identical to the others; the difference is in the art. Only `fa_alg_eat0` is used; bite/chew animated in code. Art issue 2 stays open (owner may regenerate eat1/eat2). Cooked-sausage art: still waiting |
 | 2026-09-24 | M0 → M1 | M0 closed | All rounds/demos done and signed off; M1 (engine skeleton) starts |
+| 2026-09-24 | 0.3_32 (M6b) | Floor 3 mechanic and values (proposed, tunable in M9) | **Bolts** (closes M0 Q4): 8 (2 on each of rows 1-4), +50 each; picked by walking over them on the ground; a 26 px hole opens 0.5 s later (standing still there = you fall); items fall through holes; holes persist across deaths; last bolt = win, no goal zone. **Grill** ON the bottom girder at its low end, x1.2, obstacle for the player; every item reaching it spawns a flame (max 3, speed 60, life 6 s, patrol x 150..grill, may climb the ladder x=210 to row 1 only, 35 percent per pass). Meat hop unchanged (34 px, ~5 px clearance). Weights 3/1/2, throw pause 1.4-2.6 s |
+| 2026-09-24 | 0.3_32 (M6b) | Final win | Last bolt -> 3.7 s collapse (shake 1 s, girders fall top-first except the bottom one and the player's, Algidone falls with `kick1` to the bottom girder x=190, `kick2` sitting dazed, climber hops) -> panel "Algidone è a terra!" / "Coccia, Macelleria e Fabbrica sono di nuovo al sicuro." + total score and stock bonus; Rigioca (from floor 1) / Esci. **Supersedes the M5 headbutt kick-out** (removed). Rewards/achievements stay M8. Floor-3 intro line: "Algidone ha rilevato la Fabbrica di salsicce! Svita tutti i bulloni: senza, la sua fabbrica crolla." |
+| 2026-09-24 | 0.3_32 (M6b) | Engine fixes | Falling items land on the first supporting girder below at their x (skip shorter girders/holes); belt-riding items never go backwards (minimum 12 px/s toward the exit end; porchetta 34 against a reversing 45 px/s belt used to drift back off the left end). Amends the 0.3_30 belt rule "own speed + belt" |
 | 2026-09-24 | 0.3_31 (owner phone test of 0.3_29/0.3_30) | Accepted | All OK. Riprova = current floor (confirmed) |
 | 2026-09-24 | 0.3_31 | Row 2 left end | Player-only invisible stop at the girder's left end (`lv.stopLeft`), items still drop off; jumping there stays normal |
 | 2026-09-24 | 0.3_31 | Floor 3 decisions (for M6b) | **Grill** sits ON the bottom girder at its low end (like DK's oil drum), x1.2 (about 54x40), no world growth (supersedes the "grill under the bottom girder" open point). **Mechanic (closes M0 Q4): rivets/bolts, not elevators**: removing all of them collapses the structure -> Algidone falls -> final kick-out |
