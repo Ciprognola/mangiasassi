@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>M0 · D5 — HUD: punteggio, scorta, vite, pausa</title>
+<style>
+  :root{color-scheme:dark;--bg:#0b1220;--panel:#131d2e;--border:#223047;--text:#e6ecf5;--mute:#8fa0b8;
+    --girder:#c98a3b;--girder-dk:#96601f;--ladder:#5bb0d9;--ladder-dk:#2f7594;--ladder-broken:#6b6155;
+    --player:#e5484d;--goal:#ffce3d;--grill:#e0483c;--sausage:#c9683b;--porchetta:#a8432f;
+    --meat:#e8815a;--flame:#ff8a2e;--stock:#4ade80;--stock-low:#e5484d}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,sans-serif;
+    padding:8px;display:flex;flex-direction:column;align-items:center;gap:6px;
+    min-height:100vh;touch-action:none}
+  h1{font-size:16px;margin:0;text-align:center}
+  .sub{color:var(--mute);font-size:11.5px;text-align:center;max-width:380px;margin:0}
+  .stage-wrap{position:relative;border:2px solid var(--border);border-radius:10px;overflow:hidden;
+    background:linear-gradient(#0d1626,#0a121f);width:360px;max-width:100%}
+  .hud{display:flex;align-items:center;gap:8px;background:#0f1a2c;
+    padding:6px 8px;border-bottom:1px solid var(--border)}
+  .hud .score{font:700 13px ui-monospace,monospace;color:#ffce3d;min-width:64px}
+  .hud .lives{font-size:13px;letter-spacing:1px;min-width:44px}
+  .hud .stockwrap{flex:1;height:12px;background:#0a121f;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+  .hud .stockbar{height:100%;width:100%;background:var(--stock);transition:background .2s}
+  .hud .pausebtn{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:7px;
+    width:30px;height:26px;font-size:13px;cursor:pointer;flex-shrink:0}
+  canvas{display:block;touch-action:none}
+  .flash{position:absolute;inset:0;background:#e5484d;opacity:0;pointer-events:none;transition:opacity .08s linear}
+  .flash.on{opacity:.55}
+  .pauseOverlay{position:absolute;inset:0;background:rgba(10,16,26,.82);display:none;flex-direction:column;
+    align-items:center;justify-content:center;gap:12px}
+  .pauseOverlay.on{display:flex}
+  .pauseOverlay h2{margin:0;font-size:20px;color:var(--goal)}
+  .pauseOverlay button{background:var(--girder);border:none;color:#1a1204;border-radius:9px;padding:10px 22px;font:700 14px inherit;cursor:pointer}
+  .spawnrow{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;width:360px;max-width:100%}
+  .spawnrow button{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;
+    padding:7px 10px;font:11.5px inherit;cursor:pointer;flex:1;min-width:76px}
+  .spawnrow button:active{background:var(--girder);color:#1a1204}
+  .pad-row{display:flex;justify-content:space-between;align-items:flex-end;width:360px;max-width:100%}
+  .dpad{display:grid;grid-template-columns:58px 58px 58px;grid-template-rows:58px 58px 58px;gap:4px}
+  .dpad button{grid-column:2;background:var(--panel);border:1px solid var(--border);border-radius:9px;
+    color:var(--text);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  #du{grid-row:1}
+  #dl{grid-row:2;grid-column:1}
+  #dfill{grid-row:2;grid-column:2;visibility:hidden}
+  #dr{grid-row:2;grid-column:3}
+  #dd{grid-row:3}
+  .jumpbtn{width:76px;height:76px;border-radius:50%;background:var(--player);border:1px solid #8f1f24;
+    color:#fff;font-weight:700;font-size:13px;cursor:pointer}
+  button:active,button.held{background:var(--girder);border-color:var(--girder);color:#1a1204}
+  .jumpbtn:active,.jumpbtn.held{background:#ff8a8e;border-color:var(--player)}
+  .autorow{display:flex;gap:8px;align-items:center;font-size:11.5px;color:var(--mute)}
+  .autorow button{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:5px 10px;font:inherit;cursor:pointer}
+  .autorow button.on{background:#2a3f2a;border-color:#4ade80;color:#bff3cf}
+  footer{color:var(--mute);font-size:10.5px;text-align:center;max-width:380px}
+  kbd{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font:10.5px monospace}
+</style>
+</head>
+<body>
+<h1>M0 · D5 — HUD: punteggio, scorta, vite, pausa</h1>
+<p class="sub">Stessa struttura/fisica/oggetti di D1/D2/D3. Qui la zona HUD riservata diventa vera:
+punteggio, vite, scorta che si esaurisce (Q6), pausa.</p>
+
+<div class="stage-wrap">
+  <div class="hud">
+    <span class="score" id="scoreEl">0</span>
+    <div class="stockwrap"><div class="stockbar" id="stockBar"></div></div>
+    <span class="lives" id="livesEl">♥♥♥</span>
+    <button class="pausebtn" id="pauseBtn">❚❚</button>
+  </div>
+  <canvas id="cv" width="360" height="514"></canvas>
+  <div class="flash" id="flash"></div>
+  <div class="pauseOverlay" id="pauseOverlay">
+    <h2>Pausa</h2>
+    <button id="resumeBtn">Riprendi</button>
+  </div>
+</div>
+
+<div class="autorow">
+  <span>Lancio automatico da Algidone:</span>
+  <button class="on" id="autoBtn">Attivo</button>
+</div>
+<div class="spawnrow">
+  <button id="spSaus">🌭 Salsiccia</button>
+  <button id="spPorc">🍖 Porchetta</button>
+  <button id="spMeat">🥩 Rimbalza</button>
+</div>
+
+<div class="pad-row">
+  <div class="dpad">
+    <button id="du">▲</button>
+    <button id="dl">◀</button>
+    <div id="dfill"></div>
+    <button id="dr">▶</button>
+    <button id="dd">▼</button>
+  </div>
+  <button class="jumpbtn" id="jbtn">SALTA</button>
+</div>
+
+<footer>La scorta (barra verde) si esaurisce da sola, come il timer bonus di Donkey Kong (M0 Q6) — a zero
+si perde una vita e riparte piena. <kbd>❚❚</kbd> mette in pausa: nessun oggetto/timer si muove.</footer>
+
+<script>
+const cv = document.getElementById('cv'), x = cv.getContext('2d'), flashEl = document.getElementById('flash');
+const scoreEl = document.getElementById('scoreEl'), livesEl = document.getElementById('livesEl'), stockBarEl = document.getElementById('stockBar');
+const pauseOverlay = document.getElementById('pauseOverlay');
+const W = cv.width, H = cv.height;
+
+/* ============ STESSI DATI DI LIVELLO DI D1/D2/D3 (canvas piu' basso: l'HUD ora e' un elemento DOM sopra,
+   non piu' una zona riservata dentro il canvas) ============ */
+const GIRDERS = [
+  { x1: 20, y1: 395, x2: 340, y2: 373 },
+  { x1: 20, y1: 288, x2: 340, y2: 310 },
+  { x1: 20, y1: 225, x2: 340, y2: 203 },
+  { x1: 20, y1: 118, x2: 340, y2: 140 },
+  { x1: 20, y1: 44,  x2: 340, y2: 44  },
+];
+const LADDERS = [
+  { x: 300, gTop: 1, gBot: 0 },
+  { x: 60,  gTop: 2, gBot: 1 },
+  { x: 190, gTop: 2, gBot: 1, broken: true, brokenFrac: 0.6 },
+  { x: 300, gTop: 3, gBot: 2 },
+  { x: 60,  gTop: 4, gBot: 3 },
+  { x: 230, gTop: 4, gBot: 3, broken: true, brokenFrac: 0.55 },
+];
+function girderYAt(g, px) {
+  const cx = Math.max(g.x1, Math.min(g.x2, px));
+  const t = (cx - g.x1) / (g.x2 - g.x1);
+  return g.y1 + (g.y2 - g.y1) * t;
+}
+function ladderTopY(l) {
+  const yBotG = girderYAt(GIRDERS[l.gBot], l.x), yTopG = girderYAt(GIRDERS[l.gTop], l.x);
+  return l.broken ? (yBotG + (yTopG - yBotG) * (1 - l.brokenFrac)) : yTopG;
+}
+const ALGIDONE = { x: 55, gi: 4 };
+const GRILL = { x1: 258, x2: 338 };
+const START = { x: 40, gi: 0 };
+
+/* ============ FISICA GIOCATORE (valori di D3) ============ */
+const GRAVITY = 980, WALK_SPEED = 120, CLIMB_SPEED = 105, JUMP_VY = -330;
+const LADDER_SNAP_X = 28, COYOTE_MS = 80, BUFFER_MS = 100, FALL_DAMAGE_DIST = 95;
+
+const P = { x: START.x, y: 0, vx: 0, vy: 0, onGround: true, gi: START.gi, climbing: null, facing: 1, w: 18, h: 26, invuln: 0 };
+P.y = girderYAt(GIRDERS[START.gi], P.x);
+let lives = 3, score = 0, coyoteTimer = 1e9, bufferTimer = 1e9, airStartY = null, flashT = 0;
+
+/* ============ SCORTA (M0 Q6): timer costante come il bonus di Donkey Kong, vuota = vita persa, poi riparte ============ */
+const STOCK_DURATION = 45; // secondi per uno svuotamento completo (valore di prova, da tarare)
+let stock = STOCK_DURATION;
+function drainStock(dt) {
+  if (paused) return;
+  stock -= dt;
+  if (stock <= 0) { stock = STOCK_DURATION; hitPlayer(); }
+  const pct = Math.max(0, stock / STOCK_DURATION);
+  stockBarEl.style.width = (pct * 100) + '%';
+  stockBarEl.style.background = pct < 0.25 ? getComputedStyle(document.documentElement).getPropertyValue('--stock-low') : getComputedStyle(document.documentElement).getPropertyValue('--stock');
+}
+
+/* ============ PAUSA ============ */
+let paused = false;
+function setPaused(v) { paused = v; pauseOverlay.classList.toggle('on', paused); }
+document.getElementById('pauseBtn').onclick = () => setPaused(!paused);
+document.getElementById('resumeBtn').onclick = () => setPaused(false);
+addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') setPaused(!paused); });
+
+const keys = {};
+addEventListener('keydown', e => {
+  if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)) e.preventDefault();
+  keys[e.key] = true;
+  if (e.key === ' ') requestJump();
+});
+addEventListener('keyup', e => { keys[e.key] = false; });
+const touch = { l:false, r:false, u:false, d:false };
+function bindHold(id, on, off) {
+  const el = document.getElementById(id);
+  const start = e => { e.preventDefault(); el.classList.add('held'); on(); };
+  const end = e => { e.preventDefault(); el.classList.remove('held'); off(); };
+  el.addEventListener('pointerdown', start); el.addEventListener('pointerup', end);
+  el.addEventListener('pointerleave', end); el.addEventListener('pointercancel', end);
+}
+bindHold('dl', () => touch.l = true, () => touch.l = false);
+bindHold('dr', () => touch.r = true, () => touch.r = false);
+bindHold('du', () => touch.u = true, () => touch.u = false);
+bindHold('dd', () => touch.d = true, () => touch.d = false);
+document.getElementById('jbtn').addEventListener('pointerdown', e => { e.preventDefault(); requestJump(); });
+function inputLeft()  { return !paused && (keys['ArrowLeft']  || keys['a'] || keys['A'] || touch.l); }
+function inputRight() { return !paused && (keys['ArrowRight'] || keys['d'] || keys['D'] || touch.r); }
+function inputUp()    { return !paused && (keys['ArrowUp']    || keys['w'] || keys['W'] || touch.u); }
+function inputDown()  { return !paused && (keys['ArrowDown']  || keys['s'] || keys['S'] || touch.d); }
+
+function nearestLadder() {
+  let best = null, bestD = LADDER_SNAP_X;
+  for (const l of LADDERS) { if (l.gTop !== P.gi && l.gBot !== P.gi) continue; const d = Math.abs(P.x - l.x); if (d < bestD) { bestD = d; best = l; } }
+  return best;
+}
+function requestJump() {
+  if (paused || P.climbing) return;
+  if (P.onGround || coyoteTimer < COYOTE_MS) doJumpNow();
+  else bufferTimer = 0;
+}
+function doJumpNow() { P.onGround = false; P.vy = JUMP_VY; airStartY = P.y; coyoteTimer = 1e9; }
+
+function hitPlayer() {
+  if (P.invuln > 0) return;
+  lives -= 1; if (lives <= 0) lives = 3;
+  flashT = 0.18; P.invuln = 1.2;
+  P.x = START.x; P.gi = START.gi; P.y = girderYAt(GIRDERS[START.gi], P.x);
+  P.vx = 0; P.vy = 0; P.onGround = true; P.climbing = null;
+  livesEl.textContent = '♥'.repeat(lives);
+}
+
+let items = [], nextId = 1;
+function spawnSausage(gi, xStart, dir) { items.push({ id: nextId++, type: 'sausage', gi: gi ?? ALGIDONE.gi, x: xStart ?? ALGIDONE.x + 20, dir: dir ?? 1, speed: 70, jumped: false, r: 9 }); }
+function spawnPorchetta() { items.push({ id: nextId++, type: 'porchetta', gi: ALGIDONE.gi, x: ALGIDONE.x + 24, dir: 1, speed: 34, jumped: false, r: 15 }); }
+function spawnMeat() { items.push({ id: nextId++, type: 'meat', gi: ALGIDONE.gi, x: ALGIDONE.x + 20, y: null, vy: 0, dir: (Math.random() < 0.5 ? -1 : 1), speed: 55, jumped: false, r: 8, bounces: 0 }); }
+function spawnFlame(atX) { items.push({ id: nextId++, type: 'flame', gi: 0, x: atX, dir: (Math.random() < 0.5 ? -1 : 1), speed: 60, r: 10, life: 6 }); }
+function ladderAt(gi, px) { return LADDERS.find(l => (l.gBot === gi) && Math.abs(l.x - px) < 5); }
+
+function stepItems(dt) {
+  for (const it of items) {
+    if (it.type === 'sausage' || it.type === 'porchetta' || it.type === 'flame') {
+      const g = GIRDERS[it.gi];
+      it.x += it.dir * it.speed * dt;
+      if (it.type !== 'flame') {
+        const l = ladderAt(it.gi, it.x);
+        if (l && Math.random() < 0.06 && it.gi > 0) { it.gi -= 1; it.x = l.x; continue; }
+      }
+      if (it.x <= g.x1 || it.x >= g.x2) {
+        it.x = Math.max(g.x1, Math.min(g.x2, it.x));
+        if (it.gi > 0) { it.gi -= 1; }
+        else { if (it.type === 'sausage' && it.x >= GRILL.x1 - 10 && it.x <= GRILL.x2 + 10) spawnFlame((GRILL.x1 + GRILL.x2) / 2); it.dead = true; continue; }
+        it.dir *= -1;
+      }
+      it.y = girderYAt(GIRDERS[it.gi], it.x);
+      if (it.type === 'flame') { it.life -= dt; if (it.life <= 0) it.dead = true; }
+    } else if (it.type === 'meat') {
+      if (it.y == null) it.y = girderYAt(GIRDERS[it.gi], it.x);
+      it.x += it.dir * it.speed * dt;
+      it.vy += GRAVITY * 0.6 * dt; it.y += it.vy * dt;
+      const floorY = it.gi >= 0 ? girderYAt(GIRDERS[Math.max(0, it.gi)], it.x) : H;
+      if (it.vy >= 0 && it.y >= floorY) {
+        it.y = floorY; it.vy = -420; it.bounces++;
+        if (it.bounces >= 2) { it.gi -= 1; it.bounces = 0; if (it.gi < 0) it.dead = true; }
+      }
+    }
+  }
+  items = items.filter(it => !it.dead);
+}
+
+function checkCollisions() {
+  if (P.invuln > 0) return;
+  for (const it of items) {
+    if (it.jumped) continue;
+    const dx = Math.abs(P.x - it.x); const reach = it.r + 11;
+    if (dx >= reach) continue;
+    if (it.type === 'porchetta') { hitPlayer(); continue; }
+    const itemTopY = it.y - it.r * 2 - 2;
+    if (P.y < itemTopY) { it.jumped = true; score += 10; scoreEl.textContent = score; }
+    else hitPlayer();
+  }
+}
+
+let autoOn = true, autoTimer = 1.6;
+document.getElementById('autoBtn').onclick = e => { autoOn = !autoOn; e.target.classList.toggle('on', autoOn); e.target.textContent = autoOn ? 'Attivo' : 'Fermo'; };
+document.getElementById('spSaus').onclick = () => spawnSausage();
+document.getElementById('spPorc').onclick = () => spawnPorchetta();
+document.getElementById('spMeat').onclick = () => spawnMeat();
+
+let last = performance.now();
+function step(now) {
+  const dt0 = Math.min(0.033, Math.max(0, (now - last) / 1000)); last = now;
+  const dt = paused ? 0 : dt0;
+  if (!paused) {
+    coyoteTimer += dt * 1000; bufferTimer += dt * 1000;
+    if (P.invuln > 0) P.invuln -= dt;
+    drainStock(dt);
+    if (autoOn) { autoTimer -= dt; if (autoTimer <= 0) { autoTimer = 1.6 + Math.random() * 1.4; (Math.random() < 0.25 ? spawnPorchetta : spawnSausage)(); } }
+
+    if (P.climbing) {
+      const l = P.climbing;
+      const yTop = ladderTopY(l), yBot = girderYAt(GIRDERS[l.gBot], l.x);
+      if (inputUp()) P.y -= CLIMB_SPEED * dt; else if (inputDown()) P.y += CLIMB_SPEED * dt;
+      P.x = l.x;
+      if (P.y <= yTop) { P.y = yTop; if (!l.broken) { P.gi = l.gTop; P.climbing = null; P.onGround = true; } }
+      else if (P.y >= yBot) { P.y = yBot; P.gi = l.gBot; P.climbing = null; P.onGround = true; }
+    } else {
+      P.vx = inputLeft() ? -WALK_SPEED : inputRight() ? WALK_SPEED : 0;
+      if (P.vx < 0) P.facing = -1; else if (P.vx > 0) P.facing = 1;
+      P.x += P.vx * dt; P.x = Math.max(14, Math.min(W - 14, P.x));
+      if (P.onGround) {
+        const l = nearestLadder();
+        if (l && inputUp() && l.gBot === P.gi) { P.climbing = l; P.onGround = false; P.x = l.x; }
+        else if (l && inputDown() && l.gTop === P.gi && !l.broken) { P.climbing = l; P.onGround = false; P.x = l.x; }
+        else {
+          const g = GIRDERS[P.gi];
+          if (P.x >= g.x1 && P.x <= g.x2) { P.y = girderYAt(g, P.x); coyoteTimer = 0; }
+          else { P.onGround = false; airStartY = P.y; coyoteTimer = 0; }
+        }
+      }
+      if (!P.onGround && !P.climbing) {
+        P.vy += GRAVITY * dt; const prevY = P.y; P.y += P.vy * dt;
+        if (P.vy >= 0) {
+          for (let i = 0; i < GIRDERS.length; i++) {
+            const g = GIRDERS[i]; if (P.x < g.x1 || P.x > g.x2) continue;
+            const gy = girderYAt(g, P.x);
+            if (prevY <= gy && P.y >= gy) {
+              const fellDist = airStartY == null ? 0 : (gy - airStartY);
+              P.y = gy; P.vy = 0; P.onGround = true; P.gi = i;
+              if (fellDist > FALL_DAMAGE_DIST) hitPlayer();
+              else if (bufferTimer < BUFFER_MS) doJumpNow();
+              airStartY = null; break;
+            }
+          }
+        }
+        if (P.y > H + 60) hitPlayer();
+      }
+    }
+
+    stepItems(dt);
+    checkCollisions();
+    if (flashT > 0) { flashT -= dt; flashEl.classList.toggle('on', flashT > 0); }
+  }
+
+  draw();
+  requestAnimationFrame(step);
+}
+
+function draw() {
+  x.clearRect(0, 0, W, H);
+  x.fillStyle = 'rgba(224,72,60,.18)'; x.fillRect(GRILL.x1, 402, GRILL.x2 - GRILL.x1, 60);
+  x.strokeStyle = getVar('--grill'); x.lineWidth = 2; x.strokeRect(GRILL.x1, 402, GRILL.x2 - GRILL.x1, 60);
+
+  x.lineCap = 'round';
+  LADDERS.forEach(l => {
+    const yBotG = girderYAt(GIRDERS[l.gBot], l.x), yTop = ladderTopY(l);
+    x.strokeStyle = l.broken ? getVar('--ladder-broken') : getVar('--ladder'); x.lineWidth = 6;
+    x.beginPath(); x.moveTo(l.x, yTop); x.lineTo(l.x, yBotG); x.stroke();
+    x.strokeStyle = l.broken ? '#4a4237' : getVar('--ladder-dk'); x.lineWidth = 3;
+    for (let py = yTop + 8; py < yBotG; py += 14) { x.beginPath(); x.moveTo(l.x - 7, py); x.lineTo(l.x + 7, py); x.stroke(); }
+  });
+  GIRDERS.forEach(g => {
+    x.strokeStyle = getVar('--girder-dk'); x.lineWidth = 14;
+    x.beginPath(); x.moveTo(g.x1, g.y1 + 3); x.lineTo(g.x2, g.y2 + 3); x.stroke();
+    x.strokeStyle = getVar('--girder'); x.lineWidth = 10;
+    x.beginPath(); x.moveTo(g.x1, g.y1); x.lineTo(g.x2, g.y2); x.stroke();
+  });
+
+  const ay = girderYAt(GIRDERS[ALGIDONE.gi], ALGIDONE.x);
+  x.fillStyle = getVar('--goal');
+  x.beginPath(); x.arc(ALGIDONE.x, ay - 18, 14, 0, 7); x.fill();
+  x.fillRect(ALGIDONE.x - 10, ay - 34, 20, 18);
+
+  items.forEach(it => {
+    if (it.type === 'sausage') { x.fillStyle = getVar('--sausage'); x.beginPath(); x.ellipse(it.x, it.y - it.r, it.r * 1.4, it.r, 0, 0, 7); x.fill(); }
+    else if (it.type === 'porchetta') { x.fillStyle = getVar('--porchetta'); x.beginPath(); x.ellipse(it.x, it.y - it.r, it.r * 1.6, it.r * 1.2, 0, 0, 7); x.fill(); }
+    else if (it.type === 'meat') { x.fillStyle = getVar('--meat'); x.beginPath(); x.arc(it.x, it.y - it.r, it.r, 0, 7); x.fill(); }
+    else if (it.type === 'flame') { x.fillStyle = getVar('--flame'); x.beginPath(); x.arc(it.x, it.y - it.r, it.r, 0, 7); x.fill(); x.fillStyle = '#ffe08a'; x.beginPath(); x.arc(it.x, it.y - it.r - 3, it.r * 0.5, 0, 7); x.fill(); }
+  });
+
+  x.save();
+  x.translate(P.x, P.y);
+  if (P.facing < 0) x.scale(-1, 1);
+  x.globalAlpha = P.invuln > 0 && Math.floor(P.invuln * 12) % 2 ? 0.4 : 1;
+  x.fillStyle = getVar('--player');
+  x.beginPath(); x.arc(0, -P.h - 4, 8, 0, 7); x.fill();
+  x.fillRect(-P.w / 2, -P.h, P.w, P.h - 4);
+  x.fillStyle = '#1a0506'; x.fillRect(2, -P.h - 6, 3, 3);
+  x.restore();
+}
+
+const _cssCache = {};
+function getVar(name) { if (!_cssCache[name]) _cssCache[name] = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); return _cssCache[name]; }
+
+livesEl.textContent = '♥'.repeat(lives);
+requestAnimationFrame(step);
+</script>
+</body>
+</html>
