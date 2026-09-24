@@ -1,0 +1,98 @@
+{
+ "skin": "geka",
+ "character": "uomo_roccia",
+ "mode": "replace",
+ "note": "ox,oy = where the base frame top-left sits inside the skin image (padding for parts drawn outside the base frame).",
+ "frames": {
+  "f0": {
+   "file": "frames/sk_geka_f0.png",
+   "w": 103,
+   "h": 92,
+   "base_w": 96,
+   "base_h": 85,
+   "ox": 0,
+   "oy": 7
+  },
+  "f1": {
+   "file": "frames/sk_geka_f1.png",
+   "w": 103,
+   "h": 90,
+   "base_w": 96,
+   "base_h": 86,
+   "ox": 0,
+   "oy": 4
+  },
+  "f2": {
+   "file": "frames/sk_geka_f2.png",
+   "w": 103,
+   "h": 92,
+   "base_w": 96,
+   "base_h": 89,
+   "ox": 0,
+   "oy": 3
+  },
+  "e0": {
+   "file": "frames/sk_geka_e0.png",
+   "w": 117,
+   "h": 94,
+   "base_w": 117,
+   "base_h": 94,
+   "ox": 0,
+   "oy": 0
+  },
+  "e1": {
+   "file": "frames/sk_geka_e1.png",
+   "w": 113,
+   "h": 94,
+   "base_w": 113,
+   "base_h": 94,
+   "ox": 0,
+   "oy": 0
+  },
+  "fd0": {
+   "file": "frames/sk_geka_fd0.png",
+   "w": 78,
+   "h": 92,
+   "base_w": 78,
+   "base_h": 88,
+   "ox": 0,
+   "oy": 1
+  },
+  "fd1": {
+   "file": "frames/sk_geka_fd1.png",
+   "w": 78,
+   "h": 93,
+   "base_w": 78,
+   "base_h": 88,
+   "ox": 0,
+   "oy": 1
+  },
+  "fd2": {
+   "file": "frames/sk_geka_fd2.png",
+   "w": 75,
+   "h": 91,
+   "base_w": 75,
+   "base_h": 88,
+   "ox": 0,
+   "oy": 0
+  },
+  "fu0": {
+   "file": "frames/sk_geka_fu0.png",
+   "w": 75,
+   "h": 88,
+   "base_w": 75,
+   "base_h": 88,
+   "ox": 0,
+   "oy": 0
+  },
+  "fu3": {
+   "file": "frames/sk_geka_fu3.png",
+   "w": 75,
+   "h": 88,
+   "base_w": 75,
+   "base_h": 88,
+   "ox": 0,
+   "oy": 0
+  }
+ }
+}

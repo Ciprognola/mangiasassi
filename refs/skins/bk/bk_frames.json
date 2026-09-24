@@ -1,0 +1,251 @@
+{
+ "skin": "bk",
+ "character": "algidone",
+ "mode": "replace",
+ "note": "ox,oy = where the base frame top-left sits inside the skin image (padding for parts drawn outside the base frame).",
+ "frames": {
+  "al_st": {
+   "file": "frames/sk_bk_al_st.png",
+   "w": 72,
+   "h": 100,
+   "base_w": 72,
+   "base_h": 100,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_w0": {
+   "file": "frames/sk_bk_al_w0.png",
+   "w": 75,
+   "h": 100,
+   "base_w": 75,
+   "base_h": 100,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_w1": {
+   "file": "frames/sk_bk_al_w1.png",
+   "w": 75,
+   "h": 100,
+   "base_w": 75,
+   "base_h": 100,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_w2": {
+   "file": "frames/sk_bk_al_w2.png",
+   "w": 75,
+   "h": 100,
+   "base_w": 75,
+   "base_h": 100,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_w3": {
+   "file": "frames/sk_bk_al_w3.png",
+   "w": 76,
+   "h": 100,
+   "base_w": 75,
+   "base_h": 100,
+   "ox": 1,
+   "oy": 0
+  },
+  "al_w4": {
+   "file": "frames/sk_bk_al_w4.png",
+   "w": 75,
+   "h": 100,
+   "base_w": 75,
+   "base_h": 100,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_w5": {
+   "file": "frames/sk_bk_al_w5.png",
+   "w": 75,
+   "h": 100,
+   "base_w": 75,
+   "base_h": 100,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_w6": {
+   "file": "frames/sk_bk_al_w6.png",
+   "w": 75,
+   "h": 100,
+   "base_w": 75,
+   "base_h": 100,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_w7": {
+   "file": "frames/sk_bk_al_w7.png",
+   "w": 76,
+   "h": 100,
+   "base_w": 75,
+   "base_h": 100,
+   "ox": 1,
+   "oy": 0
+  },
+  "al_d_st": {
+   "file": "frames/sk_bk_al_d_st.png",
+   "w": 73,
+   "h": 100,
+   "base_w": 73,
+   "base_h": 100,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_d0": {
+   "file": "frames/sk_bk_al_d0.png",
+   "w": 72,
+   "h": 100,
+   "base_w": 72,
+   "base_h": 100,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_d1": {
+   "file": "frames/sk_bk_al_d1.png",
+   "w": 74,
+   "h": 100,
+   "base_w": 74,
+   "base_h": 100,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_d2": {
+   "file": "frames/sk_bk_al_d2.png",
+   "w": 70,
+   "h": 100,
+   "base_w": 70,
+   "base_h": 100,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_d3": {
+   "file": "frames/sk_bk_al_d3.png",
+   "w": 72,
+   "h": 100,
+   "base_w": 72,
+   "base_h": 100,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_u0": {
+   "file": "frames/sk_bk_al_u0.png",
+   "w": 90,
+   "h": 100,
+   "base_w": 89,
+   "base_h": 100,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_u1": {
+   "file": "frames/sk_bk_al_u1.png",
+   "w": 80,
+   "h": 100,
+   "base_w": 80,
+   "base_h": 100,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_u2": {
+   "file": "frames/sk_bk_al_u2.png",
+   "w": 78,
+   "h": 100,
+   "base_w": 78,
+   "base_h": 100,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_u3": {
+   "file": "frames/sk_bk_al_u3.png",
+   "w": 76,
+   "h": 100,
+   "base_w": 75,
+   "base_h": 100,
+   "ox": 1,
+   "oy": 0
+  },
+  "al_u4": {
+   "file": "frames/sk_bk_al_u4.png",
+   "w": 76,
+   "h": 100,
+   "base_w": 76,
+   "base_h": 100,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_u5": {
+   "file": "frames/sk_bk_al_u5.png",
+   "w": 76,
+   "h": 100,
+   "base_w": 75,
+   "base_h": 100,
+   "ox": 1,
+   "oy": 0
+  },
+  "al_r0": {
+   "file": "frames/sk_bk_al_r0.png",
+   "w": 67,
+   "h": 64,
+   "base_w": 67,
+   "base_h": 64,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_r1": {
+   "file": "frames/sk_bk_al_r1.png",
+   "w": 67,
+   "h": 64,
+   "base_w": 67,
+   "base_h": 64,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_r2": {
+   "file": "frames/sk_bk_al_r2.png",
+   "w": 67,
+   "h": 64,
+   "base_w": 67,
+   "base_h": 64,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_r3": {
+   "file": "frames/sk_bk_al_r3.png",
+   "w": 67,
+   "h": 64,
+   "base_w": 67,
+   "base_h": 64,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_r4": {
+   "file": "frames/sk_bk_al_r4.png",
+   "w": 67,
+   "h": 64,
+   "base_w": 67,
+   "base_h": 64,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_r5": {
+   "file": "frames/sk_bk_al_r5.png",
+   "w": 67,
+   "h": 64,
+   "base_w": 67,
+   "base_h": 64,
+   "ox": 0,
+   "oy": 0
+  },
+  "al_r6": {
+   "file": "frames/sk_bk_al_r6.png",
+   "w": 67,
+   "h": 64,
+   "base_w": 67,
+   "base_h": 64,
+   "ox": 0,
+   "oy": 0
+  }
+ }
+}
