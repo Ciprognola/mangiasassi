@@ -3,12 +3,12 @@
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
 ## SESSION HANDOFF (2026-09-24 → next session)
-**State:** `VERSION` = `0.3_33`, everything pushed to `main`, `git status` clean.
+**State:** `VERSION` = `0.3_34`, everything pushed to `main`, `git status` clean.
 **Done through M6b** (§10.8): M0-M6b — **all three floors of Ferma Algidone! exist and are playable end to end** (dev entry points + the "Sblocca tutto" Giochi card). 0.3_31 = owner feedback 3 (skin reward previews worn, Sblocca tutto covers
 skins/tiles/Ferma card, row-2 left stop, locked-tile toast; the BK path is fine, the owner just hadn't won 10 REAL blackjack hands), 0.3_32 = floor 3 (bolts + holes, grill + flames, bouncing meat) + the collapse final win. Decisions in §10.9 and `CHANGELOG.md`.
 
 **Waiting on the owner:** phone test of 0.3_33 (bigger buildings, Riprova from floor 1); 0.3_31/0.3_32 gameplay was already accepted (earlier items: bolt spacing, hole width/delay, flame difficulty and ladder climbing, the collapse timing/shake, floor-3 difficulty, the intro card at x1 on phones). Address their feedback first.
-**Next chunks (only after the owner's sign-off):** M7 audio placeholders (synth SFX set + stock-low beep, slots matching export targets), then M8 integration (unlock/entry = random encounter from girone 5 + forced by girone 10, Giochi card
+**Done in 0.3_34: M7** (12 synth SFX slots `sound.fa.<slot>`, dev upload/reset, export targets; the dev-run silence was simply the missing M7). **Next chunks (only after the owner's sign-off):** M8 integration (unlock/entry = random encounter from girone 5 + forced by girone 10, Giochi card
 "Ferma Algidone!", popup, rewards via sordi/exp, "Minigiochi" achievements, roadmap tile 10 = first real clear of floor 1, dev test buttons, save migration), then M9 (mobile controls polish + balance of every tunable in §10.9), then REL (0.4).
 
 **M8 rules already decided (see §10.9 0.3_33):** encounter = 1/2/3 floors by encounter number, no Riprova in encounters, loss = no reward and the maze run continues. In the standalone/dev game Riprova restarts from floor 1.
@@ -690,7 +690,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | M5 | Floor 1 "Coccia": building art + kick-out win sequence | Coccia building + backdrop **arrived** (`refs/ferma_algidone/`, §10.7) | Sonnet · medium | done (0.3_28) |
 | M6a | Floor 2 "Macelleria": floor progression (Avanti), belts that carry player/items and reverse, meat riding belts, climb-away exit | M5, art (arrived) | Sonnet · high | done (0.3_30) |
 | M6b | Floor 3 "Fabbrica di salsicce": bolts + holes, bouncing meat, grill on the bottom girder + flames, final collapse win + victory screen | M6a, art (arrived) | Sonnet · high | done (0.3_32) |
-| M7 | Audio: synth placeholders + music/sfx slots that match export targets | A0 | Sonnet · medium | todo |
+| M7 | Audio: synth placeholders + slots `sound.fa.<slot>` through the A0 layer, dev upload/reset + export targets, sound in dev/SIM/sim runs | A0 | Sonnet · medium | done (0.3_34) |
 | M8 | Integration: unlock/entry, Giochi card, popup, rewards, achievements, dev test buttons, save migration | P1 | Sonnet · medium | todo |
 | M9 | Mobile controls polish + balance pass | M8 | Sonnet · medium | todo |
 | REL | Release build "0.4": VERSION, CHANGELOG, README, DEVELOPERS.md (new audio targets), roll base to 0.4 in §6/§7/§9, tag `v0.4` | all | Sonnet · low | todo |
@@ -771,6 +771,8 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-24 | 0.3_27 | Hit through girders | Root cause: box overlap only. Rule: an item hits only if no girder surface lies between its base and the player's feet (body centre on a ladder) at that x (`faSeparated`). Ladder-drop hits, refuge and jump windows unchanged |
 | 2026-09-24 | 0.3_27 | Eat frames | Draw path identical to the others; the difference is in the art. Only `fa_alg_eat0` is used; bite/chew animated in code. Art issue 2 stays open (owner may regenerate eat1/eat2). Cooked-sausage art: still waiting |
 | 2026-09-24 | M0 → M1 | M0 closed | All rounds/demos done and signed off; M1 (engine skeleton) starts |
+| 2026-09-24 | 0.3_34 (owner phone test) | Bug: no audio in dev runs of Ferma Algidone! | Everything else fine. Root cause: the mini-game had **no audio at all yet** (M7 unbuilt); nothing was gated by dev/test/SIM. Rule confirmed: sound plays in dev runs, `SIM()` and "Sblocca tutto" exactly as in a real run (dev only blocks saving, never audio). Built as M7 in 0.3_34 |
+| 2026-09-24 | 0.3_34 (M7) | Audio slots and export targets (**list for DEVELOPERS.md at REL**) | Bucket `SND.fa`, IDB `snd_fa_<slot>`, target **`sound.fa.<slot>`** (shared) for: `jump`, `land`, `climb`, `throw`, `hit`, `ping`, `win`, `low`, `bolt`, `belt`, `flame`, `collapse` (labels in `FA_SLOTS`). File name convention like the others: `sound_fa_jump.mp3`. No music. `low` = one beep per 2 s under 25 percent stock; `belt` fires with the red chevron blink; `win` is used for a floor exit and the final victory; `collapse` is the ~1.6 s rumble of the final collapse |
 | 2026-09-24 | 0.3_33 (owner phone test of 0.3_31/0.3_32) | Accepted | Gameplay good. Flames climbing to the second girder accepted. Headbutt kick-out removal in 0.3_32 accepted (recoverable from 0.3_28, noted in §8). Future Giocatore cards read "In arrivo" under Sblocca tutto |
 | 2026-09-24 | 0.3_33 | **Random encounters (for M8, not built yet)** | An encounter asks for N floors to complete: **1 the first time, 2 the second, 3 from the third on**. **No Riprova inside encounters**; game over = encounter lost, no reward, the maze run continues (M0 round 3 rule unchanged). Covers the §8 "first encounter ends at floor 1, harder later" idea |
 | 2026-09-24 | 0.3_33 | Building scale | Buildings match Coccia's on-screen width (~176 px): Macelleria x0.826, Fabbrica x0.629 (both centred x=270); Algidone stays x0.6 on every floor. The x0.6 Macelleria looked crammed next to him |

@@ -1649,3 +1649,19 @@ Owner feedback 4 after the phone test of 0.3_31/0.3_32 (gameplay good).
 - **Sblocca tutto**: the two future Giocatore cards (El Gamblador, Il Professore) read "In arrivo" instead of "Bloccato" while it is active (real state still says "Bloccato").
 - **`index.html` size delta: +47 bytes.** Verified headless (touch): both buildings, Riprova from floor 3 -> floor 1 / score 0 / 3 lives, card labels real vs sim, floor-3 smoke, 0 console errors.
 - Not tested: how the larger buildings look on a real phone.
+
+## 0.3_34 — 2026-09-24
+M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
+- **Root cause of the silence in dev runs**: Ferma Algidone! had **no audio at all yet** - M7 was not built, so no code path played a sound (nothing gated behind dev / test / `SIM()`; `beep`/`playSnd` only look at the Options "suono" switch,
+  and the AudioContext was fine). Now every run type plays sound exactly like a real one: the dev floor buttons, "Sblocca tutto" (sim) launches from the Giochi card and the future real entry. Dev only blocks saving, never audio.
+  Belt and braces: `startFerma` resumes the AudioContext inside the user gesture and the first pad touch resumes it again.
+- **12 slots** in a new A0-layer bucket `SND.fa` (lookup: IndexedDB override -> built-in -> synth), keys `snd_fa_<slot>`, export targets **`sound.fa.<slot>`** (character `shared`): `jump` (salto), `land` (atterraggio), `climb` (passo sulla scala, one tic per 0.16 s),
+  `throw` (lancio di Algidone), `hit` (colpo o caduta), `ping` (oggetto scavalcato), `win` (piano completato and the final victory), `low` (scorta sotto il 25 percento: one beep every 2 s), `bolt` (bullone tolto), `belt` (avviso di inversione,
+  fired with the red chevron blink), `flame` (vampata della griglia / fiamma), `collapse` (crollo finale, ~1.6 s rumble). No music (M0 Q13). Synth levels in the same range as the maze sounds; the Options sound switch mutes them (verified).
+- **Dev panel**: Options > Sviluppatore > Audio > "Ferma Algidone! · Suoni (12)" with Carica / ▶ / Rimuovi per slot (the generic `data-sf` / `data-sp` / `data-sr` handlers, already whitelisted; no sound on the dev buttons themselves).
+  Options reset clears the IDB layer; `expAudioItems` and the export targets doc (`exportTargetsMd`) list the new targets.
+- **`index.html` size delta: +3216 bytes.**
+- Verified headless (real keys + touch, spies on `playSnd` and on the oscillator/buffer nodes): every slot fires from the real game code (jump, land, climb, throw, ping, hit, low in a floor-1 dev run; belt on floor 2; flame, bolt, collapse, win on floor 3;
+  win on the floor-1 exit), AudioContext `running`, 14 oscillator nodes in a run, 0 when muted; upload of a real wav -> `SND.fa.jump` set, ▶ plays the custom buffer, export lists `sound.fa.jump`, Rimuovi restores the synth; launch from the
+  Sblocca tutto Giochi card plays sound; 0 console errors.
+- Not tested: actual audible output and loudness on a real phone (headless cannot hear), iOS/Safari audio unlock.
