@@ -1,16 +1,17 @@
-# Skin sprite inventory (K1a data layer, K1b draw-path hook)
+# Skin sprite inventory (K1a data layer, K1b draw-path hook, K2/K3 shipped skins)
 
 Every place Uomo roccia or Algidone visually appears in the game, the frame keys involved, and whether
-each frame is a real bitmap (skinnable) or code-drawn (not skinnable without a separate decision). Base
-frames are exported pixel-exact from the current build (`index.html`) to `refs/skins/base/<char>/<key>.png`
-— these are the canvases an artist draws skin overlays on top of. See `README.md` in this folder for the
-artist-facing how-to, including the `overlay`/`replace` render modes added in K1b.
+each frame is a real bitmap (skinnable) or code-drawn (not skinnable). Base frames are exported pixel-exact
+from the current build (`index.html`) to `refs/skins/base/<char>/<key>.png` — these are the canvases an
+artist draws skin overlays on top of. See `README.md` in this folder for the artist-facing how-to,
+including the `overlay`/`replace` render modes added in K1b.
 
-**Status as of K1b**: the overlay/replace hook is wired into every bitmap draw-path listed below (via
-`drawFace`, `drawEat`, `drawAlg` and the handful of call sites that draw `al_st` directly). Procedural
-places stay unskinned — see the "Procedural" table below, each now explicitly marked either as a settled
-decision (Cinghiale) or genuinely **pending an owner decision** (the item-art eating icons, the Acciaio
-visual effect).
+**Status as of K3**: the overlay/replace hook is wired into every bitmap draw-path listed below (via
+`drawFace`, `drawEat`, `drawAlg` and the handful of call sites that draw `al_st` directly), and two real
+skins ship through it (`SKINS.geka`, `SKINS.bk`). All three procedural places are **settled — no skin
+needed** (owner decision, 2026-09-24): the two eating icons draw the item being eaten, not the character;
+the Acciaio visual effect sits on top of whatever `drawTinted` already rendered, so it already applies to a
+costumed character automatically. See the "Procedural" table below.
 
 **Never crossed**: every location below only ever shows the *current* character. Nothing here reads or
 mixes assets between Uomo roccia and Algidone.
@@ -58,14 +59,14 @@ never touches these; a future "rocce" item customisation would be a separate fea
 
 Every Algidone key is used somewhere — no dead frames in `SPR2`.
 
-## Procedural (not bitmap — no base frame, needs a separate decision if a skin should affect it)
+## Procedural (not bitmap — no base frame; all settled, none need a skin)
 
 | What | Function | Skin status |
 |---|---|---|
 | Cinghiale (boar transformation) | `drawBoar()` | **Settled, not pending.** 100% code-drawn pixel art (rects/ellipses/triangles), no `IMG` reference at all. Per §10.9 K1b decision: skin is hidden entirely while transformed — no overlay, by design, not an open question. |
-| Up/down eating icon | `drawFaceEatFX()` (roccia) | **No skin — pending owner decision.** A small rock icon fades in/shrinks near the mouth while eating up/down — reuses the **item's** own art (`rockFrames`/`IMG.rock`), not a character frame. Currently renders unskinned regardless of an equipped skin; a themed variant (e.g. a costume-matching icon) would need its own future decision. |
-| Any-direction eating icon (Algidone) | inline in `drawAlg()` | **No skin — pending owner decision.** Same idea with `snackFrames` — item art, not a character frame. Same open question as the roccia rock icon above. |
-| Acciaio visual effect (ring + diagonal sweep highlight) | inline in the maze `draw()` around `drawTinted(...)` | **No skin — pending owner decision**, though moot in practice: it's a pure vector effect (colour/alpha only) drawn *around* the already-tinted character, not an image, so there's no frame a skin could even attach to today. Flagged in case a future skin ever wants to alter this effect's look. |
+| Up/down eating icon | `drawFaceEatFX()` (roccia) | **Settled — no skin needed.** A small rock icon fades in/shrinks near the mouth while eating up/down — it draws the **rock being eaten**, not the character, so there's nothing on the character for a skin to touch here. Reuses the item's own art (`rockFrames`/`IMG.rock`) regardless of an equipped skin, by design. |
+| Any-direction eating icon (Algidone) | inline in `drawAlg()` | **Settled — no skin needed.** Same reasoning: it draws the **snack being eaten** (`snackFrames`), not the character. |
+| Acciaio visual effect (ring + diagonal sweep highlight) | inline in the maze `draw()` around `drawTinted(...)` | **Settled — no skin needed.** It's a pure vector effect (colour/alpha only) drawn *on top of* whatever `drawTinted` already rendered — since the skin is part of that rendered character (confirmed in K1b/K2), the ring and sweep already sit over a costumed character automatically. Nothing further to build. |
 | Death-spin transform | inline in the maze `draw()` | Not procedural art — it's a real bitmap frame (`f2` / `al_st`-equivalent via `drawAlg`) rotated + scaled by code, **already skinned** via the same `drawFace`/`drawAlg` hook. Listed under its draw-path entry below, not here. |
 
 ## Every place a character appears (draw-path → frame keys)
