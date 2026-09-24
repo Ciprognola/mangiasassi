@@ -4,38 +4,34 @@ Permanent project context for Claude Code. Read it fully at the start of every s
 
 ## SESSION HANDOFF (2026-09-24 → next session)
 **State:** `VERSION` = `0.3_34`, everything pushed to `main`, `git status` clean.
-**Done through M6b** (§10.8): M0-M6b — **all three floors of Ferma Algidone! exist and are playable end to end** (dev entry points + the "Sblocca tutto" Giochi card). 0.3_31 = owner feedback 3 (skin reward previews worn, Sblocca tutto covers
-skins/tiles/Ferma card, row-2 left stop, locked-tile toast; the BK path is fine, the owner just hadn't won 10 REAL blackjack hands), 0.3_32 = floor 3 (bolts + holes, grill + flames, bouncing meat) + the collapse final win. Decisions in §10.9 and `CHANGELOG.md`.
+**Done through M7** (§10.8): M0-M7. Ferma Algidone! is complete as a dev/sim-playable mini-game: 3 floors (Coccia, Macelleria with belts, Fabbrica with bolts + collapse finale), synth SFX (`sound.fa.<slot>`), Riprova always from floor 1.
+The owner phone-tested 0.3_34: sounds great, M7 signed off. Decisions in §10.9 and `CHANGELOG.md`.
 
-**Waiting on the owner:** phone test of 0.3_33 (bigger buildings, Riprova from floor 1); 0.3_31/0.3_32 gameplay was already accepted (earlier items: bolt spacing, hole width/delay, flame difficulty and ladder climbing, the collapse timing/shake, floor-3 difficulty, the intro card at x1 on phones). Address their feedback first.
-**Done in 0.3_34: M7** (12 synth SFX slots `sound.fa.<slot>`, dev upload/reset, export targets; the dev-run silence was simply the missing M7). **Next chunks (only after the owner's sign-off):** M8 integration (unlock/entry = random encounter from girone 5 + forced by girone 10, Giochi card
-"Ferma Algidone!", popup, rewards via sordi/exp, "Minigiochi" achievements, roadmap tile 10 = first real clear of floor 1, dev test buttons, save migration), then M9 (mobile controls polish + balance of every tunable in §10.9), then REL (0.4).
-
-**M8 rules already decided (see §10.9 0.3_33):** encounter = 1/2/3 floors by encounter number, no Riprova in encounters, loss = no reward and the maze run continues. In the standalone/dev game Riprova restarts from floor 1.
-
-**Open items the owner has to judge:** every "proposed, tunable" value in §10.9 (belts, bolts, flames, collapse); stock 90 s; eat frequency 22 percent; the fatal chasm under row 2's left part (row 2 now has a player stop); art issues: `eat1/eat2` (beardless, §8 backlog),
-`kick1` double cap (accepted); `kick0` is embedded but unused (the headbutt kick-out was replaced by the collapse).
+**Start of next session:** ask the owner to **confirm or change the six M8 proposals** logged in §10.9 (row "M8 (PROPOSED...)": encounter rate 15 % from girone 5 forced by girone 10 and one mini-game per gap; combined encounter count across both characters;
+Giochi card replays = practice (no rewards); rewards per floor cleared, real wins only; the 3 Minigiochi achievements "Fuori da Coccia!" / "Algidone \u00e8 a terra" / "Senza un graffio"; the M8a/M8b split). Log the answers in §10.9 before building.
+**Remaining to 0.4:** **M8a** (entry, encounter rule 1/2/3 floors, Giochi card, unlock popup, save migration, dev buttons) → **M8b** (rewards, 3 achievements, roadmap tile 10 as "Premio in arrivo") → **M9** (mobile controls polish + balance of every tunable in §10.9) → **REL**
+(0.4 release: VERSION "0.4", CHANGELOG, README, DEVELOPERS.md incl. the `sound.fa.<slot>` targets listed in §10.9, roll base to 0.4 in §6/§7/§9, tag `v0.4`). Audio submissions A1…An are post-0.4 (§8), not a dependency.
+**No pending owner art.** The only owner-side item left is the confirmation above.
 
 **Ferma Algidone! code map** (`index.html`, `grep -n 'FA_\|fa[A-Z]'`): data `FA_LEVELS[0..2]` (fields: `title/blurb/introArt`, `girders` with optional `flow`/`conveyor:{v,rev,dir}`, `ladders`, `bolts`, `grill:{x1}`, `stopLeft`, `items` incl. `meatHop`/`grill`/`flameClimb`, `last`, `goal` (floors 1-2 only));
-world 360×610; `FA_PHYS`; loop `faLoop` → `faStep` → `faDraw`; items `faSpawn/faItemsStep/faCollide/faSeparated/faGrillHit`; belts `faInitBelts` (also inits bolts/holes) `faBeltV/faBeltStep/faDrawBelt`; bolts `faBoltPick/faBoltsStep/faInGap/faDrawBolts/faDrawGirder`;
-grill `faGrill()`; HUD `faHud`; panels `faPanel`; state `FA.state` = `intro|play|dying|climb|collapse|win|over` + `FA.paused`; floors `faLoadFloor(i,lives,score)`, `faRestart` (Riprova), `faNextFloor` (Avanti), `faAct` (`retry|next|replay|exit|resume`);
-`faIntro/faIntroEnd`, `faDie(cause,force)`, `faFinishDeath`, `faOver`, `faWin` → `faClimbStep` (floors 1-2) → `faWinPanel` (+`faCountStep`); `faFinalWin` → `faCollapseStep` → `faFinalPanel` (floor 3), `faColOff` (falling girders), `faAlgPose`.
-Demos (Pages, never linked): `prototypes/algidone/` 01–05. Review images: `refs/ferma_algidone/review/` (reference only).
+world 360×610; `FA_PHYS`; loop `faLoop` → `faStep` → `faDraw`; entry `startFerma({level,test,debug,extra,goal,finale})` (today only dev buttons and the "Sblocca tutto" Giochi card call it; M8a adds the real entry); items `faSpawn/faItemsStep/faCollide/faSeparated/faGrillHit`;
+belts `faInitBelts` (also inits bolts/holes) `faBeltV/faBeltStep/faDrawBelt`; bolts `faBoltPick/faBoltsStep/faInGap/faDrawBolts/faDrawGirder`; grill `faGrill()`; HUD `faHud`; panels `faPanel`; audio `faSnd(slot)` → `playSnd(slot,"fa")`, `FA_SLOTS`, `DEFSND.fa`;
+state `FA.state` = `intro|play|dying|climb|collapse|win|over` + `FA.paused`; floors `faLoadFloor(i,lives,score)`, `faRestart` (Riprova = floor 1), `faNextFloor` (Avanti), `faAct` (`retry|next|replay|exit|resume`); `faIntro/faIntroEnd`, `faDie`, `faFinishDeath`, `faOver`,
+`faWin` → `faClimbStep` (floors 1-2) → `faWinPanel` (+`faCountStep`); `faFinalWin` → `faCollapseStep` → `faFinalPanel` (floor 3), `faColOff`, `faAlgPose`; `faExit` returns to the menu. Demos (Pages, never linked): `prototypes/algidone/` 01–05. Review images: `refs/ferma_algidone/review/`.
 
 **Practical notes:**
-- **Verification = real clicks.** Playwright (Python, headless Chromium): click the UI entry point, never call the function (`bindOpt` forwards only whitelisted selectors to `bindDev`; new dev-panel buttons must be added
-  to that whitelist). Path: splash `#rsi` → `[data-tile=opt]` → `[data-otab=dev]` → open the accordion (`details.acc:has(#id) > summary`) → click (`#mgfa` floor 1, `#mgfa2` floor 2, `#mgfa4` floor 3, `#mgfk` floor-1 exit test,
-  `#mgfk2` collapse test); desktop + mobile touch (`has_touch`, `tap`). Dev mode: `store.set('mgs_dev',{role:'master',devOn:true})` + reload ("Sblocca tutto" = role master, `[data-sim="1"]`). For deterministic logic: freeze with
-  `window.requestAnimationFrame=()=>0;cancelAnimationFrame(FA.raf)` (cancelling alone is NOT enough) and call `faStep(1/60)`; silence throws with `Object.assign(FA.cfg,{sausage:0,porchetta:0,meat:0,ladderP:0});FA.alg.wait=1e9`;
-  `faLoadFloor(i,3,0);faIntroEnd()` jumps to a floor. Scratch scripts are NOT in the repo and are lost between sessions — rebuild them; they go stale when level indices change (index 0 = spawn girder, 5 = top; a sausage only rolls
-  toward a down-right girder; never name a page-side variable `L` or another global const in `evaluate`).
+- **Verification = real clicks.** Playwright (Python, headless Chromium): click the UI entry point, never call the function (`bindOpt` forwards only whitelisted selectors to `bindDev`; **new dev-panel buttons must be added to that whitelist**). Path: splash `#rsi` → `[data-tile=opt]` →
+  `[data-otab=dev]` → open the accordion (`details.acc:has(#id) > summary`) → click (`#mgfa` floor 1, `#mgfa2` floor 2, `#mgfa4` floor 3, `#mgfk` floor-1 exit test, `#mgfk2` collapse test); desktop + mobile touch (`has_touch`, `tap`). Dev mode:
+  `store.set('mgs_dev',{role:'master',devOn:true})` + reload ("Sblocca tutto" = role master, `[data-sim="1"]`). For deterministic logic: freeze with `window.requestAnimationFrame=()=>0;cancelAnimationFrame(FA.raf)` (cancelling alone is NOT enough) and call `faStep(1/60)`;
+  silence throws with `Object.assign(FA.cfg,{sausage:0,porchetta:0,meat:0,ladderP:0});FA.alg.wait=1e9`; `faLoadFloor(i,3,0);faIntroEnd()` jumps to a floor. Playwright quirks: an `evaluate` string whose last value is a function gets invoked - wrap in `(()=>{...})()`; never name a page-side
+  variable `L` or another global const. Audio can be checked by spying on `playSnd` and on `BaseAudioContext.prototype.createOscillator/createBufferSource`. Scratch scripts are NOT in the repo and are lost between sessions - rebuild them; they go stale when level indices or Riprova semantics change.
   `node --check` every `<script>` block first, then the smoke test. Real-time polling is flaky under CPU load.
-- **Patch scripts:** edit `index.html` with a Python script that asserts each anchor appears exactly once; the working copy is CRLF, so read with `newline=""`, normalise `chr(13)+chr(10)`→`chr(10)` for multi-line anchors and convert back on write.
-  Use raw strings (`r'''...'''`) for JS containing `\u00e8`-style escapes. Never print base64; embed art in the chunk that first draws it. Measure size deltas against `git show HEAD:index.html` with CRLF normalised.
+- **Patch scripts:** edit `index.html` with a Python script that asserts each anchor appears exactly once; the working copy is CRLF, so read with `newline=""`, normalise `chr(13)+chr(10)`→`chr(10)` for multi-line anchors and convert back on write. Use raw strings (`r'''...'''`) for JS containing
+  `\u00e8`-style escapes. Never print base64; embed art in the chunk that first draws it. Measure size deltas against `git show HEAD:index.html` with CRLF normalised.
 - **Git Bash heredocs with quotes break on this machine** — write longer scripts with the Write tool (avoid `\n` inside one-line `python -` patches: it becomes a real newline). Console output of non-ASCII needs `PYTHONIOENCODING=utf-8`.
 - **Docs are committed together with the code.** Build doc text with `.replace` (no `%` formatting), and check `git diff --stat` shows CHANGELOG/CLAUDE.md before committing.
 - Each chunk: bump `VERSION` to `0.3_NN`, CHANGELOG entry with size delta, update the §10.8 row, commit `v0.3_NN: …`, push. A push can fail transiently — retry; follow §1 only if `origin/main` really moved.
-- Owner commits often land via the GitHub web UI (art uploads land at odd paths, e.g. `refs/ferma_algidone/fa_salsiccia.png` instead of `frames/`) — always `git pull --ff-only` first (§1).
+- Owner commits often land via the GitHub web UI (art uploads land at odd paths) — always `git pull --ff-only` first (§1). Briefs arrive pasted from Claude web, one build per message: if one looks cut off, say so first (§6 rule 10).
 
 This note can be deleted at the start of the next session as part of confirming the sync.
 
@@ -323,6 +319,7 @@ into `submissions/<name>/<YYYY-MM-DD>/` through a PR. Once the `validate` check 
 8. Short replies, terse summaries. The owner directs with short commands ("continua", "passa alla X") and
    prefers you to proceed rather than ask, unless a decision is genuinely blocking.
 9. Open source: keep it readable. UI/UX improvements are welcome when they're part of the approved task.
+10. Owner's briefs arrive pasted from Claude web, one build per message. If a brief looks cut off, say so at the start of your reply and list what you received before building.
 
 ---
 
@@ -410,6 +407,10 @@ by Claude (the planning side) before Claude Code executes them.
   dedicated rebalance once the movepicker (if built) lands, rather than chasing a moving target. The 0.2_59
   economy changes (reward +40%, maze sordi −30%) don't affect this win-rate number — they're currency, not
   battle-engine balance.
+
+### Post-0.4 — audio submissions (A1…An)
+One build per approved audio submission (Uomo roccia sounds, Algidone sounds, Blackjack voiceover, Professore voiceover, professor intro music, and the new `sound.fa.<slot>` set for Ferma Algidone!). They will arrive eventually and
+are processed **after the 0.4 release** via the §5 procedure and the A0 built-in layer (keep the running slot table in §10.9; music: half-length + crossfade loop per §6 rule 7). Not a dependency of REL.
 
 ### Later phases
 - **B/C — "Esporta modifiche"**: finish the export UI and verify a real export against
@@ -671,7 +672,6 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | B3 | Win/lose track right after the last faint | — | Sonnet · medium | done (0.3_2) |
 | B4 | Rocciamon card (G3) in Giochi after first real professor game | — | Sonnet · low | done (0.3_3) |
 | A0 | Built-in audio layer (IDB → built-in → synth) + matching export targets | — | Sonnet · medium | done (0.3_7) |
-| A1…An | One build per approved audio submission (roccia sounds, algidone sounds, BJ voiceover, professor voiceover, professor intro music) | submissions | Sonnet · medium | wait-assets |
 | P1 | Popup unlock framework + asset/ghost/character/mini-game triggers + old-save seeding + dev preview | [Q] wording, grouping (answered) | Sonnet · medium | done (0.3_8) |
 | R1 | Roadmap state, entry button, snake screen, regular girone tiles | [Q] per-character (answered, amended 0.3_13 → combined) | Sonnet · medium | done (0.3_9, amended 0.3_13) |
 | R2 | Special tiles 3 and 5 (10 hands won), `S.p.gam.won`, new blackjack achievement, "?" tiles | [Q] achievement, "?" (answered) | Sonnet · medium | done (0.3_10) |
@@ -691,13 +691,13 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | M6a | Floor 2 "Macelleria": floor progression (Avanti), belts that carry player/items and reverse, meat riding belts, climb-away exit | M5, art (arrived) | Sonnet · high | done (0.3_30) |
 | M6b | Floor 3 "Fabbrica di salsicce": bolts + holes, bouncing meat, grill on the bottom girder + flames, final collapse win + victory screen | M6a, art (arrived) | Sonnet · high | done (0.3_32) |
 | M7 | Audio: synth placeholders + slots `sound.fa.<slot>` through the A0 layer, dev upload/reset + export targets, sound in dev/SIM/sim runs | A0 | Sonnet · medium | done (0.3_34) |
-| M8 | Integration: unlock/entry, Giochi card, popup, rewards, achievements, dev test buttons, save migration | P1 | Sonnet · medium | todo |
-| M9 | Mobile controls polish + balance pass | M8 | Sonnet · medium | todo |
-| REL | Release build "0.4": VERSION, CHANGELOG, README, DEVELOPERS.md (new audio targets), roll base to 0.4 in §6/§7/§9, tag `v0.4` | all | Sonnet · low | todo |
+| M8a | Integration part 1: entry (random encounter), encounter rule, Giochi card, unlock popup, save migration, dev buttons | P1, M7; **owner confirmation of the six §10.9 proposals** | Sonnet · medium | todo (waiting for owner confirmation) |
+| M8b | Integration part 2: rewards (paid per floor cleared), the 3 Minigiochi achievements, roadmap tile 10 as "Premio in arrivo" | M8a | Sonnet · medium | todo (waiting for owner confirmation) |
+| M9 | Mobile controls polish + balance pass (every tunable in §10.9) | M8b | Sonnet · medium | todo |
+| REL | Release build "0.4": VERSION, CHANGELOG, README, DEVELOPERS.md (new audio targets), roll base to 0.4 in §6/§7/§9, tag `v0.4` | M8a, M8b, M9 (audio submissions A1…An are NOT a dependency: post-0.4) | Sonnet · low | todo |
 
-Suggested order: B1–B4 → A0 → P1 → R1–R4 → K1 → C1 → K2/K3 (as art arrives) → M0 … M9 → REL.
-Submissions (A1…An) slot in whenever they appear. While waiting for art, continue with the next chunk that
-doesn't need it.
+Suggested order: B1–B4 → A0 → P1 → R1–R4 → K1 → C1 → K2/K3 (as art arrives) → M0 … M7 (done) → M8a → M8b → M9 → REL.
+Audio submissions (A1…An) are out of 0.4 scope (§8 backlog, processed after the release; any pending submission is still found at session start via §1b).
 
 ### 10.9 Decisions log
 Every answer to a [Q] goes here: date · chunk · question · answer. Also the table of audio slots made built-in.
@@ -771,6 +771,9 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-24 | 0.3_27 | Hit through girders | Root cause: box overlap only. Rule: an item hits only if no girder surface lies between its base and the player's feet (body centre on a ladder) at that x (`faSeparated`). Ladder-drop hits, refuge and jump windows unchanged |
 | 2026-09-24 | 0.3_27 | Eat frames | Draw path identical to the others; the difference is in the art. Only `fa_alg_eat0` is used; bite/chew animated in code. Art issue 2 stays open (owner may regenerate eat1/eat2). Cooked-sausage art: still waiting |
 | 2026-09-24 | M0 → M1 | M0 closed | All rounds/demos done and signed off; M1 (engine skeleton) starts |
+| 2026-09-24 | 0.3_34 (M7) | Owner phone test | Sounds great; **M7 signed off** |
+| 2026-09-24 | Scope | Audio submissions out of 0.4 | A1…An are **out of 0.4 scope**: they will arrive eventually and are processed after the 0.4 release. Row moved from the §10.8 chunk table to the §8 backlog (post-0.4) and removed from REL's dependencies (REL now needs M8a, M8b, M9) |
+| 2026-09-24 | M8 (**PROPOSED by Claude, pending owner confirmation at the start of the next session - not decided, not built**) | Six proposals | (1) **Encounter rate** 15 % per girone from girone 5, forced by girone 10; at most one mini-game per gap between gironi - El Gamblador first if both trigger, Ferma Algidone! waits for the next gap. (2) The 1/2/3-floor encounter count is **combined across both characters**. (3) **Giochi card replays = practice**: no sordi, exp, achievements or roadmap tile 10. (4) **Rewards**: existing reward formula, paid **per floor cleared**, real encounter wins only. (5) **Achievements** (category Minigiochi): "Fuori da Coccia!" (clear floor 1), "Algidone \u00e8 a terra" (clear all 3 floors), "Senza un graffio" (clear a floor without losing a life). (6) **M8 split** into M8a (entry, encounter rule, Giochi card, unlock popup, save migration, dev buttons) and M8b (rewards, the 3 achievements, roadmap tile 10 as "Premio in arrivo"). Already decided earlier (0.3_33): encounter = 1/2/3 floors by encounter number, no Riprova inside encounters, loss = no reward and the maze run continues |
 | 2026-09-24 | 0.3_34 (owner phone test) | Bug: no audio in dev runs of Ferma Algidone! | Everything else fine. Root cause: the mini-game had **no audio at all yet** (M7 unbuilt); nothing was gated by dev/test/SIM. Rule confirmed: sound plays in dev runs, `SIM()` and "Sblocca tutto" exactly as in a real run (dev only blocks saving, never audio). Built as M7 in 0.3_34 |
 | 2026-09-24 | 0.3_34 (M7) | Audio slots and export targets (**list for DEVELOPERS.md at REL**) | Bucket `SND.fa`, IDB `snd_fa_<slot>`, target **`sound.fa.<slot>`** (shared) for: `jump`, `land`, `climb`, `throw`, `hit`, `ping`, `win`, `low`, `bolt`, `belt`, `flame`, `collapse` (labels in `FA_SLOTS`). File name convention like the others: `sound_fa_jump.mp3`. No music. `low` = one beep per 2 s under 25 percent stock; `belt` fires with the red chevron blink; `win` is used for a floor exit and the final victory; `collapse` is the ~1.6 s rumble of the final collapse |
 | 2026-09-24 | 0.3_33 (owner phone test of 0.3_31/0.3_32) | Accepted | Gameplay good. Flames climbing to the second girder accepted. Headbutt kick-out removal in 0.3_32 accepted (recoverable from 0.3_28, noted in §8). Future Giocatore cards read "In arrivo" under Sblocca tutto |
