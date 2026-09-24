@@ -1501,3 +1501,18 @@ for anything not itemised below.
 - **`index.html` size delta: +75,812 bytes** (the 54 KB building PNG as base64 + code).
 - Verified headless (real clicks/keys/CDP touch + deterministic stepping): 24 new checks, 22 M3, 30 M2 regression (one flaky timing failure under CPU load, passes on rerun); maze run starts.
 - Not tested: real-phone touch feel.
+
+## 0.3_26 — 2026-09-24
+- **M4 — Ferma Algidone! lives, death rules, stock, score, HUD, pause** (dev entry only; no save/reward changes; no difficulty scaling).
+  - **HUD** (D5 layout, DOM bar above the canvas): score · stock-pile icon + stock bar · 3 life icons (Uomo roccia head, via the skin hook) · pause button.
+    Stock pile = `fa_scorte0-3` (full → 2/3 → 1/3 → empty); the bar goes red under 25 percent.
+  - **Stock**: 90 s steady drain (`FA_LEVELS[i].stock`), refilled on every respawn / restart; empty = exactly one life.
+  - **Death rules (§10.9)**: hit/fall/empty stock → 0.8 s pause + red flash, player blinks, everything frozen → all items and flames cleared → respawn at start →
+    2 s blinking invulnerability (blocks hits; falls and empty stock still count) → throws resume after a 2.5 s grace. Last life → game over panel "Scorte perse!" (Riprova / Esci).
+  - **Scoring** (D5 values): +10 per sausage/meat jumped, +20 flame, **+30 porchetta**; "+N" pop-up; goal bonus = floor(stock) × 10; goal → "Piano completato!" panel (Rigioca / Esci); kick-out animation is M5.
+  - **Algidone**: `fa_alg_eat0-2` now and then between throws (22 percent of cycles, 1.65 s), `fa_alg_angry0-1` while the player is on the top two girders or stock is under 25 percent; mirrored.
+  - **Pause**: HUD button, Esc, P; auto-pause on `visibilitychange`; panel Riprendi / Esci; timer, items, Algidone all frozen; input ignored. Esc in a game-over/win panel exits.
+  - Removed the ✕ button (exit is in the pause panel).
+- Embedded only what M4 draws: `fa_alg_eat0-2`, `fa_alg_angry0-1`, `fa_scorte0-3`. **`index.html` size delta: +119849 bytes.**
+- Verified headless (real clicks/keys/touch + deterministic stepping): 30 new M4 checks (HUD, steady drain, empty = one life, death rules, invulnerability, 3 deaths → game over, Riprova, jump scores, goal bonus, win/over freeze, eat/angry, real-click pause, Esc/P, visibilitychange, Esci) + M2 31 / M3 22 / M25 24 regressions; zero console errors. Two timing-flaky checks in my own scripts (random throw count; key-hold polling).
+- Not tested: real-phone feel, real background-tab behaviour (visibilitychange was dispatched, not a real tab switch).
