@@ -1533,3 +1533,18 @@ Ferma Algidone! — owner feedback after the phone test of 0.3_25/0.3_26.
 - **`index.html` size delta: +1232 bytes.**
 - Verified headless: repro grid before/after, regression (ladder drop x2, refuge, same-girder hit), 9 stock checks, real-click desktop (keys) + mobile (touch) smoke, 0 console errors.
 - Not tested: real-phone feel of the new hit rule.
+
+## 0.3_28 — 2026-09-24
+M5 — Ferma Algidone! floor 1 "Coccia": intro card + kick-out win sequence.
+- **Intro card** (`faIntro`) at floor entry: first start, Riprova, Rigioca; not on respawn. Follows the girone-card pattern (panel with picture, title, text): `fa_bld_coccia` at x1 (294 px, smoothing off,
+  `image-rendering:pixelated`), "Piano 1 — Coccia" + "Algidone si è preso Coccia! Fermalo prima che finisca le scorte!". Auto-closes after 2.5 s; tap on the card or Enter skips. Stock, throws and
+  player are frozen meanwhile. Pausing during the card and resuming re-shows it. No downscale on a 390 px phone (card 338 px wide); on phones under ~340 px the picture shrinks by at most a few px (`max-width:100%`).
+- **Kick-out** on reaching the goal zone (`faWin` -> state `kick`): stock frozen, throws stopped, items cleared, no hits possible. Climber headbutt (code-only lunge + hop + lean on the existing head frames) ->
+  `fa_alg_kick0` hit -> `kick1` on a 35 px arc away from the player (right, mirrored as always) -> `kick2` sitting dazed at x=320 (kept in frame, small squash on landing and a bob) -> climber celebrates with two hops
+  (code-only). 3.1 s in total, then the "Piano completato!" panel with the stock bonus counting up (~1.2 s; the score counts with it). Panel stays Rigioca / Esci (floors 2-3 are M6).
+- Embedded `fa_alg_kick0-2`. `eat1`/`eat2` stay embedded but are no longer drawn (see 0.3_27). **`index.html` size delta: +66317 bytes.**
+- Dev button **"Test uscita Algidone"** in the Ferma Algidone! dev accordion (`#mgfk`, added to the `bindOpt` whitelist): starts a dev run with the player in the goal zone, no intro. Saves nothing.
+- Fixed while testing: the intro's tap-to-skip handler also caught the pause panel's "Riprendi" (both live in `#fapanel`); now skips only when not paused.
+- Verified headless with real clicks (desktop keys/mouse, mobile touch): intro open/frozen/auto-close/skip (tap + Enter), pause during intro, no intro on respawn, Riprova and Rigioca show it again, kick timeline
+  frames (`review/m5_kick_d.png`, `m5_kick_m.png`), bonus count-up, dev button, 0 console errors.
+- Not tested: real-phone feel and timing of the kick-out, the card on phones narrower than 340 px.
