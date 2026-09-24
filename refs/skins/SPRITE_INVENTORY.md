@@ -84,7 +84,7 @@ Every Algidone key is used somewhere — no dead frames in `SPR2`.
 8. **Roadmap gift-reveal preview** (R3's `#giftreveal` canvas) — reuses the exact same `paintCanvases` `"hero"` case as #7 (`data-draw="hero:<char>:130"`), same frames.
 9. **Maze HUD lives icons** (the small row of life icons during a run) — static portrait, side view only: roccia `f2`; Algidone `al_st` (small crop).
 10. **Splash/loading screen logo** (`renderSplash`, `#logo` canvas) — static portrait, side view only: roccia `f2`; Algidone `al_st`. Shows whichever character is currently selected.
-11. **Mini-game placeholder card** (`drawMiniPlaceholder`) — static portrait, **hardcoded to roccia `f2` regardless of the active character** (no Algidone branch at all). Existing quirk, not introduced by this build — flagging it since a skin equipped on Algidone would never show here even if Algidone is selected, because roccia's art is always drawn. Not fixing it in K1a (no draw-path changes in this build); K1b should decide whether this needs to switch to the active character or is intentionally a fixed "brand" icon.
+11. **Mini-game placeholder card** (`drawMiniPlaceholder`) — static portrait, **hardcoded to roccia `f2` regardless of the active character** (no Algidone branch at all), plus 3 rolling rock icons alongside it. **Confirmed intentional by the owner** (2026-09-24, post-K1b): this is the "Mangiaroccia" brand icon for the mini-game card itself, not a "your active character" portrait — left unskinned by design, not a bug. No hook needed here, ever.
 12. **Professor mini-game — dialogue portrait box** (`prDrawPlayer`/`PR_SPK.plr`, only shown for lines with `spk:"plr"`, e.g. the "Sì" branch's `pr_pk` interjection line) — animated talking portrait in an 88×100 box: roccia cycles `f0,f1,f2,f1` while talking (frame `f0` when silent) with a 1px bob; Algidone `al_st` scaled, with the same bob (no mouth-cycle frames — Algidone has no dedicated "talking" frames, only the bob).
 13. **Professor mini-game — pond-throw cutscene** ("No" branch, `prPlayerCv()` → cached 96×96 canvas reused by `prSceneKick`'s toss/splash phases) — static portrait, side view only: roccia `f2`; Algidone `al_st`. The cutscene then rotates/scales/clips this cached canvas procedurally (arc through the air, submerge in the pond) — the character art itself is just the same static portrait as #7/#9/#10.
 14. **Professor mini-game — professor scene** (`prSceneProf`, the idle/angry professor + pokéball throw + Duskull emergence) — **the human player character does NOT appear here at all.** Only the professor (`PRSPR`/`PRIMG`) and the procedurally-drawn pokéball/Duskull are drawn. The player only appears via #12 (the separate dialogue portrait box) when a `spk:"plr"` line plays over this scene.
@@ -112,8 +112,6 @@ Every Algidone key is used somewhere — no dead frames in `SPR2`.
 - Acciaio's tint (`drawTinted`) needs **no special handling** — confirmed by test: it tints whatever the
   hook draws, since the hook lives inside `drawHero`'s own callees.
 - Cinghiale (`drawBoar`) needs **no hook at all** — it never calls into the low-level draw functions.
-- `drawMiniPlaceholder`'s hardcoded-to-roccia icon (#11) was **left as-is, not fixed**: it also draws 3
-  rolling rock icons (`IMG.rock`) alongside the portrait, which only makes sense for Uomo roccia — this
-  reads as an intentional "Mangiaroccia" brand icon for the mini-game itself, not a "your active character"
-  portrait that happens to be wrong. Reported to the owner rather than changed; flag if that reading is
-  wrong.
+- `drawMiniPlaceholder`'s hardcoded-to-roccia icon (#11) was **left as-is, not fixed** — reported to the
+  owner and **confirmed intentional**: it's the "Mangiaroccia" brand icon for the mini-game card, not a
+  per-character portrait. Settled, not open.

@@ -1270,3 +1270,44 @@ for anything not itemised below.
   entire run.
 - Not tested: real device/touch, an actual artist-drawn skin end to end (still nothing in `SKINS` — K2/K3
   populate it), in-game review by the owner.
+
+## 0.3_16 — 2026-09-24
+- **Pre-work, before C1**: `drawMiniPlaceholder`'s hardcoded-to-roccia icon (flagged in 0.3_15) confirmed
+  **intentional** by the owner — it's the "Mangiaroccia" mini-game brand icon, not a per-character portrait.
+  Noted as settled in `refs/skins/SPRITE_INVENTORY.md`. CLAUDE.md §1 gained a merge policy: if a push is
+  rejected because `origin/main` moved, a merge is only allowed when the incoming commits touch none of the
+  files the local commit changed (report it); any overlap stops and asks — never rebase, never force-push.
+- **v0.4 C1 — character customisation page.** New full screen `screen="cust"` (`renderCust`/`bindCust`),
+  not a modal (§10.9 decision) — matches the other full pages (Lista desideri, Opzioni, Percorso).
+- **Entry**: a "Personalizza" button next to "Usa"/"Selezionato" on a character's card in Lista desideri ›
+  Giocatore, shown only when `S.p.ch[k].skins.length>0` for **that** card's own character — independent of
+  which character is currently active/played. On a real save, with no `ROAD_REWARDS` entry `ready:true` yet,
+  nobody owns a costume, so the button is correctly invisible for both characters (verified).
+- **Live preview**: a canvas animated at ~12fps through a real walk cycle, calling `drawFace`/`drawAlg`
+  **directly** (never `drawHero`, which picks the *active* character) so the preview always shows the
+  character whose card was opened, regardless of who's currently selected. A 4-direction toggle (▲▶▼◀)
+  switches the preview through up/right/down/left using the same frame-selection logic `drawHero` uses
+  internally (walk-cycle sequence, `fd`/`fu` prefix, flip only for the side view).
+- **Costume section**: "Nessuno" + one button per owned costume (`cc.skins`), selecting one sets
+  `S.p.ch[char].skin` immediately and persists — verified directly in `localStorage`, not just in memory.
+  Costume display names come from `SKINS[id].name`, falling back to the matching `ROAD_REWARDS` entry's name
+  if the registry doesn't have one yet, then the raw id. **Potere segreto** and **Squadra rocciamon**
+  sections are inert placeholders reading "In arrivo", no player-facing "skin"/"asset" wording anywhere.
+- **Dev-testing reachability without touching save data**: the "Personalizza" button's visibility condition
+  also accepts `devOn && DEV_SKIN_TEST.char===k` (the K1b dev-skin-test toggle) as an alternative to real
+  ownership — this only affects whether the *button appears*, never `S.p.ch[*].skins`/`.skin`. Verified: with
+  the dev test active the page opens and the live preview shows the test overlay/replace correctly, but
+  `S.p.ch.roccia.skins.length` and `.skin` stay exactly as they were (`0`/`null`) — nothing leaks into the
+  save. The Costume section shows only "Nessuno" in that case, plus an explanatory note for the tester.
+- **Navigation**: back button returns to Lista desideri › Giocatore (`go("wish")`, `tab` untouched so the
+  Giocatore tab is still showing); `Escape` does the same, newly wired into the existing global keydown
+  handler for `screen==="cust"` specifically (no other full screen besides modals had an Esc shortcut before
+  this).
+- **Verified in headless Chromium at a 320px-wide viewport** (phone-width requirement): every screenshot
+  taken at that width — preview, all 4 directions, costume list, equipped state, placeholders — fits with no
+  horizontal scroll. Confirmed: fresh save shows no Personalizza button anywhere; dev-skin-test reachability
+  works and leaks nothing into the save; selecting a real granted test costume persists to `localStorage`
+  and survives; switching back to "Nessuno" clears it; a real run still starts fine afterward. Zero console
+  errors throughout.
+- Not tested: real device/touch, the live preview with actual K2/K3 artwork (still nothing real in `SKINS`
+  at this point in the session), in-game review by the owner.
