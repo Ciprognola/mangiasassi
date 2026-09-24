@@ -1424,3 +1424,14 @@ for anything not itemised below.
 - Verified in headless Chromium by **clicking the real button** (desktop 1280x800 and mobile 390x780 with touch tap): splash → menu →
   Opzioni → Sviluppatore → Strumenti di test → Avvia → `screen="fa"` canvas renders, ✕ returns to the menu, zero console errors.
 - Not tested: real phone. The 0.3_19 smoke test called `startFerma()` directly, which is why it missed this.
+
+## 0.3_21 — 2026-09-24
+- Ferma Algidone!: layout change. Algidone is now **top right, facing left**, mirrored at draw time (`ctx.scale(-1,1)`), PNGs untouched.
+  Embedded `fa_alg_idle0/1` (first frames drawn; drawn at x0.5, feet on the top girder, 2-frame idle).
+- `FA_LEVELS[0]`: top girder now slopes down to the LEFT (20,102)→(340,80) (≥79 px headroom kept: art top at y≈3); goal zone
+  moved beside him (x 215–275, not under him); ladder to the top stays at x=60 (far from Algidone). **Bottom girder flipped** to slope
+  down to the RIGHT (20,419)→(340,441) so, with 5 girders and items starting right, the zigzag ends at the grill (bottom right)
+  instead of rolling onto the spawn. Spawn (bottom left), safe zone x<90, flame bound x≥150, grill and walls unchanged.
+- `FA.debug` zones updated (Algidone footprint added, zones follow the slopes).
+- **`index.html` size delta: +39,644 bytes** (two idle frames + code).
+- Verified by real clicks (desktop + mobile touch), zero console errors. Not tested: real device.
