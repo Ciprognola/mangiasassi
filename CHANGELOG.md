@@ -1311,3 +1311,55 @@ for anything not itemised below.
   errors throughout.
 - Not tested: real device/touch, the live preview with actual K2/K3 artwork (still nothing real in `SKINS`
   at this point in the session), in-game review by the owner.
+
+## 0.3_17 — 2026-09-24
+- **v0.4 K2 — GEKA SNC cap (Uomo roccia), first real skin.** Frames arrived pre-cut in
+  `refs/skins/geka/frames/` + `geka_frames.json` (§10.9 K2/K3 pre-cut delivery format), nothing to cut.
+- **Render mode changed from `overlay` to `replace`** (§10.9 amendment to the K1b default): the owner's art
+  is full heads drawn with the cap already on, not an isolated cap graphic, so an overlay would have drawn
+  the new head on top of the old one instead of replacing it.
+- **New capability: oversized skin frames with an offset.** GEKA's frames are all larger than their base
+  frame (the cap extends past the head's own crop, e.g. `f0` is 103×92 vs its base's 96×85 with `oy:7`).
+  `SKINS[id].frames[key]` can now be `{b64,ox,oy}` instead of a bare base64 string (`ox,oy` = where the base
+  frame's own top-left sits inside the larger skin image); a bare string still works for exactly-same-size
+  frames. `loadSkinImgs()`'s validation changed from exact-size match to `width>=base.width &&
+  height>=base.height` (still warns + skips a too-small frame, never throws), and stashes `ox`/`oy` directly
+  on the loaded `Image` as `.skOx`/`.skOy`.
+- **New `drawSkinLayer(ctx,skImg,base,dx,dy,dw,dh,flip)`** does the actual offset-aware compositing:
+  `sx=dw/base.width, sy=dh/base.height`, draws the skin at `dx-ox*sx, dy-oy*sy`, size `skImg.width*sx ×
+  skImg.height*sy`. When the caller already applied a horizontal flip (`ctx.scale(-1,1)`), the X offset is
+  mirrored first (`skImg.width-base.width-ox`) so oversized art stays on the correct side once mirrored,
+  instead of jumping to the wrong edge. `drawSkinned()` now takes a `flip` parameter (all 9 call sites
+  updated: `drawFace`/`drawEat` pass their own `flip` var, `drawAlg` passes `sideArt&&o.flip`, the menu
+  scene's Algidone branch passes its own turn-around flip condition, the remaining static-portrait call
+  sites never flip so pass nothing) and, in **`replace` mode, skips drawing the base frame entirely** —
+  the offset-positioned skin image alone covers it, rather than drawing the base underneath first and then
+  overdrawing it at the base's own (now-wrong) rect.
+- **`SKINS.geka`** embedded: `char:"roccia"`, `mode:"replace"`, `name:"Cappello GEKA SNC"`, all 10 real
+  frames (`f0-f2, e0-e1, fd0-fd2, fu0, fu3`) as `{b64,ox,oy}`. `ROAD_REWARDS[3].ready` flipped to `true` —
+  tile 3 now actually claims and grants the cap, no longer behaves like a "?" tile once unlocked.
+- **`index.html` size delta: +146,666 bytes (+143.2 KB)** — the 10 embedded PNG frames account for
+  essentially all of it (~140 KB base64), the rest is the offset-compositing code itself.
+- **Verified in headless Chromium**, extensively:
+  - Registration sanity: `SKINS.geka` has the right mode/char/10 frames, `IMG.sk_geka_f0` loaded at its
+    declared 103×92 with `skOx:0,skOy:7` matching `geka_frames.json` exactly.
+  - Maze, all 4 directions + side eating, with the cap equipped: **left-facing verified visually** — the
+    mirrored offset math keeps the cap art coherent (not flipped to the wrong side or misaligned) when the
+    character turns around; **up-facing verified visually** — the cap's large `oy` offset correctly places
+    it above the head's own crop instead of being clipped.
+  - **Acciaio-equivalent tint** (the power-up reversal, same `drawTinted` code path Acciaio uses) confirmed
+    tinting the **entire replace-mode composite** red, not just the base head — `drawTinted` still needs no
+    skin-specific handling, exactly as predicted in K1b.
+  - Menu scene, Lista desideri card, and the C1 Personalizza preview (all 4 directions) all show the cap
+    correctly. Career modal confirmed unaffected (text only, as already documented).
+  - Pond-throw cutscene (`prTestKick`, phase-polled rather than timed) shows the cap on the thrown/splashed
+    player portrait. Professor dialogue portrait (`prDrawPlayer`, reached via the real intro → "sì" flow,
+    polled for the `spk:"plr"` line) shows the cap on the talking portrait.
+  - **Full real (non-dev) claim flow from a wiped save**: `S.p.pr.seen=true` + combined gironi ≥3 → tile 3
+    `claimable` → milestone popup correctly queued (and correctly ordered behind the save's other pending
+    popups) → "Guarda" opens the roadmap on tile 3 → claiming opens the gift modal → opening the gift marks
+    `S.p.road.claimed[3]` and adds `"geka"` to `S.p.ch.roccia.skins` → the real (non-dev) Personalizza button
+    now appears on the Lista desideri card → selecting "Cappello GEKA SNC" there sets
+    `S.p.ch.roccia.skin="geka"`, persisted to `localStorage` → a fresh run started afterward shows the
+    character wearing it. Zero console errors across the entire run.
+- Not tested: real device/touch, in-game review by the owner, K3 (Algidone's costume — next).

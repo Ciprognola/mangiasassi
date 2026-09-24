@@ -611,7 +611,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | K1a | Skin system, part 1 — data layer only: `SPRITE_INVENTORY.md`, exported base-frame PNGs, `SKINS` registry + `skinImg()` + load validation (empty registry, no draw-path changes, no player-visible change) | — | Sonnet · high | done (0.3_14) |
 | K1b | Skin system, part 2 — overlay hook wired into every draw path per §10.9's Acciaio/Cinghiale/`al_r*` decisions | K1a | Sonnet · high | done (0.3_15) |
 | C1 | Customisation page ("Personalizza", skin selector, 2 placeholders) | K1, [Q] screen/modal (answered: full screen) | Sonnet · medium | done (0.3_16) |
-| K2 | GEKA SNC hat (Uomo roccia) | asset sheet | Sonnet · medium | wait-assets |
+| K2 | GEKA SNC hat (Uomo roccia) | asset sheet | Sonnet · medium | done (0.3_17) |
 | K3 | Kebab costume (Algidone) | asset sheet | Sonnet · medium | wait-assets |
 | M0 | Design rounds + demos D1–D5 (may span several sessions) | [Q] bank | Sonnet · medium | todo |
 | M1 | Engine skeleton: new `screen`, level data format, girders/ladders render, fixed-timestep loop | M0 | Sonnet · high | todo |
@@ -659,6 +659,7 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-24 | K2 | GEKA render mode | **Supersedes** the K1b default (§10.6 said `overlay`). The owner's actual art is full heads drawn with the cap already on, so GEKA ships as `mode:"replace"` like BK, not `overlay` |
 | 2026-09-24 | K2/K3 | Pre-cut skin delivery format | New preferred workflow (documented in §10.6): a skin can arrive **pre-cut** as `refs/skins/<skin>/frames/sk_<skin>_<frameKey>.png` + `<skin>_frames.json` (`mode`, and per frame `file,w,h,base_w,base_h,ox,oy`). The template-sheet + `<skin>_cells.json` + `cut_from_cells.py` kit (§10.9 K1b) stays as an optional alternative when a skin isn't pre-cut |
 | 2026-09-24 | C1 | Screen vs modal | **Full screen**, `screen="cust"` (`renderCust`/`bindCust`), not a modal — matches the other full pages (Lista desideri, Opzioni, Percorso) rather than the smaller `openModal()` popups |
+| 2026-09-24 | K2 | Oversized-frame offset draw math | Implemented exactly as specified: `sx=dw/base_w, sy=dh/base_h` from the base call's own destination rect; skin frame drawn at `dx-ox*sx, dy-oy*sy`, size `skinW*sx × skinH*sy`. When the caller has applied a horizontal flip, the offset is mirrored as `skinW-base_w-ox` before the above math, so art that extends past one edge of the base frame (e.g. a cap brim) stays on the correct side once mirrored. Verified visually: the up-facing cap (large `oy`) sits correctly above the head, and the left-facing (mirrored) cap doesn't jump to the wrong side |
 
 **Built-in audio slots** (filled by A-chunks):
 
