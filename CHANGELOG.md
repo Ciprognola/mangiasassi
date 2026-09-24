@@ -1570,3 +1570,26 @@ Ferma Algidone! — owner feedback 2 after the phone test of 0.3_27/0.3_28.
 - Verified headless: real clicks/keys (desktop) and touch (mobile) - intro/pause/skip/Riprova/Rigioca flow, both dev buttons in real time, climb + kick frame strips (`review/m6_climb_d.png`, `m6_kickfinal_m.png`),
   real ArrowUp/Space, ladder-grab boundary tests, sausage window, girder-hit grid on the new indices (0), scripted spawn-to-goal run through every row, 90 s item-flow run (0 frames of items in the safe zone), 0 console errors.
 - Not tested: real-phone feel of the tighter grab, the new layout and the climb-away.
+
+## 0.3_30 — 2026-09-24
+M6a — Ferma Algidone! floor 2 "Macelleria" (conveyor belts) + floor progression.
+- **Floor progression**: the floor-1 win panel now has **Avanti** / Esci; Avanti loads floor 2 with its intro card (`fa_bld_macelleria` at x1, natural 213x126, "Piano 2 — Macelleria" + "Algidone ha rilevato la
+  Macelleria! I nastri cambiano verso quando meno te lo aspetti: tieni il passo!"). **Score and lives carry over, stock resets to 90 s per floor.** Riprova (game over) restarts the **current floor** (3 lives, score back to
+  what it was on entering the floor) - I think that is better than going back to floor 1 since the earlier floors are already cleared. On the last available floor the panel is Rigioca / Esci and Rigioca restarts from floor 1
+  (score 0, 3 lives). The panel picks Avanti automatically as soon as a next floor exists (M6b).
+- **Level** (`FA_LEVELS[1]`): backdrop `fa_bg_macelleria`, building `fa_bld_macelleria` in-level x0.6 (same recipe as Coccia), same 360x610 world and the same 6-row structure/ladders as floor 1, palette recoloured
+  (red girders, white ladders). Rows 2 and 4 are **conveyor belts** (flat).
+- **Conveyors** (`g.conveyor={v,rev,dir}`, `g.flow` = exit end): code-drawn belt (dark body, yellow chevrons scrolling in the direction of travel, end rollers); the chevrons blink red for the last 0.7 s before a reversal.
+  The belt carries the player (never off an end by itself: the push stops 6 px from the ends; walking off is still possible) and items: an item's speed = its own roll speed in the flow direction + the belt's, so nothing ever stalls
+  (belt 45 < sausage 70 / meat 55). Row 4 runs constantly toward the exit end; row 2 reverses every 5 s. Belts freeze during intro, death pause, pause and the exit sequences.
+- **Items on floor 2**: sausages + porchetta as on floor 1 where girders remain (rolling downhill, ladder drops, refuge, jump windows); **meat** (`fa_carne`, x0.6) does not hop here (`meatHop:false`): it slides like a sausage,
+  rides the belts and drops off the ends; bouncing meat returns on floor 3. Throw weights 3/1/2, pause 1.4-2.6 s, ladder drop 6 %. Spawn-safe rules carry over (verified: 0 frames of items in the safe zone in a 90 s run).
+- **Exit** = the same climb-away as floor 1; after floor 2 the panel is Rigioca / Esci until M6b.
+- **Dev**: new "Piano 2 (nastri)" button (dev run, saves nothing, in the whitelist); "Test uscita Algidone" / "Test cacciata finale" unchanged (floor 1).
+- **Proposed tunables for M9** (logged in §10.9): belt speed 45 px/s, reversal period 5 s (only row 2), warning 0.7 s, floor-2 throw pause 1.4-2.6 s, weights 3/1/2.
+- Layout image: `refs/ferma_algidone/review/m6a_layout.png` (390x844 and 360x800).
+- Embedded `fa_bg_macelleria` and `fa_bld_macelleria`. **`index.html` size delta: +92230 bytes.**
+- Verified headless: real clicks + touch for the whole flow (dev exit -> Avanti -> floor 2 intro at natural size -> play -> game over -> Riprova -> exit -> Rigioca), belt push/clamp/against-belt walking, reversal,
+  items on belts (with/against), meat without hop, scripted spawn-to-goal run through every row of floor 2, 90 s item flow (belts and meat exercised, 0 safe-zone frames), floor-1 regressions (intro, stock, girder hits,
+  ladder grab, Up key, sausage window still 0.229 s), 0 console errors.
+- Not tested: real-phone feel of the belts (speed, readability of the chevrons, the reversal warning), floor-2 difficulty.
