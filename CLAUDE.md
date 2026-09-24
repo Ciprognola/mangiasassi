@@ -3,12 +3,13 @@
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
 ## SESSION HANDOFF (2026-09-24 → next session)
-**M0, M1, the 0.3_20 dev-button bugfix, the 0.3_21 layout change and M2 (build `0.3_23`) are done and pushed to `main`.**
+**M0–M3 are done and pushed to `main` (latest build `0.3_24`).** 0.3_23 = M2 feedback (climb view, +20% scale, threshold 115); 0.3_24 = M3.
 
-- **0.3_21**: Algidone top right facing left (mirrored at draw time), bottom girder flipped (§10.9 row "0.3_21 layout").
-- **0.3_22 / M2**: player walk/climb/jump/falls, keyboard + on-screen pad, `faDie` stub, goal flag. See CHANGELOG 0.3_22.
-- **Waiting on the owner:** phone test of M2 (touch feel, pad size/placement, jump feel, whether the 107 px edge steps feel
-  unfair). Address feedback first. **Do not start M3 before the owner signs M2 off.** M3 = Algidone thrower + item types (Sonnet · high).
+- **Waiting on the owner:** phone test of M3 (item feel, jump-over timing, porchetta, dev button "+ carne/griglia"). Address feedback first.
+  **Do not start M4 before the owner signs M3 off.** M4 = lives, death rules, stock bar, scoring, HUD, pause (Sonnet · medium; acceptance in §10.8).
+- Known tuning flags (M9, owner to decide): clear-jump window over a sausage is ~0.06–0.09 s; porchetta art (30×16) is much smaller than its
+  un-jumpable 60 px hitbox; meat bounce apex ≈150 px passes through the girder above (D2 value); item art at ×0.5 looks small next to the ×1.2 head.
+- `faDie` now clears items + resets throws (2.5 s grace); M4 adds lives, blink, invulnerability, stock bar.
 - Open, owner-only: 3 art issues in §10.9 (pink sausage, beardless `eat1/eat2`, duplicate cap `kick1`) — never edit the art.
 - Mirrored idle shows his belt text reversed ("ALGIDONE"); accepted as a consequence of mirroring, art untouched.
 - M3 detail to remember: girder 1's right end drops items right next to the grill at the bottom-right (the sink, since the
@@ -682,7 +683,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | M0 | Design rounds + demos D1–D5 (may span several sessions) | [Q] bank | Sonnet · medium | done (prototypes only, no build) |
 | M1 | Engine skeleton: new `screen`, level data format, girders/ladders render, fixed-timestep loop (+ Coccia backdrop art) | M0 | Sonnet · high | done (0.3_19) |
 | M2 | Player movement: walk, climb, jump, gravity, collisions; climb = head-only `fu0`–`fu3` animated in code (§10.9 Q12 amendment). **Acceptance (§10.9 DK death rules):** fall damage measured only from where the player left the ground in free fall (~1 floor threshold), reset on landing / ladder grab / respawn; walking slopes, stepping between girder segments and leaving a ladder never count | M1 | Sonnet · high | done (0.3_22) |
-| M3 | Algidone thrower + item types and behaviours | M2 | Sonnet · high | todo |
+| M3 | Algidone thrower + item types and behaviours | M2 | Sonnet · high | done (0.3_24) |
 | M4 | Lives, hits/death, stock bar, scoring, HUD, pause. **Acceptance (§10.9 DK death rules):** death = short pause/blink → clear ALL items and flames → respawn at start → ~2 s blinking invulnerability → throws resume after a grace delay; spawn area is safe (no flame patrol, no item hits during invulnerability); item hits require vertical overlap on the same level (never compare x alone); stock drain gives tens of seconds per floor and costs a life only when it truly empties; reaching the goal zone shows a win message | M3 | Sonnet · medium | todo |
 | M5 | Floor 1 "Coccia": building art + kick-out win sequence | Coccia building + backdrop **arrived** (`refs/ferma_algidone/`, §10.7) | Sonnet · medium | todo |
 | M6 | Further floors (factory, intensive farm, …) — one chunk per floor if large | M5, art | Sonnet · medium | todo |
@@ -759,6 +760,7 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-24 | 0.3_21 layout | Algidone position | **Algidone top right, facing left, mirrored at draw time** (`ctx.scale(-1,1)`; PNGs never edited; every `fa_alg_*` animation mirrors the same way, so mirrored text on his belt is expected). Items start from the right; top girder slopes down-left; goal zone beside him (215–275); ladder to the top at x=60. **Bottom girder flipped to slope down-right** (grill at bottom right is the sink; items never roll onto the spawn). Spawn, safe zone x<90, flame x≥150, walls and grill unchanged. Items dropping from girder 1's right end land at the grill edge (M3 detail) |
 | 2026-09-24 | M2 | Player implementation choices | Climber always Uomo roccia head-only (`drawFace`, GEKA hat via the skin hook, whatever character is selected). D3 physics values (`FA_PHYS`) kept as-is; ladder snap 28 px; grab only in the direction the ladder serves (up from `gBot`, down from `gTop`, never down onto a broken ladder). Walking off an edge falls; a girder can't be re-landed once left (the D3 demo's ±8 px landing margin let the player stand on an invisible extension of the girder end). Fall threshold 95 px unchanged, so the 107 px steps (g3-left→g2, g2-right→g1) are fatal — flagged to the owner, tune in M9. `faDie` is a stub (respawn + debug label) until M4 |
 | 2026-09-24 | 0.3_23 (M2 feedback) | Scale, threshold, climb view | Climber head 36 px + hitbox 22×31, Algidone ×0.6, world 360×600 (level shifted +40, gaps unchanged, top space for M4 HUD). **Fall threshold raised 95→115 px** (all single-floor drops survivable, 2-floor fatal; M9 may retune). Climb view: up=`fd`, down=`fu` (maze convention), last direction kept when still |
+| 2026-09-24 | 0.3_24 (M3) | Item engine choices | Items roll **downhill** (direction from the girder slope). Ladder drops use ladders that lead DOWN from the item's girder (D2 checked the wrong set). Porchetta hitbox 60 tall (un-jumpable), drawn ×0.5 (30×16) as instructed — looks smaller than its hitbox, flagged. Carne + grill/flame off on floor 1, on via dev button "+ carne/griglia". Player contact width vs items `hitw`=16 (body 22): forgiving, needed to keep a sausage jumpable after the +20% scale. `faDie` clears items, throws resume after 2.5 s |
 | 2026-09-24 | M0 → M1 | M0 closed | All rounds/demos done and signed off; M1 (engine skeleton) starts |
 
 **Built-in audio slots** (filled by A-chunks):

@@ -1467,3 +1467,24 @@ for anything not itemised below.
   World height 560→600, whole level shifted down 40 px; gaps between girders, jump and physics untouched. Algidone's head top is at y≈23.
 - **Fall threshold 95→115 px** (largest single-floor drop is 107; a 2-floor fall is ≥125, still fatal). M9 may retune.
 - **`index.html` size delta: about +0.9 KB** (code only). Real-click/key tests (30 checks) re-run and pass; 107 px steps now survive.
+
+## 0.3_24 — 2026-09-24
+- **M3 — Algidone throws + items** (Ferma Algidone!, dev entry only, no save changes; lives/HUD/scoring are M4).
+  - Algidone: idle ↔ throw cycle with `fa_alg_throw0-3` (mirrored like idle, x0.6); the item spawns on the release frame (frame 2).
+    Pause between throws 1.6–3.0 s (D2). Eat/angry frames not used.
+  - Engine with per-level config (`FA_LEVELS[i].items`: throw weights, throw pause, ladder chance, meat, grill). Floor 1 = salsicce + porchetta
+    (3:1). **Carne (bounce), griglia + flame spawn are built but off on floor 1**; dev panel button **"+ carne/griglia"** starts a run with them on.
+  - Salsicce roll downhill along the zigzag (verso = pendenza della trave, so g0 rolls right to the grill), code-driven roll rotation, sometimes
+    take a ladder down (D2: 6% per step within 5 px; ladders that lead DOWN from that girder, unbroken only — D2's demo looked at the wrong ladder set);
+    porchetta slow (34), hitbox 60 tall (> jump apex ~53) = un-jumpable, wobbles; carne bounces (2 hops per floor, then down a floor);
+    grill art (`fa_griglia0-1`) bottom right, a sausage falling over it spawns a flame that patrols x>=150 (max 3), 6 s.
+  - Hits need vertical overlap (never x alone); bottom-girder items are harmless left of x=90; "jumped over" is an event (`FA.jumps`, debug counter only).
+    A hit calls `faDie`, which now also clears ALL items/flames and restarts the throw delay at 2.5 s (full death rules = M4).
+  - Item contact width is a forgiving `FA_PHYS.hitw`=16 (body box stays 22): with the +20% body a standing jump could no longer clear a sausage.
+  - Embedded only what M3 draws: `fa_alg_throw0-3`, `fa_salsiccia`, `fa_porchetta0`, `fa_carne0-1`, `fa_fiamma0-3`, `fa_griglia0-1` (art untouched).
+- **`index.html` size delta: +102,286 bytes.**
+- Verified headless (real clicks/keys/touch + deterministic stepping, 23 M3 checks + 30 M2 regression checks, zero console errors): idle↔throw and spawn on
+  the release frame, zigzag g4→g0 to the grill, ladder drops, D2 ladder rate, jumping a sausage counts and doesn't hit, standing still hits, porchetta hits
+  at 3 timings, safe zone, vertical overlap (item 63 px above = no hit), respawn clears items, dev toggle by real click (meat hops, flame spawns, x>=150).
+- Measured: the clear-jump window over a sausage is only ~22–26 px of takeoff distance (~0.06–0.09 s) — same tightness as the D2 demo. Flagged for M9.
+- Not tested: touch feel on a real phone, real-device performance.
