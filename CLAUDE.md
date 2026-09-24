@@ -2,51 +2,6 @@
 
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
-## SESSION HANDOFF (2026-09-24 → next session)
-**State:** `VERSION` = `0.3_26`, everything pushed to `main`, `git status` clean. HEAD = `a69b722` plus this note's own docs commit ("docs: session handoff after M4").
-**Done through M4** (§10.8): M0–M4 plus the 0.3_20 dev-button bugfix, 0.3_21 layout, 0.3_23/0.3_25 owner-feedback builds, 0.3_24 (M3), 0.3_26 (M4).
-Details of every decision live in §10.9 and `CHANGELOG.md` — not repeated here.
-
-**Waiting on the owner:** phone test of 0.3_25 and 0.3_26. Address their feedback first. **Next chunk: M5** (Floor 1 "Coccia": intro card with `fa_bld_coccia`
-at ×1 + kick-out win sequence with `fa_alg_kick0-2`) — **only after the owner's feedback/sign-off**, Sonnet · medium.
-
-**Open items the owner has to judge** (all tuning, M9 may retune):
-1. Stock pace: 90 s per floor.
-2. Death pause 0.8 s + 2 s invulnerable blink.
-3. Algidone eat frequency: 22 percent of throw cycles.
-4. Sausage standing-jump window ~0.23 s (porchetta needs a running jump, ~0.25 s).
-5. Item size ×0.6 vs the ×1.2 climber head (they look small).
-6. Stock pile art: set A `fa_scorte0-3` (in use) or set B `fa_scorte_b0-3`.
-7. Mirrored belt text on Algidone ("ALGIDONE" reversed) — accepted so far, confirm.
-8. The 3 art issues (§10.9): pink sausage, beardless `eat1/eat2`, duplicate cap `kick1`. Never edit the art.
-Also confirm: building ×0.6 (chosen), climb view up=`fd` / down=`fu` (maze convention), floor 1 has no grill by design.
-Review images for these are on GitHub in `refs/ferma_algidone/review/` (`bld_options`, `scorte_compare`, `m4_alg`, `climb_strip`) — reference only, not shipped or linked from the game.
-
-**Ferma Algidone! code map** (`index.html`, `grep -n 'FA_\|fa[A-Z]'`): data `FA_LEVELS[0]`; world 360×610; `FA_PHYS`; loop `faLoop` → `faStep` → `faDraw`;
-items `faSpawn/faItemsStep/faCollide/faGrillHit`; HUD `faHud`; panels `faPanel`; state `FA.state` = `play|dying|win|over` + `FA.paused`;
-`faDie(cause,force)`, `faFinishDeath`, `faWin`, `faRestart`. Demos (Pages, never linked): `prototypes/algidone/` 01–05.
-
-**Practical notes:**
-- **Verification = real clicks.** Playwright (Python, headless Chromium): click the UI entry point, never call the function (0.3_19's dev button was dead because
-  `bindOpt` forwards only whitelisted selectors to `bindDev`; new dev-panel buttons must be added to that whitelist). Path: splash `#rsi` → `[data-tile=opt]` →
-  `[data-otab=dev]` → open the accordion (`details.acc:has(#id) > summary`) → click; desktop + mobile touch (`has_touch`, `tap`). Real keys via `keyboard.down/up`,
-  touch pad via CDP `Input.dispatchTouchEvent`. Dev mode: `store.set('mgs_dev',{role:'master',devOn:true})` + reload. For deterministic logic: freeze with
-  `cancelAnimationFrame(FA.raf)` and call `faStep(1/60)`; silence throws with `Object.assign(FA.cfg,{sausage:0,porchetta:0,meat:0,ladderP:0});FA.alg.wait=1e9`.
-  Scratch scripts are NOT in the repo and are lost between sessions — rebuild them. `node --check` every `<script>` block first, then the smoke test.
-  Real-time key-hold polling and random throw counts are flaky under CPU load — rerun before suspecting the game.
-- **Patch scripts:** edit `index.html` with a Python script that asserts each anchor appears exactly once; working copy is CRLF (read/write with `newline=""`);
-  never print base64; embed art in the chunk that first draws it. Measure size deltas against `git show HEAD:index.html` with CRLF normalised.
-- **Git Bash heredocs with quotes break on this machine** — write longer scripts with the Write tool.
-- **Docs are committed together with the code.** In 0.3_26 my docs script crashed (a `%` in a `%`-formatted string) and the code commit went out without its docs;
-  it needed a follow-up commit. Build doc text with `.replace`, and check `git diff --stat` shows CHANGELOG/CLAUDE.md before committing.
-- Each chunk: bump `VERSION` to `0.3_NN`, CHANGELOG entry with size delta, update the §10.8 row, commit `v0.3_NN: …`, push. A push can fail transiently — retry; follow §1 only if
-  `origin/main` really moved. The dev achievement toast overlays the bottom of the screen (`popBottom()` avoids `.dpad,#fapad`).
-- Package `60c07bf` and other owner commits may land via the GitHub web UI — always `git pull --ff-only` first (§1).
-
-This note can be deleted at the start of the next session as part of confirming the sync.
-
----
-
 Owner: **Ciprognola** ("El Cipro") — product owner and master developer.
 Repo: `https://github.com/Ciprognola/mangiasassi` · Live: `https://ciprognola.github.io/mangiasassi/`
 Licence: MIT. Game language: **Italian** (all UI text, dialogue and new strings stay in Italian).
@@ -769,6 +724,10 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-24 | 0.3_24 (M3) | Item engine choices | Items roll **downhill** (direction from the girder slope). Ladder drops use ladders that lead DOWN from the item's girder (D2 checked the wrong set). Porchetta hitbox 60 tall (un-jumpable), drawn ×0.5 (30×16) as instructed — looks smaller than its hitbox, flagged. Carne + grill/flame off on floor 1, on via dev button "+ carne/griglia". Player contact width vs items `hitw`=16 (body 22): forgiving, needed to keep a sausage jumpable after the +20% scale. `faDie` clears items, throws resume after 2.5 s |
 | 2026-09-24 | 0.3_25 (M3 feedback) | Controls, porchetta, windows, scale, grill, meat, building | **Controls** (Ferma Algidone! only): d-pad bottom-left (66 px buttons), big round yellow "SALTA" 104 px bottom-right, 40 px gap, separate pointer captures. **Amends round 3 "porchetta cannot be jumped": porchetta is now clearable** (hitbox = sprite 36×19, no invisible box); only with a running jump (standing is impossible), window ≈0.25 s; worth more points than a sausage (M4). **Ladder refuge:** climbing ≥~17 px up any ladder (regular or the short broken ones: 35 and 41 px of height) lets items pass underneath. Sausage standing-jump window ≈0.23 s (was 0.06–0.09) via contact width 10 (body 22), sausage hitbox r8×h14; jump apex/gravity unchanged. Items ×0.6. **Grill:** item slides into the grill, `fa_griglia1` flare + code smoke puff + sparks, glow settles; same hook spawns the floor-3 flame; on floor 1 (grill off) items still just exit. **Meat hop capped** to 34 px (`FA_MEAT_HOP`=200) so it never reaches the girder above; floor 3 may retune. **Building:** `fa_bld_coccia` is an in-level layer (order: backdrop → building → girders/ladders → items/Algidone/player → HUD), ×0.6, bottom on the top girder at x=270; world height 600→610 (level shifted +10, gaps unchanged) |
 | 2026-09-24 | 0.3_26 (M4) | HUD, stock, scoring, death, pause choices | HUD = D5 layout in the DOM bar (score · stock-pile icon + bar · 3 head icons · pause); stock pile = set A `fa_scorte0-3` (set B offered for comparison, not embedded). **Stock 90 s** steady, refilled on respawn/restart, empty = one life. **Death**: 0.8 s pause+flash → clear ALL → respawn → 2 s invulnerable blink (blocks hits, not falls/empty stock) → throws after 2.5 s grace. **Scores (D5 + choices)**: jump +10 sausage/meat, +20 flame, **+30 porchetta**; goal bonus floor(stock)×10. Algidone: eat 22 percent of cycles, angry on top two girders or stock under 25 percent. Game over "Scorte perse!" Riprova/Esci; win "Piano completato!" Rigioca/Esci; pause panel Riprendi/Esci; Esc/P/HUD button/visibilitychange. ✕ button removed |
+| 2026-09-24 | 0.3_27 (owner phone test of 0.3_25/0.3_26) | Accepted as-is | Death pause 0.8 s + 2 s blink, sausage/porchetta jump windows, items x0.6, stock pile set A, mirrored belt text, building x0.6, climb view up=`fd`/down=`fu`, no grill on floor 1, `kick1` double cap (kept, comedic) |
+| 2026-09-24 | 0.3_27 | Stock behaviour | **Amends M0 Q6 / M4:** stock keeps its value across deaths (no refill on respawn), resets only at floor start / Riprova / Rigioca. Each death: Algidone eats during the death pause and stock -10 s (clamp 0). Empty = **immediate game over** "Scorte perse!" regardless of lives. Hits/falls still cost one life. Drain paused in death pause + pause menu |
+| 2026-09-24 | 0.3_27 | Hit through girders | Root cause: box overlap only. Rule: an item hits only if no girder surface lies between its base and the player's feet (body centre on a ladder) at that x (`faSeparated`). Ladder-drop hits, refuge and jump windows unchanged |
+| 2026-09-24 | 0.3_27 | Eat frames | Draw path identical to the others; the difference is in the art. Only `fa_alg_eat0` is used; bite/chew animated in code. Art issue 2 stays open (owner may regenerate eat1/eat2). Cooked-sausage art: still waiting |
 | 2026-09-24 | M0 → M1 | M0 closed | All rounds/demos done and signed off; M1 (engine skeleton) starts |
 
 **Built-in audio slots** (filled by A-chunks):

@@ -1516,3 +1516,20 @@ for anything not itemised below.
 - Embedded only what M4 draws: `fa_alg_eat0-2`, `fa_alg_angry0-1`, `fa_scorte0-3`. **`index.html` size delta: +119849 bytes.**
 - Verified headless (real clicks/keys/touch + deterministic stepping): 30 new M4 checks (HUD, steady drain, empty = one life, death rules, invulnerability, 3 deaths → game over, Riprova, jump scores, goal bonus, win/over freeze, eat/angry, real-click pause, Esc/P, visibilitychange, Esci) + M2 31 / M3 22 / M25 24 regressions; zero console errors. Two timing-flaky checks in my own scripts (random throw count; key-hold polling).
 - Not tested: real-phone feel, real background-tab behaviour (visibilitychange was dispatched, not a real tab switch).
+
+## 0.3_27 — 2026-09-24
+Ferma Algidone! — owner feedback after the phone test of 0.3_25/0.3_26.
+- **Hit through girders (fixed).** Reproduced headless: with the player under the narrow-gap girder ends (gap 62-66 px, jump apex 55 px + 31 px body) a jump put the head into the
+  box of an item rolling on the girder above, with the girder in between. Root cause: `faCollide` only tested box overlap, never what lies between. New `faSeparated()`:
+  an item hits only if no girder surface lies between the item's base and the player's feet (centre of the body while on a ladder) at their x. 23 through-girder hits in the
+  repro grid (4 girder pairs x 6 x positions x sausage/porchetta x stand/jump/run-jump; the 4 left are fall-off-the-edge artefacts of the test) -> 0. Ladder-drop hits (player on
+  the landing girder / on the ladder), same-girder hits and the ladder refuge unchanged; jump-window measurements identical before and after.
+- **Cooked sausage**: `fa_salsiccia.png` has not been replaced since `60c07bf` - waiting for art, nothing changed.
+- **Stock**: no refill on respawn; the value is kept across deaths and reset only at floor start / Riprova / Rigioca. Each death: Algidone plays the eat animation during the death pause
+  and the stock drops 10 s (clamped at 0). Normal drain is paused in the death pause and in the pause menu (as before). Stock empty = **immediate game over "Scorte perse!"**
+  regardless of lives; if the death penalty empties it, game over follows the death pause. Hits/falls still cost one life.
+- **Eat frames**: `review/eat_compare.png` (idle0-1, throw0, eat0-2 drawn exactly as in game). The draw path is identical (124x158 cell, x0.6, bottom-centre, mirror, smoothing off);
+  the difference is in the art (eat1/eat2 beardless, puffed cheeks). Game now uses `eat0` only; bite/chew is code (squash + bob) after the grab.
+- **`index.html` size delta: +1232 bytes.**
+- Verified headless: repro grid before/after, regression (ladder drop x2, refuge, same-girder hit), 9 stock checks, real-click desktop (keys) + mobile (touch) smoke, 0 console errors.
+- Not tested: real-phone feel of the new hit rule.
