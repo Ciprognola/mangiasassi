@@ -3,63 +3,45 @@
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
 ## SESSION HANDOFF (2026-09-24 → next session)
-**M0–M4 are done and pushed to `main` (latest build `0.3_26`).** 0.3_25 = M3 feedback (controls, porchetta, windows, grill, building); 0.3_26 = M4.
+**State:** `VERSION` = `0.3_26`, everything pushed to `main`, `git status` clean. HEAD = `a69b722` plus this note's own docs commit ("docs: session handoff after M4").
+**Done through M4** (§10.8): M0–M4 plus the 0.3_20 dev-button bugfix, 0.3_21 layout, 0.3_23/0.3_25 owner-feedback builds, 0.3_24 (M3), 0.3_26 (M4).
+Details of every decision live in §10.9 and `CHANGELOG.md` — not repeated here.
 
-- **Waiting on the owner:** phone test of M4 (HUD, death/invulnerability feel, stock pace, pause, panels). Address feedback first.
-  **Do not start M5 before the owner signs M4 off.** M5 = Floor 1 "Coccia": intro card with `fa_bld_coccia` (×1) + kick-out win sequence (`fa_alg_kick0-2`).
-- Known tuning flags (M9, owner to decide): stock 90 s; eat frequency 22 percent; sausage jump window ~0.23 s, porchetta needs a running jump (~0.25 s);
-  item art ×0.6; score values (10/10/20/30, stock bonus ×10); flame/meat scoring.
-- Panels/HUD are DOM (`#fapanel`, `#fahud`); game state is `FA.state` = `play|dying|win|over` + `FA.paused`; `faDie(cause,force)`, `faFinishDeath`, `faWin`, `faRestart`.
-- Open, owner-only: 3 art issues in §10.9 (pink sausage, beardless `eat1/eat2`, duplicate cap `kick1`) — never edit the art.
-- Mirrored idle shows his belt text reversed ("ALGIDONE"); accepted as a consequence of mirroring, art untouched.
-- M3 detail to remember: girder 1's right end drops items right next to the grill at the bottom-right (the sink, since the
-  bottom girder now slopes down-right); the M0 safe-zone/flame rules (§10.9) still apply.
+**Waiting on the owner:** phone test of 0.3_25 and 0.3_26. Address their feedback first. **Next chunk: M5** (Floor 1 "Coccia": intro card with `fa_bld_coccia`
+at ×1 + kick-out win sequence with `fa_alg_kick0-2`) — **only after the owner's feedback/sign-off**, Sonnet · medium.
+
+**Open items the owner has to judge** (all tuning, M9 may retune):
+1. Stock pace: 90 s per floor.
+2. Death pause 0.8 s + 2 s invulnerable blink.
+3. Algidone eat frequency: 22 percent of throw cycles.
+4. Sausage standing-jump window ~0.23 s (porchetta needs a running jump, ~0.25 s).
+5. Item size ×0.6 vs the ×1.2 climber head (they look small).
+6. Stock pile art: set A `fa_scorte0-3` (in use) or set B `fa_scorte_b0-3`.
+7. Mirrored belt text on Algidone ("ALGIDONE" reversed) — accepted so far, confirm.
+8. The 3 art issues (§10.9): pink sausage, beardless `eat1/eat2`, duplicate cap `kick1`. Never edit the art.
+Also confirm: building ×0.6 (chosen), climb view up=`fd` / down=`fu` (maze convention), floor 1 has no grill by design.
+Review images for these are on GitHub in `refs/ferma_algidone/review/` (`bld_options`, `scorte_compare`, `m4_alg`, `climb_strip`) — reference only, not shipped or linked from the game.
+
+**Ferma Algidone! code map** (`index.html`, `grep -n 'FA_\|fa[A-Z]'`): data `FA_LEVELS[0]`; world 360×610; `FA_PHYS`; loop `faLoop` → `faStep` → `faDraw`;
+items `faSpawn/faItemsStep/faCollide/faGrillHit`; HUD `faHud`; panels `faPanel`; state `FA.state` = `play|dying|win|over` + `FA.paused`;
+`faDie(cause,force)`, `faFinishDeath`, `faWin`, `faRestart`. Demos (Pages, never linked): `prototypes/algidone/` 01–05.
+
+**Practical notes:**
+- **Verification = real clicks.** Playwright (Python, headless Chromium): click the UI entry point, never call the function (0.3_19's dev button was dead because
+  `bindOpt` forwards only whitelisted selectors to `bindDev`; new dev-panel buttons must be added to that whitelist). Path: splash `#rsi` → `[data-tile=opt]` →
+  `[data-otab=dev]` → open the accordion (`details.acc:has(#id) > summary`) → click; desktop + mobile touch (`has_touch`, `tap`). Real keys via `keyboard.down/up`,
+  touch pad via CDP `Input.dispatchTouchEvent`. Dev mode: `store.set('mgs_dev',{role:'master',devOn:true})` + reload. For deterministic logic: freeze with
+  `cancelAnimationFrame(FA.raf)` and call `faStep(1/60)`; silence throws with `Object.assign(FA.cfg,{sausage:0,porchetta:0,meat:0,ladderP:0});FA.alg.wait=1e9`.
+  Scratch scripts are NOT in the repo and are lost between sessions — rebuild them. `node --check` every `<script>` block first, then the smoke test.
+  Real-time key-hold polling and random throw counts are flaky under CPU load — rerun before suspecting the game.
+- **Patch scripts:** edit `index.html` with a Python script that asserts each anchor appears exactly once; working copy is CRLF (read/write with `newline=""`);
+  never print base64; embed art in the chunk that first draws it. Measure size deltas against `git show HEAD:index.html` with CRLF normalised.
+- **Git Bash heredocs with quotes break on this machine** — write longer scripts with the Write tool.
+- **Docs are committed together with the code.** In 0.3_26 my docs script crashed (a `%` in a `%`-formatted string) and the code commit went out without its docs;
+  it needed a follow-up commit. Build doc text with `.replace`, and check `git diff --stat` shows CHANGELOG/CLAUDE.md before committing.
+- Each chunk: bump `VERSION` to `0.3_NN`, CHANGELOG entry with size delta, update the §10.8 row, commit `v0.3_NN: …`, push. A push can fail transiently — retry; follow §1 only if
+  `origin/main` really moved. The dev achievement toast overlays the bottom of the screen (`popBottom()` avoids `.dpad,#fapad`).
 - Package `60c07bf` and other owner commits may land via the GitHub web UI — always `git pull --ff-only` first (§1).
-
-**First thing next session:** the owner will reply to the last report (0.3_25 + 0.3_26). Expect M4 phone-test feedback and answers to these
-open questions — answer/apply feedback first, then (only if signed off) start M5:
-- Stock pile art: keep set A (`fa_scorte0-3`, in use) or switch to set B (`fa_scorte_b0-3`, not embedded)?
-- Building size: ×0.6 chosen (recommended over ×0.5 / ×0.75) — confirm.
-- Floor 1 has no grill by design (`items.grill:false`); items just exit there. Owner may want the grill visible on floor 1 (one-line cfg change).
-- Tuning flags above (stock 90 s, eat 22 percent, jump windows, item ×0.6 looks small next to the ×1.2 head, scores).
-
-**Ferma Algidone! code map (all in `index.html`, `grep -n 'FA_\|fa[A-Z]'`):** data `FA_LEVELS[0]` (girders, ladders, start/goal/grill/algidone/building,
-`items` config, `stock`); world 360×610 (`FA_W/FA_H`); `FA_PHYS` (physics, head 36, body box 22×31, contact width `hitw` 10, Algidone ×0.6, fall threshold 115);
-loop `faLoop` (fixed step, pause-aware) → `faStep` (state gate → stock → Algidone → items → fx → player → goal/collide) → `faDraw` (backdrop → building → grill →
-girders/ladders → Algidone → items → fx → player → debug/flash); items `faSpawn/faItemsStep/faCollide/faGrillHit`; HUD `faHud`; panels `faPanel`;
-input `FA_KEYS/FA_TOUCH` + `#fapad` pointer handlers. Climb view: up = `fd` set, down = `fu` set (maze convention).
-Girder gaps are 62/63/85/106–107 px; items roll downhill (bottom girder slopes down-right into the grill).
-
-**Test recipe (scratch scripts are NOT in the repo and are lost between sessions — rebuild them):** Playwright sync API, `setup()` sets dev mode via
-`store.set('mgs_dev',...)` + reload, `open_fa()` clicks splash `#rsi` → menu → `[data-tile=opt]` → `[data-otab=dev]` → accordion → `#mgfa` (`#mgfa3` = with meat/grill).
-Freeze the loop with `cancelAnimationFrame(FA.raf)` and step `faStep(1/60)` from `page.evaluate` for deterministic logic tests; use real `keyboard`/CDP touch for input tests.
-Silence random throws with `Object.assign(FA.cfg,{sausage:0,porchetta:0,meat:0,ladderP:0});FA.alg.wait=1e9`. Jump-window measurement = sweep the takeoff distance
-and divide the OK range by the relative speed. Known flaky checks under CPU load: real-time key-hold polling and random throw counts — rerun before suspecting the game.
-
-**Gotchas:** the working copy is CRLF (Python: read/write with `newline=""`); patch `index.html` with anchored-replace scripts that assert exactly one match;
-`%` in a Python `%`-formatted string crashed a docs script once (0.3_26) — use `.replace`, and re-check `git diff --stat` before committing docs; a push can fail
-transiently — retry, and only if `origin/main` really moved follow §1. The dev achievement toast overlays the bottom of the screen (`popBottom()` avoids `.dpad,#fapad`).
-
-**Demos (live on Pages, never linked from the game):** `prototypes/algidone/` 01–05. Rules from the M0-fix (§10.9) hold:
-hit tests need vertical overlap on the same level; respawn clears all items; spawn area is safe.
-
-**Practical notes for the next session:**
-- Verification pattern: Playwright (Python, headless Chromium) with `page.evaluate` on top-level `let`/`const` globals (`screen`, `FA`,
-  `FA.p`); keep helper scripts in the scratchpad, not in the repo. `node --check` on each `<script>` block first, then the smoke test.
-- **Smoke tests must click the UI entry point, not call the function** (0.3_19's dev-panel button was dead because `bindOpt`
-  forwards only whitelisted selectors to `bindDev`; a direct `startFerma()` call passed anyway). New dev-panel buttons: add the
-  selector to that whitelist in `bindOpt`. Path: splash `#rsi` → `[data-tile=opt]` → `[data-otab=dev]` → open the accordion
-  (`details.acc:has(#id) > summary`) → click; run desktop + mobile touch (`has_touch`, `tap`). Play tests with real key presses
-  (`keyboard.down/up`) and real touch (CDP `Input.dispatchTouchEvent`) for the pad. Set dev mode with
-  `store.set('mgs_dev',{role:'master',devOn:true})` + reload.
-- Build patches to `index.html` with a Python script that asserts each anchor appears exactly once (the working copy is CRLF —
-  read/write with `newline=""` and convert); never print base64. Embed art via script like `fa_bg_coccia` in `FA_IMG_SRC`.
-  Measure the size delta against `git show HEAD:index.html` with CRLF normalised (raw `wc -c` is off by the CRLFs).
-- Long Bash heredocs containing quotes have broken on this machine (Git Bash) — write longer scripts with the Write tool.
-- M1/M2 logical world is 360×560; climber head is drawn 30 px wide (`FA_PHYS.head`); the `FA.debug` overlay shows safe/goal/grill zones,
-  Algidone's footprint, "Ultimo danno" and the goal-reached text.
-- Each further chunk: bump `VERSION` to `0.3_NN`, append a `CHANGELOG.md` entry with the size delta, update the §10.8 row, commit
-  `v0.3_NN: …`, push. Embed each art frame in the chunk that first draws it (§10.9 round 4 amendment).
 
 This note can be deleted at the start of the next session as part of confirming the sync.
 
