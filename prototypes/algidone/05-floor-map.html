@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>M0 · D4 — Mappa dei piani</title>
+<style>
+  :root{color-scheme:dark;--bg:#0b1220;--panel:#131d2e;--border:#223047;--text:#e6ecf5;--mute:#8fa0b8;--girder:#c98a3b;--goal:#ffce3d;--ok:#4ade80}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,sans-serif;padding:12px;display:flex;flex-direction:column;align-items:center;gap:10px}
+  h1{font-size:16px;margin:0;text-align:center}
+  .sub{color:var(--mute);font-size:11.5px;text-align:center;max-width:380px;margin:0}
+  .tower{display:flex;flex-direction:column-reverse;gap:0;width:340px;max-width:100%}
+  .floor{position:relative;background:var(--panel);border:2px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer}
+  .floor+.floor{margin-bottom:-2px}
+  .floor.cur{border-color:var(--goal)}
+  .floor.done{border-color:var(--ok)}
+  .floor.locked{opacity:.45;cursor:default}
+  .floor .n{position:absolute;left:-2px;top:-2px;background:var(--girder);color:#1a1204;font-weight:700;font-size:12px;border-radius:10px 0 8px 0;padding:2px 8px}
+  .floor h2{margin:6px 0 2px;font-size:15px}
+  .floor .m{font-size:12px;color:var(--mute)}
+  .floor .items{font-size:12px;margin-top:4px}
+  .link{text-align:center;color:var(--mute);font-size:18px;line-height:14px;padding:2px}
+  .card{display:none;background:#0f1a2c;border:2px solid var(--goal);border-radius:12px;padding:16px;width:340px;max-width:100%;text-align:center}
+  .card.on{display:block}
+  .card h2{margin:0 0 4px;color:var(--goal)}
+  button{background:var(--girder);border:none;color:#1a1204;border-radius:9px;padding:9px 18px;font:700 13px inherit;cursor:pointer;margin-top:8px}
+  .row{display:flex;gap:8px}
+  .row button{background:var(--panel);color:var(--text);border:1px solid var(--border)}
+</style>
+</head>
+<body>
+<h1>M0 · D4 — Mappa dei piani</h1>
+<p class="sub">Le tre tappe della v1 come una torre: Algidone sale di livello ogni volta che si prende un produttore
+più importante. Tocca un piano sbloccato per vedere la scheda di introduzione che comparirebbe prima di giocarlo.</p>
+
+<div class="tower" id="tower"></div>
+<div class="card" id="card"><h2 id="cT"></h2><div id="cS" style="color:var(--mute)"></div><div id="cM" style="margin-top:8px"></div><button id="cGo">Via!</button></div>
+
+<div class="row"><button id="clear">Segna piano superato</button><button id="reset">Ricomincia</button></div>
+<p class="sub" id="end"></p>
+
+<script>
+const FLOORS = [
+  { n: 1, name: 'Coccia', sub: 'Il ristorante della carne eccellente', mech: 'Travi e scale', items: '🌭 salsicce · 🍖 porchetta ogni tanto' },
+  { n: 2, name: 'Macelleria', sub: 'Algidone si prende il banco più grande', mech: 'Novità: nastri trasportatori', items: '🌭 🍖 + carne che viaggia sui nastri' },
+  { n: 3, name: 'Fabbrica di salsicce', sub: 'La linea di produzione al completo', mech: 'Novità: ascensori o rivetti (da decidere)', items: '🌭 🍖 🥩 rimbalzanti + fiamme dalla griglia' },
+];
+let done = 0, sel = null;
+const tw = document.getElementById('tower'), card = document.getElementById('card');
+function render() {
+  tw.innerHTML = '';
+  FLOORS.forEach((f, i) => {
+    const st = i < done ? 'done' : i === done ? 'cur' : 'locked';
+    if (i > 0) { const l = document.createElement('div'); l.className = 'link'; l.textContent = '▲'; tw.appendChild(l); }
+    const d = document.createElement('div'); d.className = 'floor ' + st;
+    d.innerHTML = `<span class="n">Piano ${f.n}${st === 'done' ? ' ✓' : ''}</span><h2>${f.name}</h2><div class="m">${f.mech}</div><div class="items">${f.items}</div>`;
+    if (st !== 'locked') d.onclick = () => { sel = i; showCard(); };
+    tw.appendChild(d);
+  });
+  document.getElementById('end').textContent = done >= FLOORS.length ? 'Schermata finale di vittoria: Algidone ha perso tutto. (Il giro più veloce alla DK è futuro, non v1.)' : '';
+}
+function showCard() {
+  const f = FLOORS[sel];
+  document.getElementById('cT').textContent = 'Piano ' + f.n + ': ' + f.name;
+  document.getElementById('cS').textContent = f.sub;
+  document.getElementById('cM').textContent = f.mech + ' — ' + f.items;
+  card.classList.add('on');
+}
+document.getElementById('cGo').onclick = () => card.classList.remove('on');
+document.getElementById('clear').onclick = () => { if (done < FLOORS.length) done++; card.classList.remove('on'); render(); };
+document.getElementById('reset').onclick = () => { done = 0; card.classList.remove('on'); render(); };
+render();
+</script>
+</body>
+</html>
