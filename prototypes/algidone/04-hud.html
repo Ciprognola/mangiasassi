@@ -71,6 +71,7 @@ punteggio, vite, scorta che si esaurisce (Q6), pausa.</p>
   </div>
   <canvas id="cv" width="360" height="514"></canvas>
   <div class="flash" id="flash"></div>
+  <div class="pauseOverlay" id="winOverlay"><h2>Piano completato!</h2><div id="winScore" style="color:var(--mute)"></div><button id="againBtn">Rigioca</button></div>
   <div class="pauseOverlay" id="pauseOverlay">
     <h2>Pausa</h2>
     <button id="resumeBtn">Riprendi</button>
@@ -78,6 +79,7 @@ punteggio, vite, scorta che si esaurisce (Q6), pausa.</p>
 </div>
 
 <div class="autorow">
+  <button id="invBtn">Invincibile: NO</button>
   <span>Lancio automatico da Algidone:</span>
   <button class="on" id="autoBtn">Attivo</button>
 </div>
@@ -98,12 +100,15 @@ punteggio, vite, scorta che si esaurisce (Q6), pausa.</p>
   <button class="jumpbtn" id="jbtn">SALTA</button>
 </div>
 
+<div id="dbg" style="font:11px ui-monospace,monospace;color:#ffb4b4;min-height:14px">Ultimo danno: —</div>
 <footer>La scorta (barra verde) si esaurisce da sola, come il timer bonus di Donkey Kong (M0 Q6) — a zero
 si perde una vita e riparte piena. <kbd>❚❚</kbd> mette in pausa: nessun oggetto/timer si muove.</footer>
 
 <script>
 const cv = document.getElementById('cv'), x = cv.getContext('2d'), flashEl = document.getElementById('flash');
 const scoreEl = document.getElementById('scoreEl'), livesEl = document.getElementById('livesEl'), stockBarEl = document.getElementById('stockBar');
+const DBG=[]; const dbgEl=document.getElementById('dbg');
+const winOverlay = document.getElementById('winOverlay');
 const pauseOverlay = document.getElementById('pauseOverlay');
 const W = cv.width, H = cv.height;
 
@@ -146,12 +151,16 @@ P.y = girderYAt(GIRDERS[START.gi], P.x);
 let lives = 3, score = 0, coyoteTimer = 1e9, bufferTimer = 1e9, airStartY = null, flashT = 0;
 
 /* ============ SCORTA (M0 Q6): timer costante come il bonus di Donkey Kong, vuota = vita persa, poi riparte ============ */
-const STOCK_DURATION = 45; // secondi per uno svuotamento completo (valore di prova, da tarare)
+const STOCK_DURATION = 90; // secondi per uno svuotamento completo (valore di prova, da tarare)
+/* Regole di morte alla DK (M0-fix): pausa+lampeggio -> via TUTTI gli oggetti -> respawn -> invulnerabilita' -> lanci dopo una pausa */
+const DYING_TIME = 0.8, INVULN_TIME = 2.0, THROW_GRACE = 2.5, SAFE_X_END = 90;
+const GOAL = { x1: 20, x2: 100, gi: 4 };
+let dying = 0, invincible = false, ended = false;
 let stock = STOCK_DURATION;
 function drainStock(dt) {
   if (paused) return;
   stock -= dt;
-  if (stock <= 0) { stock = STOCK_DURATION; hitPlayer(); }
+  if (stock <= 0) { stock = STOCK_DURATION; hitPlayer('scorte finite'); }
   const pct = Math.max(0, stock / STOCK_DURATION);
   stockBarEl.style.width = (pct * 100) + '%';
   stockBarEl.style.background = pct < 0.25 ? getComputedStyle(document.documentElement).getPropertyValue('--stock-low') : getComputedStyle(document.documentElement).getPropertyValue('--stock');
@@ -201,15 +210,27 @@ function requestJump() {
 }
 function doJumpNow() { P.onGround = false; P.vy = JUMP_VY; airStartY = P.y; coyoteTimer = 1e9; }
 
-function hitPlayer() {
-  if (P.invuln > 0) return;
-  lives -= 1; if (lives <= 0) lives = 3;
-  flashT = 0.18; P.invuln = 1.2;
+function hitPlayer(cause) {
+  if (invincible || ended || dying > 0 || P.invuln > 0) return;
+  DBG.push(cause || '?'); dbgEl.textContent = 'Ultimo danno: ' + (cause || '?');
+  dying = DYING_TIME; flashT = 0.18; P.vx = 0; P.climbing = null;
+}
+function finishDeath() {
+  lives -= 1;
+  if (lives <= 0) { lives = 3; score = 0; scoreEl.textContent = 0; dbgEl.textContent += ' — vite finite, si riparte'; }
+  respawn();
+}
+function respawn() {
+  items = [];                                   // via TUTTI gli oggetti e le fiamme
   P.x = START.x; P.gi = START.gi; P.y = girderYAt(GIRDERS[START.gi], P.x);
   P.vx = 0; P.vy = 0; P.onGround = true; P.climbing = null;
+  P.invuln = INVULN_TIME; airStartY = null; coyoteTimer = 1e9; bufferTimer = 1e9;
+  stock = STOCK_DURATION; autoTimer = THROW_GRACE;
   livesEl.textContent = '♥'.repeat(lives);
 }
+function resetDemo() { lives = 3; score = 0; scoreEl.textContent = 0; ended = false; winOverlay.classList.remove('on'); respawn(); }
 
+const CAUSE={sausage:'salsiccia',porchetta:'porchetta',flame:'fiamma',meat:'carne'};
 let items = [], nextId = 1;
 function spawnSausage(gi, xStart, dir) { items.push({ id: nextId++, type: 'sausage', gi: gi ?? ALGIDONE.gi, x: xStart ?? ALGIDONE.x + 20, dir: dir ?? 1, speed: 70, jumped: false, r: 9 }); }
 function spawnPorchetta() { items.push({ id: nextId++, type: 'porchetta', gi: ALGIDONE.gi, x: ALGIDONE.x + 24, dir: 1, speed: 34, jumped: false, r: 15 }); }
@@ -226,8 +247,10 @@ function stepItems(dt) {
         const l = ladderAt(it.gi, it.x);
         if (l && Math.random() < 0.06 && it.gi > 0) { it.gi -= 1; it.x = l.x; continue; }
       }
-      if (it.x <= g.x1 || it.x >= g.x2) {
-        it.x = Math.max(g.x1, Math.min(g.x2, it.x));
+      const lo = it.type === 'flame' ? 150 : g.x1;   // la fiamma non pattuglia mai il punto di partenza
+      if (it.x <= lo || it.x >= g.x2) {
+        it.x = Math.max(lo, Math.min(g.x2, it.x));
+        if (it.type === 'flame') { it.dir *= -1; it.y = girderYAt(g, it.x); it.life -= dt; if (it.life <= 0) it.dead = true; continue; }
         if (it.gi > 0) { it.gi -= 1; }
         else { if (it.type === 'sausage' && it.x >= GRILL.x1 - 10 && it.x <= GRILL.x2 + 10) spawnFlame((GRILL.x1 + GRILL.x2) / 2); it.dead = true; continue; }
         it.dir *= -1;
@@ -249,19 +272,30 @@ function stepItems(dt) {
 }
 
 function checkCollisions() {
-  if (P.invuln > 0) return;
+  if (P.invuln > 0 || dying > 0) return;
+  const pTop = P.y - P.h, pBot = P.y;
   for (const it of items) {
-    if (it.jumped) continue;
-    const dx = Math.abs(P.x - it.x); const reach = it.r + 11;
-    if (dx >= reach) continue;
-    if (it.type === 'porchetta') { hitPlayer(); continue; }
-    const itemTopY = it.y - it.r * 2 - 2;
-    if (P.y < itemTopY) { it.jumped = true; score += 10; scoreEl.textContent = score; }
-    else hitPlayer();
+    if (it.gi === 0 && it.x < SAFE_X_END && it.type !== 'flame') continue;   // zona di partenza sicura
+    if (Math.abs(P.x - it.x) >= it.r + 9) continue;
+    const h = it.type === 'porchetta' ? 60 : it.r * 2;   // porchetta: piu' alta del salto (~55px) -> non saltabile
+    const iTop = it.y - h, iBot = it.y;
+    if (pBot > iTop + 2 && pTop < iBot - 2) { hitPlayer(CAUSE[it.type]); return; }   // stessa altezza: urto
+    if (!it.jumped && it.type !== 'porchetta' && !P.onGround && !P.climbing && pBot <= iTop + 2 && iTop - pBot < 60) {
+      it.jumped = true; score += 10; scoreEl.textContent = score;    // scavalcato davvero (stesso piano, in aria sopra)
+    }
+  }
+}
+function checkGoal() {
+  if (P.gi === GOAL.gi && P.onGround && !P.climbing && P.x >= GOAL.x1 && P.x <= GOAL.x2) {
+    const bonus = Math.floor(stock) * 10; score += bonus; scoreEl.textContent = score; ended = true;
+    document.getElementById('winScore').textContent = 'Punti: ' + score + ' (bonus scorta ' + bonus + ')';
+    winOverlay.classList.add('on');
   }
 }
 
 let autoOn = true, autoTimer = 1.6;
+document.getElementById('invBtn').onclick = e => { invincible = !invincible; e.target.classList.toggle('on', invincible); e.target.textContent = 'Invincibile: ' + (invincible ? 'SI' : 'NO'); };
+document.getElementById('againBtn').onclick = resetDemo;
 document.getElementById('autoBtn').onclick = e => { autoOn = !autoOn; e.target.classList.toggle('on', autoOn); e.target.textContent = autoOn ? 'Attivo' : 'Fermo'; };
 document.getElementById('spSaus').onclick = () => spawnSausage();
 document.getElementById('spPorc').onclick = () => spawnPorchetta();
@@ -271,9 +305,11 @@ let last = performance.now();
 function step(now) {
   const dt0 = Math.min(0.033, Math.max(0, (now - last) / 1000)); last = now;
   const dt = paused ? 0 : dt0;
-  if (!paused) {
+  if (!paused && !ended) {
     coyoteTimer += dt * 1000; bufferTimer += dt * 1000;
     if (P.invuln > 0) P.invuln -= dt;
+    if (dying > 0) { dying -= dt; if (dying <= 0) finishDeath(); }
+    else {
     drainStock(dt);
     if (autoOn) { autoTimer -= dt; if (autoTimer <= 0) { autoTimer = 1.6 + Math.random() * 1.4; (Math.random() < 0.25 ? spawnPorchetta : spawnSausage)(); } }
 
@@ -287,11 +323,12 @@ function step(now) {
     } else {
       P.vx = inputLeft() ? -WALK_SPEED : inputRight() ? WALK_SPEED : 0;
       if (P.vx < 0) P.facing = -1; else if (P.vx > 0) P.facing = 1;
-      P.x += P.vx * dt; P.x = Math.max(14, Math.min(W - 14, P.x));
+      const wall = P.gi === 0 && P.onGround;   // piano terra: niente vuoto ai lati
+      P.x += P.vx * dt; P.x = Math.max(wall ? 20 : 14, Math.min(wall ? 340 : W - 14, P.x));
       if (P.onGround) {
         const l = nearestLadder();
-        if (l && inputUp() && l.gBot === P.gi) { P.climbing = l; P.onGround = false; P.x = l.x; }
-        else if (l && inputDown() && l.gTop === P.gi && !l.broken) { P.climbing = l; P.onGround = false; P.x = l.x; }
+        if (l && inputUp() && l.gBot === P.gi) { P.climbing = l; P.onGround = false; P.x = l.x; airStartY = null; }
+        else if (l && inputDown() && l.gTop === P.gi && !l.broken) { P.climbing = l; P.onGround = false; P.x = l.x; airStartY = null; }
         else {
           const g = GIRDERS[P.gi];
           if (P.x >= g.x1 && P.x <= g.x2) { P.y = girderYAt(g, P.x); coyoteTimer = 0; }
@@ -302,23 +339,25 @@ function step(now) {
         P.vy += GRAVITY * dt; const prevY = P.y; P.y += P.vy * dt;
         if (P.vy >= 0) {
           for (let i = 0; i < GIRDERS.length; i++) {
-            const g = GIRDERS[i]; if (P.x < g.x1 || P.x > g.x2) continue;
+            const g = GIRDERS[i]; if (P.x < g.x1 - 8 || P.x > g.x2 + 8) continue;   // margine: cadere dal bordo atterra sul piano sotto
             const gy = girderYAt(g, P.x);
             if (prevY <= gy && P.y >= gy) {
               const fellDist = airStartY == null ? 0 : (gy - airStartY);
-              P.y = gy; P.vy = 0; P.onGround = true; P.gi = i;
-              if (fellDist > FALL_DAMAGE_DIST) hitPlayer();
+              P.y = gy; P.vy = 0; P.onGround = true; P.gi = i; airStartY = null;
+              if (fellDist > FALL_DAMAGE_DIST) hitPlayer('caduta ('+Math.round(fellDist)+'px)');
               else if (bufferTimer < BUFFER_MS) doJumpNow();
-              airStartY = null; break;
+              break;
             }
           }
         }
-        if (P.y > H + 60) hitPlayer();
+        if (P.y > H + 60) { if (invincible) respawn(); else hitPlayer('caduta (fuori schermo)'); }
       }
     }
 
     stepItems(dt);
     checkCollisions();
+    checkGoal();
+    }
     if (flashT > 0) { flashT -= dt; flashEl.classList.toggle('on', flashT > 0); }
   }
 
@@ -331,6 +370,9 @@ function draw() {
   x.fillStyle = 'rgba(224,72,60,.18)'; x.fillRect(GRILL.x1, 402, GRILL.x2 - GRILL.x1, 60);
   x.strokeStyle = getVar('--grill'); x.lineWidth = 2; x.strokeRect(GRILL.x1, 402, GRILL.x2 - GRILL.x1, 60);
 
+  x.fillStyle = 'rgba(74,222,128,.10)'; x.fillRect(20, 380, SAFE_X_END - 20, 30);
+  x.fillStyle = 'rgba(255,206,61,.14)'; x.fillRect(GOAL.x1, 14, GOAL.x2 - GOAL.x1, 34);
+  x.setLineDash([4, 3]); x.strokeStyle = getVar('--goal'); x.lineWidth = 1; x.strokeRect(GOAL.x1, 14, GOAL.x2 - GOAL.x1, 34); x.setLineDash([]);
   x.lineCap = 'round';
   LADDERS.forEach(l => {
     const yBotG = girderYAt(GIRDERS[l.gBot], l.x), yTop = ladderTopY(l);
@@ -361,7 +403,7 @@ function draw() {
   x.save();
   x.translate(P.x, P.y);
   if (P.facing < 0) x.scale(-1, 1);
-  x.globalAlpha = P.invuln > 0 && Math.floor(P.invuln * 12) % 2 ? 0.4 : 1;
+  x.globalAlpha = (dying > 0 ? Math.floor(dying * 14) % 2 : (P.invuln > 0 && Math.floor(P.invuln * 12) % 2)) ? 0.25 : 1;
   x.fillStyle = getVar('--player');
   x.beginPath(); x.arc(0, -P.h - 4, 8, 0, 7); x.fill();
   x.fillRect(-P.w / 2, -P.h, P.w, P.h - 4);

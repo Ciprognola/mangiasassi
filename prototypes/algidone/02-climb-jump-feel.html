@@ -33,6 +33,10 @@
   button{cursor:pointer}
   button:active,button.held{background:var(--girder);border-color:var(--girder);color:#1a1204}
   .jumpbtn:active,.jumpbtn.held{background:#ff8a8e;border-color:var(--player)}
+  .winOverlay{position:absolute;inset:0;background:rgba(10,16,26,.82);display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+  .winOverlay.on{display:flex}
+  .winOverlay h2{margin:0;font-size:20px;color:var(--goal)}
+  .winOverlay button{background:var(--girder);border:none;color:#1a1204;border-radius:9px;padding:10px 22px;font:700 14px inherit}
   .toggles{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
   .togglebtn{background:var(--panel);border:1px solid var(--border);color:var(--mute);border-radius:8px;
     padding:6px 10px;font:11.5px inherit}
@@ -58,9 +62,11 @@
 <div class="stage-wrap">
   <canvas id="cv" width="360" height="560"></canvas>
   <div class="flash" id="flash"></div>
+  <div class="winOverlay" id="winOverlay"><h2>Piano completato!</h2><button id="againBtn">Rigioca</button></div>
 </div>
 
 <div class="toggles">
+  <button class="togglebtn" id="invBtn">Invincibile: NO</button>
   <button class="togglebtn" id="tJump">Salto dalla scala: NO (classico)</button>
 </div>
 
@@ -75,6 +81,7 @@
   <button class="jumpbtn" id="jbtn">SALTA</button>
 </div>
 
+<div id="dbg" style="font:11px ui-monospace,monospace;color:#ffb4b4;min-height:14px">Ultimo danno: —</div>
 <details>
   <summary>Regolazioni fisica (per tarare col telefono)</summary>
   <div class="slider-row"><label for="sGrav">Gravità</label><input type="range" id="sGrav" min="400" max="1600" step="20" value="980"><output id="oGrav"></output></div>
@@ -88,7 +95,7 @@
 </details>
 
 <footer>Tastiera: <kbd>←</kbd><kbd>→</kbd> cammina, <kbd>↑</kbd><kbd>↓</kbd> scala, <kbd>Spazio</kbd> salta.
-Cadere più di un piano = vita persa (lampo rosso + si riparte dall'inizio).</footer>
+Cadere più di un piano = vita persa (lampeggia, si riparte dall'inizio con 2 s di invulnerabilità). Raggiungi la zona gialla in alto per completare il piano.</footer>
 
 <script>
 const cv = document.getElementById('cv'), x = cv.getContext('2d'), flashEl = document.getElementById('flash');
@@ -162,9 +169,14 @@ document.getElementById('copyBtn').onclick = async () => {
 };
 
 /* ============ STATO GIOCATORE ============ */
-const P = { x: START.x, y: 0, vx: 0, vy: 0, onGround: true, gi: START.gi, climbing: null, facing: 1, w: 18, h: 26 };
+const P = { x: START.x, y: 0, vx: 0, vy: 0, onGround: true, gi: START.gi, climbing: null, facing: 1, w: 18, h: 26, invuln: 0 };
 P.y = girderYAt(GIRDERS[START.gi], P.x);
 let lives = 3, coyoteTimer = 1e9, bufferTimer = 1e9, airStartY = null, flashT = 0;
+/* Regole di morte alla DK (M0-fix): pausa+lampeggio -> respawn -> invulnerabilita' (qui non ci sono oggetti) */
+const DYING_TIME = 0.8, INVULN_TIME = 2.0;
+const GOAL = { x1: 20, x2: 100, gi: 4 };
+let dying = 0, invincible = false, ended = false;
+const DBG = [], dbgEl = document.getElementById('dbg'), winOverlay = document.getElementById('winOverlay');
 
 const keys = {};
 addEventListener('keydown', e => {
@@ -188,6 +200,8 @@ bindHold('dl', () => touch.l = true, () => touch.l = false);
 bindHold('dr', () => touch.r = true, () => touch.r = false);
 bindHold('du', () => touch.u = true, () => touch.u = false);
 bindHold('dd', () => touch.d = true, () => touch.d = false);
+document.getElementById('invBtn').onclick = e => { invincible = !invincible; e.target.classList.toggle('on', invincible); e.target.textContent = 'Invincibile: ' + (invincible ? 'SI' : 'NO'); };
+document.getElementById('againBtn').onclick = resetDemo;
 document.getElementById('jbtn').addEventListener('pointerdown', e => { e.preventDefault(); requestJump(); });
 
 function inputLeft()  { return keys['ArrowLeft']  || keys['a'] || keys['A'] || touch.l; }
@@ -220,17 +234,30 @@ function doJumpNow() {
   P.onGround = false; P.vy = JUMP_VY; airStartY = P.y; coyoteTimer = 1e9;
 }
 
-function loseLife() {
+function loseLife(cause) {
+  if (invincible || ended || dying > 0 || P.invuln > 0) return;
+  DBG.push(cause || '?'); dbgEl.textContent = 'Ultimo danno: ' + (cause || '?');
+  dying = DYING_TIME; flashT = 0.18; P.vx = 0; P.climbing = null;
+}
+function finishDeath() {
   lives -= 1; if (lives <= 0) lives = 3; // per il prototipo: si ricomincia sempre da 3, niente game-over vero
-  flashT = 0.18;
+  respawn();
+}
+function respawn() {
   P.x = START.x; P.gi = START.gi; P.y = girderYAt(GIRDERS[START.gi], P.x);
   P.vx = 0; P.vy = 0; P.onGround = true; P.climbing = null;
+  P.invuln = INVULN_TIME; airStartY = null; coyoteTimer = 1e9; bufferTimer = 1e9;
 }
+function resetDemo() { lives = 3; ended = false; winOverlay.classList.remove('on'); respawn(); }
 
 let last = performance.now();
 function step(now) {
   const dt = Math.min(0.033, Math.max(0, (now - last) / 1000)); last = now;
+  if (ended) { draw(); requestAnimationFrame(step); return; }
   coyoteTimer += dt * 1000; bufferTimer += dt * 1000;
+  if (P.invuln > 0) P.invuln -= dt;
+  if (dying > 0) { dying -= dt; if (dying <= 0) finishDeath(); }
+  else {
 
   if (P.climbing) {
     const l = P.climbing;
@@ -246,13 +273,14 @@ function step(now) {
   } else {
     P.vx = inputLeft() ? -WALK_SPEED : inputRight() ? WALK_SPEED : 0;
     if (P.vx < 0) P.facing = -1; else if (P.vx > 0) P.facing = 1;
+    const wall = P.gi === 0 && P.onGround;   // piano terra: niente vuoto ai lati
     P.x += P.vx * dt;
-    P.x = Math.max(14, Math.min(W - 14, P.x));
+    P.x = Math.max(wall ? 20 : 14, Math.min(wall ? 340 : W - 14, P.x));
 
     if (P.onGround) {
       const l = nearestLadder();
-      if (l && inputUp() && l.gBot === P.gi) { P.climbing = l; P.onGround = false; P.x = l.x; }
-      else if (l && inputDown() && l.gTop === P.gi && !l.broken) { P.climbing = l; P.onGround = false; P.x = l.x; }
+      if (l && inputUp() && l.gBot === P.gi) { P.climbing = l; P.onGround = false; P.x = l.x; airStartY = null; }
+      else if (l && inputDown() && l.gTop === P.gi && !l.broken) { P.climbing = l; P.onGround = false; P.x = l.x; airStartY = null; }
       else {
         const g = GIRDERS[P.gi];
         if (P.x >= g.x1 && P.x <= g.x2) { P.y = girderYAt(g, P.x); coyoteTimer = 0; }
@@ -267,20 +295,23 @@ function step(now) {
       if (P.vy >= 0) {
         for (let i = 0; i < GIRDERS.length; i++) {
           const g = GIRDERS[i];
-          if (P.x < g.x1 || P.x > g.x2) continue;
+          if (P.x < g.x1 - 8 || P.x > g.x2 + 8) continue;   // margine: cadere dal bordo atterra sul piano sotto
           const gy = girderYAt(g, P.x);
           if (prevY <= gy && P.y >= gy) {
             const fellDist = airStartY == null ? 0 : (gy - airStartY);
-            P.y = gy; P.vy = 0; P.onGround = true; P.gi = i;
-            if (fellDist > FALL_DAMAGE_DIST) { loseLife(); }
+            P.y = gy; P.vy = 0; P.onGround = true; P.gi = i; airStartY = null;   // il danno da caduta si misura da dove si e' lasciato il suolo, poi si azzera
+            if (fellDist > FALL_DAMAGE_DIST) { loseLife('caduta (' + Math.round(fellDist) + 'px)'); }
             else if (bufferTimer < BUFFER_MS) { doJumpNow(); } // salto bufferizzato: scatta appena atterrato
-            airStartY = null;
             break;
           }
         }
       }
-      if (P.y > H + 60) loseLife(); // caduto fuori dal piano
+      if (P.y > H + 60) { if (invincible) respawn(); else loseLife('caduta (fuori schermo)'); } // caduto fuori dal piano
     }
+  }
+  if (P.gi === GOAL.gi && P.onGround && !P.climbing && P.x >= GOAL.x1 && P.x <= GOAL.x2) {
+    ended = true; winOverlay.classList.add('on');
+  }
   }
 
   if (flashT > 0) { flashT -= dt; flashEl.classList.toggle('on', flashT > 0); }
@@ -305,6 +336,8 @@ function draw() {
   x.fillStyle = 'rgba(224,72,60,.18)'; x.fillRect(GRILL.x1, 448, GRILL.x2 - GRILL.x1, 60);
   x.strokeStyle = getVar('--grill'); x.lineWidth = 2; x.strokeRect(GRILL.x1, 448, GRILL.x2 - GRILL.x1, 60);
 
+  x.fillStyle = 'rgba(255,206,61,.14)'; x.fillRect(GOAL.x1, 60, GOAL.x2 - GOAL.x1, 34);
+  x.setLineDash([4, 3]); x.strokeStyle = getVar('--goal'); x.lineWidth = 1; x.strokeRect(GOAL.x1, 60, GOAL.x2 - GOAL.x1, 34); x.setLineDash([]);
   x.lineCap = 'round';
   LADDERS.forEach(l => {
     const yBotG = girderYAt(GIRDERS[l.gBot], l.x), yTop = ladderTopY(l);
@@ -329,6 +362,7 @@ function draw() {
   x.save();
   x.translate(P.x, P.y);
   if (P.facing < 0) x.scale(-1, 1);
+  x.globalAlpha = (dying > 0 ? Math.floor(dying * 14) % 2 : (P.invuln > 0 && Math.floor(P.invuln * 12) % 2)) ? 0.25 : 1;
   x.fillStyle = getVar('--player');
   x.beginPath(); x.arc(0, -P.h - 4, 8, 0, 7); x.fill();
   x.fillRect(-P.w/2, -P.h, P.w, P.h - 4);

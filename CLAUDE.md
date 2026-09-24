@@ -3,6 +3,8 @@
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
 ## SESSION HANDOFF (2026-09-24 → next session)
+> **Update (M0-fix):** D2/D3/D5 playability bug fixed (see §10.9 "DK death rules"); owner approved the D2/D5 design. Round 4 (Q12 art, Q13 audio, D4) is next.
+
 Paused mid-M0, waiting on the owner to try two demos before continuing. Nothing is half-committed —
 everything through this point is **committed and pushed to `main`** (`git status` clean at handoff, HEAD
 `b5d98a5`, build still `0.3_18` — M0 is prototype-only, see below, so it hasn't bumped `VERSION`).
@@ -664,9 +666,9 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | K3 | Costume BK (Algidone) | asset sheet | Sonnet · medium | done (0.3_18) |
 | M0 | Design rounds + demos D1–D5 (may span several sessions) | [Q] bank | Sonnet · medium | todo |
 | M1 | Engine skeleton: new `screen`, level data format, girders/ladders render, fixed-timestep loop | M0 | Sonnet · high | todo |
-| M2 | Player movement: walk, climb, jump, gravity, collisions (placeholder frames) | M1 | Sonnet · high | todo |
+| M2 | Player movement: walk, climb, jump, gravity, collisions (placeholder frames). **Acceptance (§10.9 DK death rules):** fall damage measured only from where the player left the ground in free fall (~1 floor threshold), reset on landing / ladder grab / respawn; walking slopes, stepping between girder segments and leaving a ladder never count | M1 | Sonnet · high | todo |
 | M3 | Algidone thrower + item types and behaviours | M2 | Sonnet · high | todo |
-| M4 | Lives, hits/death, stock bar, scoring, HUD, pause | M3 | Sonnet · medium | todo |
+| M4 | Lives, hits/death, stock bar, scoring, HUD, pause. **Acceptance (§10.9 DK death rules):** death = short pause/blink → clear ALL items and flames → respawn at start → ~2 s blinking invulnerability → throws resume after a grace delay; spawn area is safe (no flame patrol, no item hits during invulnerability); item hits require vertical overlap on the same level (never compare x alone); stock drain gives tens of seconds per floor and costs a life only when it truly empties; reaching the goal zone shows a win message | M3 | Sonnet · medium | todo |
 | M5 | Floor 1 "Coccia": building art + kick-out win sequence | Coccia asset | Sonnet · medium | wait-assets |
 | M6 | Further floors (factory, intensive farm, …) — one chunk per floor if large | M5, art | Sonnet · medium | todo |
 | M7 | Audio: synth placeholders + music/sfx slots that match export targets | A0 | Sonnet · medium | todo |
@@ -727,6 +729,8 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-24 | M0 (round 3) | Run impact of the random encounter | Same shape as El Gamblador: triggers mid-run, doesn't end it. **Losing costs nothing** — no reward, run continues as if it hadn't happened. **Winning pays out** (sordi/exp/achievements per the row above) and the run continues afterward |
 | 2026-09-24 | M0 (round 3) | Roadmap tile 10 | **New milestone tile**, same pattern as tile 3 (professor) / tile 5 (blackjack). Unlock condition (asked, owner's own default confirmed): **first real clear of floor 1 "Coccia."** Reward stays `{type:"skin"?...}` **undefined** — behaves like a "?" tile (`ready:false`, "Premio in arrivo") until a reward is actually planned. **Not implemented now** — this is an M8 task, logged here only so the decision isn't lost |
 | 2026-09-24 | M0 (round 3) | Item art | Every item (salsicce, porchetta, pezzi di carne, flame, grill) stays a **coloured placeholder** through M0-M4. Real art requested only when M5/M6 actually start, with exact sizes/frames specified then — **nothing requested now** |
+
+| 2026-09-24 | M0-fix (DK death rules) | D2/D3/D5 were unplayable: player kept respawning and taking damage | Root causes found headless: (1) `checkCollisions` compared **x only**, so an item on *any* girder at the player's x counted as a hit; (2) every sausage lands on the bottom girder at x=20 and rolls across the spawn point, the flame could patrol it, and death cleared no items; (3) buffered jump overwrote `airStartY`, fall distance not reset on ladder grab. **Rules adopted (required for M2/M4):** death = short pause/blink (0.8 s) → clear ALL items/flames → respawn at start → 2 s blinking invulnerability → throws resume after 2.5 s; fall damage measured only from where the ground was left in free fall, reset on landing/ladder grab/respawn, threshold ≈1 floor (95 px); spawn zone safe (items on the bottom girder are harmless left of x=90, flames confined to x≥150); hits need vertical overlap on the same level, porchetta hitbox taller than a jump (still un-jumpable); stock 90 s per floor in the demo, refilled on respawn; reaching the goal zone next to Algidone shows "Piano completato!" and resets. Demo-only: "Invincibile" toggle, on-screen "Ultimo danno: <causa>" label |
 
 **Built-in audio slots** (filled by A-chunks):
 
