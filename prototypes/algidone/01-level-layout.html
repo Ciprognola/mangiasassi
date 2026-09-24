@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>M0 · D1 — Struttura livello (Piano 1: Coccia)</title>
+<style>
+  :root{color-scheme:dark;--bg:#0b1220;--panel:#131d2e;--border:#223047;--text:#e6ecf5;--mute:#8fa0b8;
+    --girder:#c98a3b;--girder-dk:#96601f;--ladder:#5bb0d9;--player:#e5484d;--goal:#ffce3d;--grid:#1c2a3d}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,sans-serif;
+    padding:10px;display:flex;flex-direction:column;align-items:center;gap:8px}
+  h1{font-size:17px;margin:0;text-align:center}
+  .sub{color:var(--mute);font-size:12.5px;text-align:center;max-width:380px;margin:0 0 4px}
+  .stage-wrap{position:relative;border:2px solid var(--border);border-radius:10px;overflow:hidden;
+    background:linear-gradient(#0d1626,#0a121f)}
+  canvas{display:block}
+  .legend{display:flex;flex-wrap:wrap;gap:10px 16px;max-width:360px;justify-content:center;font-size:12px;color:var(--mute)}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  button{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;
+    padding:8px 14px;font:inherit;cursor:pointer}
+  button:hover{border-color:var(--girder)}
+  button.on{background:var(--girder);color:#1a1204;border-color:var(--girder)}
+  footer{color:var(--mute);font-size:11.5px;text-align:center;max-width:380px;margin-top:4px}
+</style>
+</head>
+<body>
+<h1>M0 · D1 — Struttura del livello, Piano 1 "Coccia"</h1>
+<p class="sub">Struttura a torre in stile Donkey Kong classico: impalcature inclinate a zig-zag collegate
+da scale. Nessuna fisica qui — solo la forma del piano. Vedi anche D3 per il salto/arrampicata.</p>
+
+<div class="stage-wrap"><canvas id="cv" width="360" height="560"></canvas></div>
+
+<div class="legend">
+  <span><i class="sw" style="background:var(--girder)"></i>Impalcatura (percorso)</span>
+  <span><i class="sw" style="background:var(--ladder)"></i>Scala</span>
+  <span><i class="sw" style="background:var(--player)"></i>Partenza (Uomo roccia)</span>
+  <span><i class="sw" style="background:var(--goal)"></i>Algidone (obiettivo)</span>
+</div>
+
+<div class="controls">
+  <button id="gridBtn">Griglia coordinate</button>
+  <button id="labelBtn" class="on">Etichette</button>
+</div>
+
+<footer>Piano 1 di 2-3 al lancio (M0 Q3). Ordine dei produttori di carne ancora da decidere per i piani
+successivi. Orientamento verticale confermato (M0 Q11).</footer>
+
+<script>
+const cv = document.getElementById('cv'), x = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+
+/* ============ DATI DEL LIVELLO (condivisi concettualmente con D3) ============
+   Impalcature: segmenti inclinati, zig-zag come nel Donkey Kong originale.
+   Scale: collegano una impalcatura alla successiva, lati alternati. */
+const GIRDERS = [
+  { x1: 20, y1: 535, x2: 340, y2: 514 },  // G0 - base, sale verso destra
+  { x1: 20, y1: 427, x2: 340, y2: 448 },  // G1 - scende verso destra
+  { x1: 20, y1: 361, x2: 340, y2: 340 },  // G2 - sale verso destra
+  { x1: 20, y1: 252, x2: 340, y2: 273 },  // G3 - scende verso destra
+  { x1: 20, y1: 175, x2: 340, y2: 175 },  // G4 - piano di Algidone, piatto
+];
+const LADDERS = [
+  { x: 300, gTop: 1, gBot: 0 },  // destra: G0 -> G1
+  { x: 60,  gTop: 2, gBot: 1 },  // sinistra: G1 -> G2
+  { x: 300, gTop: 3, gBot: 2 },  // destra: G2 -> G3
+  { x: 60,  gTop: 4, gBot: 3 },  // sinistra: G3 -> G4
+];
+function girderYAt(g, px) {
+  const t = (px - g.x1) / (g.x2 - g.x1);
+  return g.y1 + (g.y2 - g.y1) * t;
+}
+const START = { x: 40, gi: 0 };
+const GOAL  = { x: 300, gi: 4 };
+
+let showGrid = false, showLabels = true;
+
+function draw() {
+  x.clearRect(0, 0, W, H);
+
+  if (showGrid) {
+    x.strokeStyle = '#1c2a3d'; x.lineWidth = 1;
+    for (let gx = 0; gx <= W; gx += 20) { x.beginPath(); x.moveTo(gx, 0); x.lineTo(gx, H); x.stroke(); }
+    for (let gy = 0; gy <= H; gy += 20) { x.beginPath(); x.moveTo(0, gy); x.lineTo(W, gy); x.stroke(); }
+    x.fillStyle = '#3a4a63'; x.font = '9px monospace';
+    for (let gx = 0; gx <= W; gx += 100) x.fillText(gx, gx + 2, 10);
+    for (let gy = 0; gy <= H; gy += 100) x.fillText(gy, 2, gy + 10);
+  }
+
+  // scale (disegnate PRIMA delle impalcature, cosi' le impalcature "tagliano" sopra visivamente)
+  x.strokeStyle = '#5bb0d9'; x.lineWidth = 6; x.lineCap = 'round';
+  LADDERS.forEach(l => {
+    const yTop = girderYAt(GIRDERS[l.gTop], l.x);
+    const yBot = girderYAt(GIRDERS[l.gBot], l.x);
+    x.beginPath(); x.moveTo(l.x, yTop); x.lineTo(l.x, yBot); x.stroke();
+    // pioli
+    x.strokeStyle = '#2f7594'; x.lineWidth = 3;
+    for (let py = yTop + 8; py < yBot; py += 14) {
+      x.beginPath(); x.moveTo(l.x - 7, py); x.lineTo(l.x + 7, py); x.stroke();
+    }
+    x.strokeStyle = '#5bb0d9'; x.lineWidth = 6;
+  });
+
+  // impalcature
+  GIRDERS.forEach((g, i) => {
+    x.strokeStyle = '#96601f'; x.lineWidth = 14; x.lineCap = 'round';
+    x.beginPath(); x.moveTo(g.x1, g.y1 + 3); x.lineTo(g.x2, g.y2 + 3); x.stroke();
+    x.strokeStyle = '#c98a3b'; x.lineWidth = 10;
+    x.beginPath(); x.moveTo(g.x1, g.y1); x.lineTo(g.x2, g.y2); x.stroke();
+    if (showLabels) {
+      x.fillStyle = '#e6ecf5'; x.font = 'bold 11px system-ui'; x.textAlign = 'left';
+      x.fillText('G' + i, g.x1 - 2, Math.min(g.y1, g.y2) - 10);
+    }
+  });
+
+  // partenza
+  const sy = girderYAt(GIRDERS[START.gi], START.x);
+  x.fillStyle = '#e5484d';
+  x.beginPath(); x.arc(START.x, sy - 14, 10, 0, 7); x.fill();
+  x.fillRect(START.x - 7, sy - 26, 14, 14);
+  if (showLabels) { x.fillStyle = '#e6ecf5'; x.font = '11px system-ui'; x.textAlign = 'center'; x.fillText('Partenza', START.x, sy + 22); }
+
+  // obiettivo (Algidone)
+  const goalY = girderYAt(GIRDERS[GOAL.gi], GOAL.x);
+  x.fillStyle = '#ffce3d';
+  x.beginPath(); x.arc(GOAL.x, goalY - 18, 14, 0, 7); x.fill();
+  x.fillRect(GOAL.x - 10, goalY - 34, 20, 18);
+  if (showLabels) { x.fillStyle = '#1a1204'; x.font = 'bold 11px system-ui'; x.textAlign = 'center'; x.fillText('A', GOAL.x, goalY - 14); }
+  if (showLabels) { x.fillStyle = '#e6ecf5'; x.font = '11px system-ui'; x.fillText('Algidone', GOAL.x, goalY + 22); }
+
+  x.textAlign = 'left';
+}
+
+document.getElementById('gridBtn').onclick = e => { showGrid = !showGrid; e.target.classList.toggle('on', showGrid); draw(); };
+document.getElementById('labelBtn').onclick = e => { showLabels = !showLabels; e.target.classList.toggle('on', showLabels); draw(); };
+
+draw();
+</script>
+</body>
+</html>
