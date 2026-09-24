@@ -3,7 +3,7 @@
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
 ## SESSION HANDOFF (2026-09-24 → next session)
-**M0–M3 are done and pushed to `main` (latest build `0.3_24`).** 0.3_23 = M2 feedback (climb view, +20% scale, threshold 115); 0.3_24 = M3.
+**M0–M3 (+ M3 feedback, 0.3_25) are done and pushed to `main` (latest build `0.3_25`).** 0.3_23 = M2 feedback (climb view, +20% scale, threshold 115); 0.3_24 = M3.
 
 - **Waiting on the owner:** phone test of M3 (item feel, jump-over timing, porchetta, dev button "+ carne/griglia"). Address feedback first.
   **Do not start M4 before the owner signs M3 off.** M4 = lives, death rules, stock bar, scoring, HUD, pause (Sonnet · medium; acceptance in §10.8).
@@ -637,22 +637,22 @@ elevators/rivets stay **code-drawn** (recoloured per floor); sausage roll-rotati
 
 | Key(s) | Native size | Anim / use | In-game draw size (logical px, demos' 360-px-wide layout) |
 |---|---|---|---|
-| `fa_alg_idle0-1` | 124×158 cell | Algidone idle (top of the tower) | ×0.5 → 62×79, feet on the top girder (M1 must leave ≥79 px of headroom above girder 5) |
+| `fa_alg_idle0-1` | 124×158 cell | Algidone idle (top of the tower) | ×0.6 → 74×95 (was ×0.5; 0.3_23), feet on the top girder; world grown to 360×610 for the headroom |
 | `fa_alg_throw0-3` | cell | grab → lift → release → recover (game spawns the item at release) | same ×0.5 |
 | `fa_alg_eat0-2` | cell | grab ham → bite → chew (stock draining) | same ×0.5 |
 | `fa_alg_angry0-1` | cell | stomp with dust → furious with steam (player close / stock low) | same ×0.5 |
 | `fa_alg_kick0-2` | cell | hit → flying (cap flies off) → sitting dazed (floor-win kick-out) | same ×0.5 |
-| `fa_salsiccia` | 52×32 | rolling sausage (rotated to horizontal) | ×0.5 → 26×16 (hit radius 9 in the demos) |
-| `fa_porchetta0` | 60×31 | porchetta, main frame | ×0.5 → 30×16 |
+| `fa_salsiccia` | 52×32 | rolling sausage (rotated to horizontal) | ×0.6 → 31×19 (0.3_25; hitbox r 8 × h 14, deliberately smaller than the sprite) |
+| `fa_porchetta0` | 60×31 | porchetta, main frame | ×0.6 → 36×19 (0.3_25; hitbox = sprite, 36×19) |
 | `fa_porchetta1` | 88×56 | alternative: roll with a slice cut off (optional, not a squash frame) | ×0.5 if used |
-| `fa_carne0-1` | 44×32 | bouncing meat: normal / squashed on landing (floor 3) | ×0.5 → 22×16 |
-| `fa_fiamma0-3` | 25×32 | flame flicker (floor 3) | ×0.5 → 13×16 |
+| `fa_carne0-1` | 44×32 | bouncing meat: normal / squashed on landing (floor 3) | ×0.6 → 26×19 (0.3_25) |
+| `fa_fiamma0-3` | 25×32 | flame flicker (floor 3) | ×0.6 → 15×19 (0.3_25) |
 | `fa_griglia0-1` | 45×33 | grill at the bottom: coals dim / bright | fill D1's 80-px grill zone → ×1.78 (≈80×59) |
 | `fa_scorte0-3` | 55×58 | stock pile: full → 2/3 → 1/3 → empty (stock bar / Algidone's crate) | ×0.5 → 27×29 |
 | `fa_scorte_b0-3` | 56×60 | alternative stock-pile set | same as above (pick one set in M4) |
-| `fa_bld_coccia` | 294×215 | floor-1 intro-card building | ×1 (fits 360 px) |
-| `fa_bld_macelleria` | 213×126 | floor-2 intro-card building (van included) | ×1 |
-| `fa_bld_fabbrica` | 280×218 | floor-3 intro-card building | ×1 |
+| `fa_bld_coccia` | 294×215 | floor-1 **in-level layer** (behind the girders, in front of the backdrop, ×0.6 = 176×129, bottom on the top girder at x=270; 0.3_25) **+ intro card** (M5, ×1) | ×0.6 in level / ×1 on the card |
+| `fa_bld_macelleria` | 213×126 | floor-2 in-level layer (M6, same recipe) + intro card | ×0.6 in level / ×1 on the card |
+| `fa_bld_fabbrica` | 280×218 | floor-3 in-level layer (M6, same recipe) + intro card | ×0.6 in level / ×1 on the card |
 | `fa_bg_coccia` / `fa_bg_macelleria` / `fa_bg_fabbrica` | 270×480 | level backdrops (portrait), behind the code structure | scale to 360 px wide (×1.33, cover-cropped vertically) — painted scenery, only non-integer case |
 
 The climber (Uomo roccia, head only) has **no new art**: see the Q12 row in §10.9. Sizes are decisions for M1+ and may be
@@ -761,6 +761,7 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-24 | M2 | Player implementation choices | Climber always Uomo roccia head-only (`drawFace`, GEKA hat via the skin hook, whatever character is selected). D3 physics values (`FA_PHYS`) kept as-is; ladder snap 28 px; grab only in the direction the ladder serves (up from `gBot`, down from `gTop`, never down onto a broken ladder). Walking off an edge falls; a girder can't be re-landed once left (the D3 demo's ±8 px landing margin let the player stand on an invisible extension of the girder end). Fall threshold 95 px unchanged, so the 107 px steps (g3-left→g2, g2-right→g1) are fatal — flagged to the owner, tune in M9. `faDie` is a stub (respawn + debug label) until M4 |
 | 2026-09-24 | 0.3_23 (M2 feedback) | Scale, threshold, climb view | Climber head 36 px + hitbox 22×31, Algidone ×0.6, world 360×600 (level shifted +40, gaps unchanged, top space for M4 HUD). **Fall threshold raised 95→115 px** (all single-floor drops survivable, 2-floor fatal; M9 may retune). Climb view: up=`fd`, down=`fu` (maze convention), last direction kept when still |
 | 2026-09-24 | 0.3_24 (M3) | Item engine choices | Items roll **downhill** (direction from the girder slope). Ladder drops use ladders that lead DOWN from the item's girder (D2 checked the wrong set). Porchetta hitbox 60 tall (un-jumpable), drawn ×0.5 (30×16) as instructed — looks smaller than its hitbox, flagged. Carne + grill/flame off on floor 1, on via dev button "+ carne/griglia". Player contact width vs items `hitw`=16 (body 22): forgiving, needed to keep a sausage jumpable after the +20% scale. `faDie` clears items, throws resume after 2.5 s |
+| 2026-09-24 | 0.3_25 (M3 feedback) | Controls, porchetta, windows, scale, grill, meat, building | **Controls** (Ferma Algidone! only): d-pad bottom-left (66 px buttons), big round yellow "SALTA" 104 px bottom-right, 40 px gap, separate pointer captures. **Amends round 3 "porchetta cannot be jumped": porchetta is now clearable** (hitbox = sprite 36×19, no invisible box); only with a running jump (standing is impossible), window ≈0.25 s; worth more points than a sausage (M4). **Ladder refuge:** climbing ≥~17 px up any ladder (regular or the short broken ones: 35 and 41 px of height) lets items pass underneath. Sausage standing-jump window ≈0.23 s (was 0.06–0.09) via contact width 10 (body 22), sausage hitbox r8×h14; jump apex/gravity unchanged. Items ×0.6. **Grill:** item slides into the grill, `fa_griglia1` flare + code smoke puff + sparks, glow settles; same hook spawns the floor-3 flame; on floor 1 (grill off) items still just exit. **Meat hop capped** to 34 px (`FA_MEAT_HOP`=200) so it never reaches the girder above; floor 3 may retune. **Building:** `fa_bld_coccia` is an in-level layer (order: backdrop → building → girders/ladders → items/Algidone/player → HUD), ×0.6, bottom on the top girder at x=270; world height 600→610 (level shifted +10, gaps unchanged) |
 | 2026-09-24 | M0 → M1 | M0 closed | All rounds/demos done and signed off; M1 (engine skeleton) starts |
 
 **Built-in audio slots** (filled by A-chunks):

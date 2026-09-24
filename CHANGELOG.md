@@ -1488,3 +1488,16 @@ for anything not itemised below.
   at 3 timings, safe zone, vertical overlap (item 63 px above = no hit), respawn clears items, dev toggle by real click (meat hops, flame spawns, x>=150).
 - Measured: the clear-jump window over a sausage is only ~22–26 px of takeoff distance (~0.06–0.09 s) — same tightness as the D2 demo. Flagged for M9.
 - Not tested: touch feel on a real phone, real-device performance.
+
+## 0.3_25 — 2026-09-24
+- Owner feedback on M3 (Ferma Algidone! only):
+  - **Touch layout**: d-pad bottom-left (66 px buttons), big round yellow SALTA (104 px) bottom-right, 40 px gap, vertically aligned;
+    the dev achievement toast now also avoids `#fapad` (it was covering the pad). Keyboard unchanged.
+  - **Porchetta is clearable**: hitbox = sprite (36×19). Needs a running jump (window ≈0.25 s; standing impossible).
+  - **Ladder refuge**: any player ≥ ~17 px up a ladder (incl. broken ones: 35/41 px) lets items pass under.
+  - **Sausage jump window** ≈0.23 s standing (target ≥0.2): contact width 10 (body box 22), sausage hitbox r8×h14. Apex/gravity untouched.
+  - **Items ×0.6**. **Grill ending**: item slides in, `fa_griglia1` flare, code smoke puff + sparks, glow settles; same hook spawns the flame (floor 3).
+  - **Meat hop** capped to 34 px. **Building** `fa_bld_coccia` as a layer behind the girders (×0.6, bottom on the top girder); world 600→610.
+- **`index.html` size delta: +75,812 bytes** (the 54 KB building PNG as base64 + code).
+- Verified headless (real clicks/keys/CDP touch + deterministic stepping): 24 new checks, 22 M3, 30 M2 regression (one flaky timing failure under CPU load, passes on rerun); maze run starts.
+- Not tested: real-phone touch feel.
