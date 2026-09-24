@@ -3,55 +3,21 @@
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
 ## SESSION HANDOFF (2026-09-24 → next session)
-> **Update (M0-fix):** D2/D3/D5 playability bug fixed (see §10.9 "DK death rules"); owner approved the D2/D5 design. Round 4 (Q12 art, Q13 audio, D4) is next.
+**M0 is closed; M1 is done and shipped (build `0.3_19`, committed and pushed to `main`).** Owner approved the
+playability fix, D4 and the art package (`refs/ferma_algidone/`, spec in §10.7, decisions in §10.9 "round 4 amendments").
 
-Paused mid-M0, waiting on the owner to try two demos before continuing. Nothing is half-committed —
-everything through this point is **committed and pushed to `main`** (`git status` clean at handoff, HEAD
-`b5d98a5`, build still `0.3_18` — M0 is prototype-only, see below, so it hasn't bumped `VERSION`).
+- Done through K3, M0 and M1 in the §10.8 table. Both roadmap skin rewards are live.
+- **M1** = the `screen="fa"` skeleton: `FA_LEVELS` data, `startFerma`/`faExit`, fixed-timestep loop, code-drawn
+  girders/ladders, embedded `fa_bg_coccia` backdrop. Dev-panel entry only ("Ferma Algidone!" row); no gameplay yet.
+- **Next: M2** (player movement — walk/climb/jump/gravity/collisions; climber = head-only `fu0`–`fu3` animated in code,
+  no new art; acceptance criteria for fall damage are in the M2 row). Then M3 items (real art from the package),
+  M4 (death rules + HUD + stock pile art), M5, M6, M7, M8, M9, REL.
+- Open, owner-only: 3 art issues in §10.9 (pink sausage, beardless `eat1/eat2`, duplicate cap `kick1`) — never edit the art.
+- Watch: the Coccia backdrop is busy behind the girders; if legibility is poor, darken/outline the code-drawn girders,
+  don't touch the art. The M1 demo values (stock 90 s, physics from D3) are starting points; tuning is M9.
+- The package `60c07bf` and any other owner commits may land via the GitHub web UI — always `git pull --ff-only` first (§1).
 
-**Where things stand in the §10 v0.4 release plan:**
-- Done through K3: B1–B4, A0, P1, R1–R4, K1a, K1b, C1, K2 (GEKA cap), K3 (BK costume) — all shipped,
-  builds 0.3_1 through 0.3_18. Both roadmap skin rewards (tiles 3 and 5) are fully live end-to-end.
-- **In progress: M0** (Algidone's mini-game, "Ferma Algidone!" — design rounds + demos, §10.7). This is
-  explicitly allowed to span sessions (§10.8's own note). **`index.html` has NOT been touched for M0** —
-  everything so far lives in `prototypes/algidone/*.html` (standalone demos, never linked from the game,
-  each its own `M0-Dn: …` commit) and in §10.9's decisions log.
-- Still `todo`, not started: M1–M9 (the actual `index.html` implementation, blocked on M0 finishing), REL.
-
-**M0 progress in detail:**
-- Rounds 1–3 of the §10.7 question bank all asked and answered, every answer logged in §10.9: name
-  ("Ferma Algidone!"), unlock (low-rate random from girone 5+, forced by girone 10, replayable after),
-  floors for v1 (Coccia → Macelleria → Fabbrica di salsicce, one new DK mechanic per floor), controls/
-  orientation (portrait, d-pad + jump button), item behaviours (sausages roll + random ladder-drop,
-  porchetta un-jumpable, meat pieces bounce, grill→flame), lives/scoring/difficulty scaling, floor-win
-  sequence, rewards (existing formula + 3 new "Minigiochi" achievements), run impact (lose=free, win=pays
-  out), roadmap tile 10 (new milestone, unlocks on first real clear of floor 1, deferred to M8), and item
-  art staying placeholder until M5/M6.
-- Two small side items closed this session too: the 3 procedural skin places (eating icons, Acciaio
-  effect) marked **settled — no skin needed** in `SPRITE_INVENTORY.md`; tile 3's unlock re-confirmed as
-  `S.p.pr.seen`-only (never girone count) — no bug, a report's wording had just been loose.
-- **Demos live and playable** (Pages redeploys automatically from `main`, no linking from the game):
-  - `01-level-layout.html` (D1) — floor 1 "Coccia" structure: 5 girders, ladders incl. 2 **broken** ones,
-    Algidone + stock pile top-left, a separate goal-zone marker, a grill at the bottom, reserved HUD strip.
-  - `02-climb-jump-feel.html` (D3) — full player physics (gravity, slope-walking, ladder climbing, jump,
-    coyote time, jump buffering, fall damage) with **live tuning sliders** + a "Copia valori" button, and a
-    toggle comparing jump-off-ladder on/off (default **off**, classic DK).
-  - `03-items.html` (D2) — sausages/porchetta/bouncing meat/flame on D1's layout with D3's physics,
-    Algidone auto-throwing + manual spawn buttons, height-based jump-clear scoring.
-  - `04-hud.html` (D5) — real DOM HUD (score, draining stock bar, lives, pause) replacing the placeholder
-    strip; pause genuinely freezes the whole loop, not just the visuals.
-  - D1 and D3 were each updated once after their first version (layout got Algidone/goal/grill/broken-
-    ladders added; D3 got the sliders/toggle/fall-damage/touch-forgiveness pass) — the links above are
-    already the current versions, no separate old links to worry about.
-- **Waiting on the owner**: they were asked to try D2 and D5 before round 4 gets asked (§10.7's remaining
-  bank: art list Q12, audio Q13, plus demo D4 — the floor-progression map). **Do not ask round 4 until
-  they've given feedback on D2/D5** — if they reply with feedback/tweaks instead of "go ahead", address
-  that first.
-
-**Read this file in full as usual** (per the instruction below) — this handoff note is just an index into
-what's already there (mainly §10.7 for the mini-game concept and §10.9 for every logged answer), not a
-replacement for it. Once read, this note can be deleted at the start of the next session as part of
-confirming the sync.
+This note can be deleted at the start of the next session as part of confirming the sync.
 
 ---
 
@@ -695,7 +661,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | K2 | GEKA SNC hat (Uomo roccia) | asset sheet | Sonnet · medium | done (0.3_17) |
 | K3 | Costume BK (Algidone) | asset sheet | Sonnet · medium | done (0.3_18) |
 | M0 | Design rounds + demos D1–D5 (may span several sessions) | [Q] bank | Sonnet · medium | done (prototypes only, no build) |
-| M1 | Engine skeleton: new `screen`, level data format, girders/ladders render, fixed-timestep loop | M0 | Sonnet · high | todo |
+| M1 | Engine skeleton: new `screen`, level data format, girders/ladders render, fixed-timestep loop (+ Coccia backdrop art) | M0 | Sonnet · high | done (0.3_19) |
 | M2 | Player movement: walk, climb, jump, gravity, collisions; climb = head-only `fu0`–`fu3` animated in code (§10.9 Q12 amendment). **Acceptance (§10.9 DK death rules):** fall damage measured only from where the player left the ground in free fall (~1 floor threshold), reset on landing / ladder grab / respawn; walking slopes, stepping between girder segments and leaving a ladder never count | M1 | Sonnet · high | todo |
 | M3 | Algidone thrower + item types and behaviours | M2 | Sonnet · high | todo |
 | M4 | Lives, hits/death, stock bar, scoring, HUD, pause. **Acceptance (§10.9 DK death rules):** death = short pause/blink → clear ALL items and flames → respawn at start → ~2 s blinking invulnerability → throws resume after a grace delay; spawn area is safe (no flame patrol, no item hits during invulnerability); item hits require vertical overlap on the same level (never compare x alone); stock drain gives tens of seconds per floor and costs a life only when it truly empties; reaching the goal zone shows a win message | M3 | Sonnet · medium | todo |

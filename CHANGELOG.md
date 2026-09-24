@@ -1396,3 +1396,21 @@ for anything not itemised below.
     HUD lives icons included. Zero console errors across the entire run.
 - Not tested: real device/touch, in-game review by the owner. Both roadmap skin rewards (K2, K3) are now
   fully shipped — remaining v0.4 work is M0-M9 (Algidone's mini-game) and REL.
+
+## 0.3_19 — 2026-09-24
+- **M1 — "Ferma Algidone!" engine skeleton** (`screen="fa"`). Nothing player-facing yet: reachable only from the dev
+  panel (new "Ferma Algidone! — scheletro motore (M1)" row). Writes no progress.
+  - Level data format `FA_LEVELS[]` (pure data): girders, ladders incl. broken ones, start/Algidone/goal/grill zones,
+    per-floor palette, plus the promoted design decisions (safe zone `safeXEnd:90`, `flameMinX:150`, `wallGirder:0`).
+    Floor 1 "Coccia" = the D2/D5 layout in a 360×560 logical world (HUD will sit above the canvas in M4).
+  - `startFerma`/`faExit`, `ensureFA` lazy image loader, fixed-timestep loop (60 Hz accumulator, max 5 steps/frame),
+    responsive canvas (uniform fit, DPR-aware, integer-safe pixel rendering), code-drawn girders/ladders from the
+    palette, dev-only debug zone overlay. Esc / back / ✕ leave to the menu.
+  - Real art embedded per the round-4 amendment: **`fa_bg_coccia`** backdrop (the first chunk that draws it),
+    scaled to 360 px wide and centre-cropped. The other 38 frames are embedded by the chunk that first draws them.
+- **`index.html` size delta: +77,471 bytes** (one 53 KB PNG as base64 + ~5 KB of code).
+- Verified in headless Chromium: menu renders, a maze run starts, dev-entry screen loads, loop ticks, backdrop + girder
+  pixels drawn, Esc returns to the menu, resize re-fits the canvas, zero console errors.
+- Not tested: real device/touch, iOS/Safari. Backdrop is busy behind the girders — legibility is for the owner to judge
+  before M2 (girders can be given a darker outline without touching the art).
+
