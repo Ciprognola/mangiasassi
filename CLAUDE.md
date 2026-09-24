@@ -583,7 +583,8 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | R2 | Special tiles 3 and 5 (10 hands won), `S.p.gam.won`, new blackjack achievement, "?" tiles | [Q] achievement, "?" (answered) | Sonnet · medium | done (0.3_10) |
 | R3 | Gift container (animated gift) + generic reward claim | [Q] reward mapping (answered) | Sonnet · medium | done (0.3_11) |
 | R4 | Milestone popups wired to the roadmap | P1, R2 | Sonnet · low | done (0.3_12) |
-| K1 | Skin system: overlay hook in every draw path, `SPRITE_INVENTORY.md`, missing-frame warning | — | Sonnet · high | todo |
+| K1a | Skin system, part 1 — data layer only: `SPRITE_INVENTORY.md`, exported base-frame PNGs, `SKINS` registry + `skinImg()` + load validation (empty registry, no draw-path changes, no player-visible change) | — | Sonnet · high | done (0.3_14) |
+| K1b | Skin system, part 2 — overlay hook wired into every draw path per §10.9's Acciaio/Cinghiale/`al_r*` decisions | K1a | Sonnet · high | todo |
 | C1 | Customisation page ("Personalizza", skin selector, 2 placeholders) | K1, [Q] screen/modal | Sonnet · medium | todo |
 | K2 | GEKA SNC hat (Uomo roccia) | asset sheet | Sonnet · medium | wait-assets |
 | K3 | Kebab costume (Algidone) | asset sheet | Sonnet · medium | wait-assets |
@@ -621,6 +622,9 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-23 | R2 | Tile 3/5 faces | Reuse existing art: the pixel pokéball from the professor throw scene for tile 3, existing El Gamblador card art for tile 5. "?" stays text (no new art needed) |
 | 2026-09-23 | R3 | Readiness gate | `ROAD_REWARDS` registry with a `ready:false` flag per reward, flipped to `true` only in K2/K3 (never elsewhere). A tile whose reward isn't ready behaves exactly like a "?" tile — unlocked, "Premio in arrivo", not claimable, no pulse — even once its own unlock condition (R2) is met. Only `ready:true` rewards can pulse/claim |
 | 2026-09-24 | R1 (amendment) | Roadmap tiles per-character or combined | **Supersedes** the 2026-09-23 R1 answer above. Regular/"?" tiles now unlock on the **combined** girone count across both characters (`roadGir()` = sum of `S.p.ch.roccia.gir` + `S.p.ch.algidone.gir`), not the active character's `cs().gir` alone. Tiles 3/5 and `S.p.road.claimed` were already global and are unaffected. Shipped 0.3_13 |
+| 2026-09-24 | K1b | Skin visibility during Acciaio | Skin stays **on**; the overlay is drawn **under** the steel effect, so the accessory picks up the steel look too, not drawn on top unaffected |
+| 2026-09-24 | K1b | Skin visibility during Cinghiale | Skin is **hidden** while transformed into the boar |
+| 2026-09-24 | K1b | Skin visibility during power-up rolling (Algidone `al_r*`) | Shown **only if that skin provides those specific frames**; otherwise falls back to the standard missing-frame rule (render plain, no skin, no error) |
 
 **Built-in audio slots** (filled by A-chunks):
 

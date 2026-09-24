@@ -1147,3 +1147,58 @@ for anything not itemised below.
   Menu renders with zero console errors; a real run still starts normally via `startGame()`.
 - Not tested: real device/touch, in-game review by the owner, the R2 popup path for tiles 3/5 (unchanged
   by this build, already covered by 0.3_10's testing).
+
+## 0.3_14 — 2026-09-24
+- **v0.4 K1a — skin system, data layer only (no player-visible change, no draw-path change).** K1 was split
+  into K1a (this build) and K1b (the actual overlay hook, next) per the owner's instruction; K1b's three
+  design decisions are logged in CLAUDE.md §10.9 (Acciaio keeps the skin on, drawn *under* the steel tint;
+  Cinghiale hides the skin entirely; Algidone's power-up "rolling" frames show a skin only if that skin
+  actually provides those frames, missing-frame rule otherwise).
+- **`refs/skins/SPRITE_INVENTORY.md`**: every place either character visually appears — 19 numbered
+  draw-paths, from the maze (all 4 directions, eating, Acciaio, Cinghiale, death-spin) through the menu
+  scene, every static-portrait canvas (Lista desideri card, gift-reveal preview, HUD lives icons, splash
+  logo), and the professor mini-game (dialogue portrait box, pond-throw cutscene) — with the exact frame
+  keys each one reads, and which function draws it. Flags every procedural (non-bitmap) element explicitly
+  (Cinghiale's `drawBoar` is 100% code-drawn, matching the "skin hidden" decision with no overlay needed)
+  and every place the character does **not** actually appear despite being part of the same scene (the
+  professor's own idle/angry/walk scenes draw only the professor, never the player; the battle screen draws
+  the player's chosen rock/snack asset, not their human body). Also documents a pre-existing, unrelated
+  quirk found along the way: `drawMiniPlaceholder` always draws Uomo roccia's portrait regardless of the
+  active character — flagged for K1b to decide on, not touched in this build.
+- **Two genuinely new, non-obvious findings surfaced while building the inventory** (beyond what CLAUDE.md
+  §4 already documented for `fu1`/`fu2`/`al_r7`): `f3` and `fd3` (Uomo roccia's side/up walk cycles both
+  run `[0,1,2,1]`, never reaching index 3) are likewise defined but never drawn by any current code path;
+  and `fd_e0`/`fd_e1`/`fu_e0`/`fu_e1` (the up/down eat-bite frames) are **completely dead** — up/down eating
+  uses a procedural rock-icon overlay (`drawFaceEatFX`) instead, so `eatKey`/`eatImg` are never actually
+  called with an "fd"/"fu" prefix from any real draw path. All four are still exported as base frames (an
+  artist can still draw overlays for them for future-proofing) and flagged, not pruned — same "not dead
+  weight to prune" policy CLAUDE.md already states for the other three.
+- **46 base-frame PNGs** exported pixel-exact, decoded directly from the current build's embedded `SPR`
+  (Uomo roccia, 18 frames — the pellet-animation keys `rock`/`r1`/`r2` are excluded, they're item art, not
+  the avatar) and `SPR2` (Algidone, all 28 frames) constants, to `refs/skins/base/uomo_roccia/<key>.png` and
+  `refs/skins/base/algidone/<key>.png`. Filenames match the exact in-game sprite key. 732 KB total on disk;
+  **not embedded in `index.html`** (reference material only, exactly like the existing `refs/` reference
+  sheets).
+- **`refs/skins/README.md`**: short artist-facing how-to — copy a base PNG, draw only the accessory on
+  transparency, keep the canvas size identical, name the file `sk_<skin-id>_<frameKey>.png`, right-facing
+  side view only (left is a code flip), up/down views never flipped, unused frames can be skipped.
+- **Data layer** (`index.html`, right after `loadImgs()`/`tintRock`): `const SKINS={}` (empty in this
+  build — K2/K3 populate it), `loadSkinImgs()` decodes every `SKINS[id].frames[frameKey]` into
+  `IMG["sk_"+id+"_"+frameKey]`, **validating at load** that the overlay's decoded pixel size exactly matches
+  its base frame's (`IMG[frameKey]`) — a mismatch is skipped with a `console.warn`, never a thrown error,
+  and that frame simply renders without the skin (the missing-frame rule). Wired into boot right after
+  `loadImgs()`: `loadImgs().then(loadSkinImgs).then(()=>{...})`. Helper `skinImg(char,frameKey)` returns the
+  loaded overlay Image or `null`, looked up via **the given character's own** `S.p.ch[char].skin` (already
+  existing state from R3's reward-granting code, not new) — deliberately *not* the currently-played
+  character, so a Lista desideri card can show each character's own equipped skin regardless of which one
+  is active. `SKINS`/`loadSkinImgs`/`skinImg` are the only public surface K1b needs; no draw-path function
+  calls `skinImg` yet.
+- **Verified in headless Chromium**: with `SKINS` empty, `skinImg()` returns `null` everywhere (no
+  behaviour change). Registered a temporary in-memory test skin with a correctly-sized `f0` overlay and a
+  deliberately wrong-sized `f1` overlay, ran `loadSkinImgs()`: the matching frame loads and `skinImg()`
+  returns it once equipped on `S.p.ch.roccia.skin`; the mismatched frame is rejected with exactly the
+  expected console warning and `skinImg()` returns `null` for it; a frame never provided at all
+  (`f2`) also returns `null`; equipping the skin on roccia does **not** leak it to `skinImg('algidone',...)`.
+  Menu renders with zero console errors throughout, and a real run still starts normally.
+- Not tested: real device/touch, an actual artist-drawn skin end to end (nothing populates `SKINS` yet),
+  K1b's draw-path integration (next chunk).
