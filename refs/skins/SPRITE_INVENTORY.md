@@ -1,10 +1,16 @@
-# Skin sprite inventory (K1a)
+# Skin sprite inventory (K1a data layer, K1b draw-path hook)
 
 Every place Uomo roccia or Algidone visually appears in the game, the frame keys involved, and whether
 each frame is a real bitmap (skinnable) or code-drawn (not skinnable without a separate decision). Base
 frames are exported pixel-exact from the current build (`index.html`) to `refs/skins/base/<char>/<key>.png`
 — these are the canvases an artist draws skin overlays on top of. See `README.md` in this folder for the
-artist-facing how-to.
+artist-facing how-to, including the `overlay`/`replace` render modes added in K1b.
+
+**Status as of K1b**: the overlay/replace hook is wired into every bitmap draw-path listed below (via
+`drawFace`, `drawEat`, `drawAlg` and the handful of call sites that draw `al_st` directly). Procedural
+places stay unskinned — see the "Procedural" table below, each now explicitly marked either as a settled
+decision (Cinghiale) or genuinely **pending an owner decision** (the item-art eating icons, the Acciaio
+visual effect).
 
 **Never crossed**: every location below only ever shows the *current* character. Nothing here reads or
 mixes assets between Uomo roccia and Algidone.
@@ -54,13 +60,13 @@ Every Algidone key is used somewhere — no dead frames in `SPR2`.
 
 ## Procedural (not bitmap — no base frame, needs a separate decision if a skin should affect it)
 
-| What | Function | Notes |
+| What | Function | Skin status |
 |---|---|---|
-| Cinghiale (boar transformation) | `drawBoar()` | 100% code-drawn pixel art (rects/ellipses/triangles), no `IMG` reference at all. **Per §10.9 K1b decision: skin is hidden while transformed, so this needs no overlay — flagged here only for completeness.** |
-| Up/down eating icon | `drawFaceEatFX()` (roccia) | A small rock icon fades in/shrinks near the mouth while eating up/down — reuses the **item's** own art (`rockFrames`/`IMG.rock`), not a character frame. Not a skin target. |
-| Any-direction eating icon (Algidone) | inline in `drawAlg()` | Same idea with `snackFrames` — item art, not a skin target. |
-| Acciaio visual effect (ring + diagonal sweep highlight) | inline in the maze `draw()` around `drawTinted(...)` | Pure vector effect drawn *around* the (tinted) character, not part of any frame. No skin implication. |
-| Death-spin transform | inline in the maze `draw()` | Not procedural art — it's a real bitmap frame (`f2` / `al_st`-equivalent via `drawAlg`) rotated + scaled by code. Listed under its draw-path entry below, not here. |
+| Cinghiale (boar transformation) | `drawBoar()` | **Settled, not pending.** 100% code-drawn pixel art (rects/ellipses/triangles), no `IMG` reference at all. Per §10.9 K1b decision: skin is hidden entirely while transformed — no overlay, by design, not an open question. |
+| Up/down eating icon | `drawFaceEatFX()` (roccia) | **No skin — pending owner decision.** A small rock icon fades in/shrinks near the mouth while eating up/down — reuses the **item's** own art (`rockFrames`/`IMG.rock`), not a character frame. Currently renders unskinned regardless of an equipped skin; a themed variant (e.g. a costume-matching icon) would need its own future decision. |
+| Any-direction eating icon (Algidone) | inline in `drawAlg()` | **No skin — pending owner decision.** Same idea with `snackFrames` — item art, not a character frame. Same open question as the roccia rock icon above. |
+| Acciaio visual effect (ring + diagonal sweep highlight) | inline in the maze `draw()` around `drawTinted(...)` | **No skin — pending owner decision**, though moot in practice: it's a pure vector effect (colour/alpha only) drawn *around* the already-tinted character, not an image, so there's no frame a skin could even attach to today. Flagged in case a future skin ever wants to alter this effect's look. |
+| Death-spin transform | inline in the maze `draw()` | Not procedural art — it's a real bitmap frame (`f2` / `al_st`-equivalent via `drawAlg`) rotated + scaled by code, **already skinned** via the same `drawFace`/`drawAlg` hook. Listed under its draw-path entry below, not here. |
 
 ## Every place a character appears (draw-path → frame keys)
 
@@ -88,9 +94,26 @@ Every Algidone key is used somewhere — no dead frames in `SPR2`.
 18. **Algidone's mini-game ("Coccia") climber** — **not built yet** (M-chunks are all `todo`). Will need its own frame set and a skin-overlay hook when M1/M2 land; flagged here so K1b's hook design doesn't need to special-case it now, but M-chunks should reuse the same `skinImg()` helper once the climber sprite exists.
 19. **Character customisation page** (C1, §10.5) — **not built yet.** Will need a live skin-preview canvas; expected to reuse the same static-portrait pattern as #7/#8/#9/#10/#13, but no code exists yet to hook into.
 
-## Summary for K1b
+## K1b implementation notes (done)
 
-- The overlay hook needs to live inside the **three** low-level draw functions (`drawFace`, `drawEat`+`drawFaceEatFX`'s frame draw, `drawAlg`) so every call site above (maze, menu, cards, HUD, splash, cutscene, dialogue box) picks it up automatically without touching each call site individually.
-- Acciaio's tint (`drawTinted`) needs **no special handling** — confirmed above, it tints whatever the hook draws.
+- The hook lives inside the **three** low-level draw functions (`drawFace`, `drawEat`, `drawAlg`), via a
+  shared `drawSkinned(ctx,char,frameKey,im,dx,dy,dw,dh)` helper that draws base+skin with **identical**
+  `drawImage` arguments to what the function already used (same `dx,dy,dw,dh`, same `save`/`restore`, same
+  flip/scale/smoothing/alpha already set by the caller) — so every call site above (maze, menu, cards, HUD,
+  splash, cutscene, dialogue box) picked it up automatically, without touching each call site's own sizing
+  math. `drawFaceEatFX`'s rock-icon overlay is untouched (item art, see the Procedural table) — the walk
+  frame drawn alongside it by `drawHero` already carries the skin on its own.
+- Five places that draw `IMG.al_st`/`al_w0` **directly** instead of going through `drawAlg()` — the Lista
+  desideri/gift-reveal card, the maze HUD lives icons, the splash logo, the pond-cutscene cached portrait
+  (`prPlayerCv`), the professor dialogue talking-portrait (`prDrawPlayer`), and the menu scene (`drawScene`)
+  — were each updated individually to call `drawSkinned` in place of their own `ctx.drawImage`, same
+  identical-arguments rule. Their roccia counterparts already went through `drawFace`/`drawEat` and needed
+  no change.
+- Acciaio's tint (`drawTinted`) needs **no special handling** — confirmed by test: it tints whatever the
+  hook draws, since the hook lives inside `drawHero`'s own callees.
 - Cinghiale (`drawBoar`) needs **no hook at all** — it never calls into the low-level draw functions.
-- `drawMiniPlaceholder`'s hardcoded-to-roccia quirk (#11) is a pre-existing oddity, not something this chunk introduces or fixes.
+- `drawMiniPlaceholder`'s hardcoded-to-roccia icon (#11) was **left as-is, not fixed**: it also draws 3
+  rolling rock icons (`IMG.rock`) alongside the portrait, which only makes sense for Uomo roccia — this
+  reads as an intentional "Mangiaroccia" brand icon for the mini-game itself, not a "your active character"
+  portrait that happens to be wrong. Reported to the owner rather than changed; flag if that reading is
+  wrong.

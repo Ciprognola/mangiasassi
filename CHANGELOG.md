@@ -1202,3 +1202,71 @@ for anything not itemised below.
   Menu renders with zero console errors throughout, and a real run still starts normally.
 - Not tested: real device/touch, an actual artist-drawn skin end to end (nothing populates `SKINS` yet),
   K1b's draw-path integration (next chunk).
+
+## 0.3_15 — 2026-09-24
+- **v0.4 K1b — skin overlay hook wired into every draw path, plus per-skin render mode.** Every `SKINS`
+  entry now carries `mode:"overlay"` (drawn on top of the base frame — accessories) or `mode:"replace"`
+  (drawn instead of the base frame, same size — full costumes that recolour the character, where an overlay
+  would leak the original colours through). A `replace` skin still falls back to the base frame for any
+  frame it doesn't provide, same as `overlay`. `skinImg()` now returns `{img,mode}` instead of a bare image.
+- **Hook**: a shared `drawSkinned(ctx,char,frameKey,im,dx,dy,dw,dh)` helper draws base+skin with **identical**
+  arguments to whatever `drawImage` call it replaces (same `dx,dy,dw,dh`, inside the caller's own
+  `save`/`restore`, inheriting whatever flip/scale/smoothing/alpha the caller already set) — wired into the
+  three low-level functions (`drawFace`, `drawEat`, `drawAlg`), which alone covers most of
+  `SPRITE_INVENTORY.md`'s draw-paths (maze all 4 directions + eating, menu-scene eating, battle-interjection
+  bite, death-spin, Acciaio/power-up/burn tinting via `drawTinted`) without touching those call sites.
+  `drawFaceEatFX`'s procedural rock-icon overlay is untouched by design — the walk frame `drawHero` draws
+  alongside it already carries the skin.
+- **Five call sites that draw `IMG.al_st`/`al_w0` directly** instead of going through `drawAlg()` — the
+  Lista desideri/gift-reveal card, the maze HUD lives icons, the splash logo, the pond-cutscene cached
+  portrait (`prPlayerCv`), the professor dialogue talking-portrait (`prDrawPlayer`), and the home-menu scene
+  (`drawScene`) — were each updated individually to call `drawSkinned` in place of their own `drawImage`,
+  same identical-arguments rule. Their Uomo roccia counterparts already went through `drawFace`/`drawEat`
+  and needed no change.
+- **Verified Acciaio needs no special handling**: `drawTinted` renders its callback to an offscreen canvas
+  and tints the *whole* buffer — since the hook lives inside `drawHero`'s own callees, whatever the skin
+  draws gets the steel tint for free, in both `overlay` and `replace` mode, confirmed by direct test on
+  `drawTinted(...,fn=drawFace/drawAlg,...)`. Cinghiale (`drawBoar`) needs **no hook at all** — 100%
+  procedural pixel art with no `IMG` reference, matching the "skin hidden" decision with zero code changes.
+- **`drawMiniPlaceholder`'s hardcoded-to-Uomo-roccia icon reported, not fixed**: it also draws 3 rolling
+  rock icons alongside the portrait, which only makes sense for Uomo roccia — reads as an intentional
+  "Mangiaroccia" brand icon for the mini-game card, not a "your active character" portrait that happens to
+  be wrong. Left as-is; flag if that reading is incorrect.
+- **Dev-only skin test tool**: a new "Skin di prova (K1b)" row in Opzioni → Sviluppatore → Strumenti di
+  test, 5 buttons (Roccia/Algidone × overlay/replace, plus "Disattiva"). Sets an in-memory `DEV_SKIN_TEST`
+  variable — never written to `S.p.ch[*].skin` or any persisted state, so it's automatically never saved;
+  gated on `devOn` and cleared on logout. `overlay` mode renders a magenta outline + diagonal cross at the
+  frame's exact bounds (for alignment checks); `replace` mode renders the base frame tinted a clearly
+  different magenta/blue hue. A new `activeSkin(char,frameKey,baseIm)` combines the dev test (when active)
+  with the real `skinImg()` lookup, so every draw path only ever calls one function.
+- **Reward rename (§10.9 amendment to R3)**: `ROAD_REWARDS[5]` is now `id:"bk"`, `name:"Costume BK"` (was
+  `"kebab"`/"Costume kebab"), still `ready:false`. The BK costume uses the real Burger King logo —
+  owner-approved brand-parody treatment, same as the existing McDonald's cup art; logged, no other code
+  impact.
+- **`refs/skins/README.md`** corrected: documents the two render modes, and the *real* reachable frame set
+  per character (Uomo roccia: 10 frames — `f0-f2, e0-e1, fd0-fd2, fu0, fu3`; skippable: `f3, fd3, fu1, fu2,
+  fd_e*, fu_e*`. Algidone: 27 frames, only `al_r7` skippable) instead of the earlier "draw everything"
+  framing. Also documents the upcoming sheet + `<skin>_cells.json` + `cut_from_cells.py` delivery workflow.
+- **`refs/skins/SPRITE_INVENTORY.md`** updated: marks the K1b hook as wired, and reclassifies the
+  procedural item-art overlays (roccia's eating rock icon, Algidone's eating snack icon, the Acciaio ring/
+  sweep visual) as explicitly **"no skin — pending owner decision"** rather than just "not a skin target" —
+  Cinghiale stays a settled decision (hidden), not pending.
+- **`refs/skins/cut_from_cells.py` intentionally not written this build** — no real skin sheet or
+  `_cells.json` exists yet to build or test it against; documented as the plan in §10.6, to be written when
+  K2's GEKA cap sheet actually arrives.
+- **Verified in headless Chromium**: baseline with dev off is provably a no-op (`skinImg()` returns `null`
+  everywhere, `activeSkin()` falls straight through to it, no character has `.skin` set on a fresh save).
+  With dev skin active: `replace` mode pixel-sampled as strongly tinted magenta/blue on both roccia
+  (`drawFace`) and Algidone (`drawAlg`); `overlay` mode pixel-sampled as visibly different from `replace`
+  (natural colours, only the outline is magenta); a `replace`-mode skin missing a frame (`al_r0`) correctly
+  falls back to `null` (plain base) while a provided frame (`al_st`) resolves with the right mode. The real
+  dev-panel button was clicked through the actual DOM (not called directly) and correctly set/cleared
+  `DEV_SKIN_TEST` via the production click handler; logout correctly cleared it. Built a 28-cell synthetic
+  gallery (every frame direction/mode/character/Acciaio-tint combination, all through the real production
+  draw functions) plus 21 real in-game screenshots (menu scene, splash logo, Lista desideri cards — proving
+  each character's card reflects *that* character's own skin regardless of which one is active — career
+  modal confirming no character art there, maze in all 4 directions + eating + power-up tinting for both
+  characters) — published as an artifact for owner review, linked in chat. Zero console errors across the
+  entire run.
+- Not tested: real device/touch, an actual artist-drawn skin end to end (still nothing in `SKINS` — K2/K3
+  populate it), in-game review by the owner.

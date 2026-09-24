@@ -518,12 +518,23 @@ Enter = accept, Esc = dismiss. Each event fires **once ever** (`S.p.pop={queue:[
   draws, card canvases). Also write **`refs/skins/SPRITE_INVENTORY.md`**: every frame key per character, pixel size,
   direction, whether it's a bitmap or **procedural** (drawn by code — flag these: an overlay for them still needs
   owner art), and where it's used. This is the checklist artists draw against.
-- **Asset sheets** come from the owner, one per skin, when the chunk asks. Cut them with `tools/cut_sprites.py`.
+- **Asset sheets** come from the owner, one per skin, when the chunk asks. **Skin workflow (K1b, replaces
+  `tools/cut_sprites.py` for skins specifically)**: the owner draws the skin on a template sheet and supplies a
+  matching `<skin>_cells.json` describing the cell mapping, both under `refs/skins/<skin>/`. A new
+  `refs/skins/cut_from_cells.py` cuts the sheet into `sk_<skin>_<frameKey>.png` files per the cells file —
+  written when the first real sheet arrives (not yet, as of K1b). `tools/cut_sprites.py` remains the tool for
+  the game's own non-skin reference-sheet cutting (professor, cutscene assets, etc.), unchanged.
 - **Missing frame rule**: if a direction/frame is missing from the sheet, **print a WARNING listing the missing
   frames and ask the owner to upload them. Do not create or adapt them.** Until provided, that frame renders
   without the skin.
-- **K2 GEKA SNC hat** — Uomo roccia, a hat with the text "GEKA SNC".
-- **K3 Kebab costume** — Algidone.
+- **Per-skin render mode** (§10.9 K1b): every skin declares `mode:"overlay"` (accessory drawn on top of the
+  base frame, e.g. a hat) or `mode:"replace"` (drawn instead of the base frame at the same size, for a full
+  costume that recolours the character rather than just adding to it). A `replace` skin still falls back to
+  the base frame for any frame it doesn't provide.
+- **K2 GEKA SNC hat** — Uomo roccia, a hat with the text "GEKA SNC". `mode:"overlay"`.
+- **K3 Costume BK** — Algidone, a Burger King-branded costume (real BK logo, brand-parody style, owner-approved
+  — same treatment as the existing McDonald's cup art). `mode:"replace"` (recolours cape/logo/gloves/boots, an
+  overlay would leak the base character's colours through). Reward id `"bk"` (§10.9 R3 amendment; was `"kebab"`).
 - Sprite limit 200 KB each; report the size delta. Skins belong to one character only (no crossing).
 
 ### 10.7 Algidone's mini-game (M-chunks) — **high effort, the key feature of 0.4**
@@ -584,7 +595,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | R3 | Gift container (animated gift) + generic reward claim | [Q] reward mapping (answered) | Sonnet · medium | done (0.3_11) |
 | R4 | Milestone popups wired to the roadmap | P1, R2 | Sonnet · low | done (0.3_12) |
 | K1a | Skin system, part 1 — data layer only: `SPRITE_INVENTORY.md`, exported base-frame PNGs, `SKINS` registry + `skinImg()` + load validation (empty registry, no draw-path changes, no player-visible change) | — | Sonnet · high | done (0.3_14) |
-| K1b | Skin system, part 2 — overlay hook wired into every draw path per §10.9's Acciaio/Cinghiale/`al_r*` decisions | K1a | Sonnet · high | todo |
+| K1b | Skin system, part 2 — overlay hook wired into every draw path per §10.9's Acciaio/Cinghiale/`al_r*` decisions | K1a | Sonnet · high | done (0.3_15) |
 | C1 | Customisation page ("Personalizza", skin selector, 2 placeholders) | K1, [Q] screen/modal | Sonnet · medium | todo |
 | K2 | GEKA SNC hat (Uomo roccia) | asset sheet | Sonnet · medium | wait-assets |
 | K3 | Kebab costume (Algidone) | asset sheet | Sonnet · medium | wait-assets |
@@ -625,6 +636,11 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-24 | K1b | Skin visibility during Acciaio | Skin stays **on**; the overlay is drawn **under** the steel effect, so the accessory picks up the steel look too, not drawn on top unaffected |
 | 2026-09-24 | K1b | Skin visibility during Cinghiale | Skin is **hidden** while transformed into the boar |
 | 2026-09-24 | K1b | Skin visibility during power-up rolling (Algidone `al_r*`) | Shown **only if that skin provides those specific frames**; otherwise falls back to the standard missing-frame rule (render plain, no skin, no error) |
+| 2026-09-24 | K1b | Per-skin render mode | Every `SKINS` entry now carries `mode:"overlay"\|"replace"`. `overlay` = drawn right after the base frame (accessories, e.g. the GEKA cap). `replace` = drawn **instead of** the base frame at the same size (full costumes, e.g. Algidone's BK costume — it recolours cape/logo/gloves/boots, so an overlay would leak red pixels from the base). In `replace` mode, a frame the skin doesn't provide falls back to the normal base frame (same missing-frame rule as `overlay`) |
+| 2026-09-24 | R3 (amendment) | Tile 5 reward identity | **Supersedes** the original R3 entry for tile 5. Reward is now id `"bk"`, name **"Costume BK"** (was `"kebab"`/"Costume kebab"). `ROAD_REWARDS[5]` updated; still `ready:false` (K3 flips it). Shipped 0.3_15 |
+| 2026-09-24 | K3 (early) | BK costume art uses the real Burger King logo | Owner decision: keep it as-is for now, same brand-parody style already used for the McDonald's cup art. Logged for the record; no code impact in K1b |
+| 2026-09-24 | K1b | Skin art delivery workflow | Skins arrive as an artist-drawn sheet on a template, plus a `<skin>_cells.json` describing the cell mapping, both under `refs/skins/<skin>/`. Cut by a new `refs/skins/cut_from_cells.py` (**not written yet** — no real sheet/cells.json exists to build or test it against; it gets written when the first skin sheet actually arrives, likely at the start of K2). This **replaces** `tools/cut_sprites.py` as the skin-specific cutting workflow — that tool stays as-is for its original (non-skin) reference-sheet cutting use. Documented in §10.6 |
+| 2026-09-24 | K1b | Dev-only skin test tool | A debug-only skin toggle in the dev panel, both modes: `overlay` mode draws a magenta outline + corner cross at each frame's exact bounds (so alignment is visually verifiable); `replace` mode draws the base frame tinted a clearly-different magenta/blue hue. Never written to `S.p.ch[*].skin` or any persisted state — a plain in-memory variable (`DEV_SKIN_TEST`), so it's automatically never saved. Gated on `devOn`; invisible and inert with dev mode off |
 
 **Built-in audio slots** (filled by A-chunks):
 
