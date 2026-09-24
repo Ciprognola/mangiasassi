@@ -1640,3 +1640,12 @@ M6b — Ferma Algidone! floor 3 "Fabbrica di salsicce" + the final win.
   -> Rigioca; the scripted all-8-bolts run; bolt pick / hole timing / jump over a hole / walking into a hole / standing on a bolt; sausage falling through a hole; meat clearance; flames (range, spawn, climb, cap; 0 safe-zone frames);
   floor 1/2 regressions (belts, stops, girder hits, sausage window 0.229 s, ladder grab, sim card); 0 console errors.
 - Not tested: real-phone feel (bolt spacing, hole width, flame difficulty, the collapse timing and shake), floor-3 difficulty balance.
+
+## 0.3_33 — 2026-09-24
+Owner feedback 4 after the phone test of 0.3_31/0.3_32 (gameplay good).
+- **Building scale per floor**: floor 2's `fa_bld_macelleria` (213x126) was tiny and crammed next to Algidone (x0.6). Buildings now match Coccia's on-screen width (176 px): Macelleria **x0.826** (176x104),
+  Fabbrica **x0.629** (176x137, was x0.6 = 168 wide), both centred at x=270 like Coccia; Algidone stays x0.6 on every floor. `review/building_scale_m.png` (floors 2 and 3 on a 390x844 phone).
+- **Riprova always restarts from floor 1** (3 lives, score 0), on any floor - amends 0.3_30's "Riprova = current floor". Rigioca (final panel) also restarts from floor 1.
+- **Sblocca tutto**: the two future Giocatore cards (El Gamblador, Il Professore) read "In arrivo" instead of "Bloccato" while it is active (real state still says "Bloccato").
+- **`index.html` size delta: +47 bytes.** Verified headless (touch): both buildings, Riprova from floor 3 -> floor 1 / score 0 / 3 lives, card labels real vs sim, floor-3 smoke, 0 console errors.
+- Not tested: how the larger buildings look on a real phone.
