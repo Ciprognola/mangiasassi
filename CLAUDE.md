@@ -389,6 +389,8 @@ Do not implement any of these until they are planned into chunks in a later rele
   stays in force until this future feature is designed.
 - **Algidone's mini-game — other playable characters**: El Gamblador and Il Professore as the climbing
   character (0.4 ships with Uomo roccia only).
+- **Algidone eat animation** — `fa_alg_eat1`/`eat2` look different from the other frames (beardless); enhance in a future patch (owner regenerates the frames or another fix is planned). The game uses the frames as they are (0.3_29).
+- **Ferma Algidone! encounter progression** — the first-ever encounter might end after floor 1 with the kick-out, later encounters get progressively harder (more floors / faster). Not for now.
 - **Roadmap "?" rewards** at tiles 10, 15, 20 … 50: containers exist in 0.4, the rewards themselves are defined later.
 - (Already listed above) Movepicker and professor rebalance — they naturally fit together with the asset-experience
   and customisation-page items.
@@ -640,7 +642,7 @@ elevators/rivets stay **code-drawn** (recoloured per floor); sausage roll-rotati
 | `fa_alg_eat0-2` | cell | grab ham → bite → chew (stock draining) | same ×0.5 |
 | `fa_alg_angry0-1` | cell | stomp with dust → furious with steam (player close / stock low) | same ×0.5 |
 | `fa_alg_kick0-2` | cell | hit → flying (cap flies off) → sitting dazed (floor-win kick-out) | same ×0.5 |
-| `fa_salsiccia` | 52×32 | rolling sausage (rotated to horizontal) | ×0.6 → 31×19 (0.3_25; hitbox r 8 × h 14, deliberately smaller than the sprite) |
+| `fa_salsiccia` | 77×29 | rolling sausage, cooked, already horizontal (owner replacement, 0.3_29) | ×0.5 → 39×15 (0.3_29, no rotation; hitbox r 8 × h 14 unchanged, smaller than the sprite) |
 | `fa_porchetta0` | 60×31 | porchetta, main frame | ×0.6 → 36×19 (0.3_25; hitbox = sprite, 36×19) |
 | `fa_porchetta1` | 88×56 | alternative: roll with a slice cut off (optional, not a squash frame) | ×0.5 if used |
 | `fa_carne0-1` | 44×32 | bouncing meat: normal / squashed on landing (floor 3) | ×0.6 → 26×19 (0.3_25) |
@@ -766,6 +768,13 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-24 | 0.3_27 | Hit through girders | Root cause: box overlap only. Rule: an item hits only if no girder surface lies between its base and the player's feet (body centre on a ladder) at that x (`faSeparated`). Ladder-drop hits, refuge and jump windows unchanged |
 | 2026-09-24 | 0.3_27 | Eat frames | Draw path identical to the others; the difference is in the art. Only `fa_alg_eat0` is used; bite/chew animated in code. Art issue 2 stays open (owner may regenerate eat1/eat2). Cooked-sausage art: still waiting |
 | 2026-09-24 | M0 → M1 | M0 closed | All rounds/demos done and signed off; M1 (engine skeleton) starts |
+| 2026-09-24 | 0.3_29 (owner phone test of 0.3_27/0.3_28) | Accepted as-is | Through-girder fix, stock no-refill + 10 s death bite + empty = game over, intro card, 0.3_28 timings |
+| 2026-09-24 | 0.3_29 | Eating | Owner wants the real `fa_alg_eat0-2` animation back even though eat1/eat2 look different (beardless). Improving it is a future patch (§8). Art issue 2 stays open; the death bite uses the full animation |
+| 2026-09-24 | 0.3_29 | Cooked sausage | Owner replaced `fa_salsiccia` (77x29, horizontal, cut from the `fa_bld_fabbrica` sign, approved). Drawn x0.5, no rotation, hitbox unchanged. Standing-jump window re-measured 0.229 s. **Art issue 1 resolved** |
+| 2026-09-24 | 0.3_29 | Ladder grab | Tighter: centre within +-8 px (`FA_PHYS.snap` 28 -> 8), then snap. Amends the M2 "ladder snap 28 px" |
+| 2026-09-24 | 0.3_29 | Desktop keys | Up/W = climb inside a ladder's grab zone, otherwise jump (key press only). Space still jumps. Mobile unchanged |
+| 2026-09-24 | 0.3_29 | Extra bottom row | Empty space below the level (floor 1, no grill) 115 px on 390x844 / 107 px on 360x800 vs a gap of 85 (87 / 81 px): added without growing the world. Slopes alternate: new bottom down-right, old bottom down-left starting at x=110 (items drop at x=110, never on the spawn), new ladder x=210. Second girder's left part is now a fatal chasm. **Floor 3's grill does not fit under the new bottom in 610: decide in M6b** |
+| 2026-09-24 | 0.3_29 | **Amends M0 Q9 (floor win)** | Floors 1-2: Algidone **climbs away** up a ladder to the next level (code-only, `fa_alg_throw1`, ~2.5 s), no kick-out. The kick-out is the final win on floor 3 only (`lv.last`); dev preview "Test cacciata finale". Future (§8): the first-ever encounter might end after floor 1 with the kick-out, later encounters progressively harder |
 | 2026-09-24 | 0.3_28 (M5) | Intro card + kick-out choices | Card = maze-style panel (`fa_bld_coccia` x1, "Piano 1 — Coccia", blurb), 2.5 s auto-close, tap/Enter skips, shown at start/Riprova/Rigioca not on respawn. Kick-out 3.1 s: headbutt lunge -> `kick0` -> `kick1` arc to the right (peak 35 px, lands x=320 so it stays in frame) -> `kick2` dazed -> celebrate hops; stock frozen, items cleared, no hits. Stock bonus counts up on the panel. Dev button "Test uscita Algidone" |
 
 **Built-in audio slots** (filled by A-chunks):

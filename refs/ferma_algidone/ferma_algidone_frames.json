@@ -166,11 +166,11 @@
   },
   "fa_salsiccia": {
    "file": "frames/fa_salsiccia.png",
-   "w": 52,
-   "h": 32,
+   "w": 77,
+   "h": 29,
    "anchor": "center",
-   "source": "Meat_Items.png",
-   "note": "ruotata di 90° in orizzontale; la rotazione mentre rotola si fa in codice"
+   "source": "fa_bld_fabbrica (insegna)",
+   "note": "salsiccia cotta gia orizzontale (sostituisce la versione rosa 52x32, 0.3_29); nessuna rotazione di base, rotola lungo il suo asse"
   },
   "fa_porchetta0": {
    "file": "frames/fa_porchetta0.png",

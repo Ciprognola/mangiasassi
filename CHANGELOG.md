@@ -1548,3 +1548,25 @@ M5 — Ferma Algidone! floor 1 "Coccia": intro card + kick-out win sequence.
 - Verified headless with real clicks (desktop keys/mouse, mobile touch): intro open/frozen/auto-close/skip (tap + Enter), pause during intro, no intro on respawn, Riprova and Rigioca show it again, kick timeline
   frames (`review/m5_kick_d.png`, `m5_kick_m.png`), bonus count-up, dev button, 0 console errors.
 - Not tested: real-phone feel and timing of the kick-out, the card on phones narrower than 340 px.
+
+## 0.3_29 — 2026-09-24
+Ferma Algidone! — owner feedback 2 after the phone test of 0.3_27/0.3_28.
+- **Cooked sausage**: the owner's new `fa_salsiccia.png` (77x29, already horizontal, cut from the `fa_bld_fabbrica` sign) embedded (it arrived as `refs/ferma_algidone/fa_salsiccia.png`, commit `1c69976`;
+  moved into `frames/` replacing the old file). Drawn x0.5 (39x15), no base rotation (a lying sausage rolls along its axis, so it no longer spins); hitbox unchanged (r8 x h14).
+  Standing-jump window re-measured at 0.25 px steps: **0.229 s** (jump-press distance 15.5-31.25 px at 70 px/s), same as before - the hitbox did not change. Art issue 1 resolved.
+- **Eating**: the full `fa_alg_eat0-2` animation (grab -> bite -> chew) is back, the eat0-only code chew is gone. The 10 s death bite uses it. Art improvement of eat1/eat2 is logged in §8 as a future patch.
+- **Ladder grab**: only when the player's centre is within +-8 px of the ladder centre (`FA_PHYS.snap` 28 -> 8), then it snaps to the centre; same for grabbing down (verified at 0, +-7 grab / +-9, 20 no).
+- **Desktop keys**: Up/W = climb when inside a ladder's grab zone (direction the ladder serves), otherwise jump (on key press, not while held). Space/Z still jump. Touch controls unchanged.
+- **Extra bottom row**: measured the empty space below the level (floor 1 has no grill): 112 world px = 115 px on a 390x844 phone / 107 px on 360x800, against a girder gap of 85 (87 / 81 px), so it fits **without growing the world** (610 stays).
+  New bottom girder (slopes down-right, spawn left, safe zone x<90, flames x>=150, end walls, grill at its low end). The old bottom girder now slopes down-left and starts at x=110, so items dropping off its left end land
+  on the new bottom at x=110 and roll right to the grill - **never on the spawn**. New ladder x=210 (new bottom -> old bottom). All indices shifted (start still gi 0, Algidone/goal/building gi 5).
+  The chasm under the left part of the second girder is now a fatal fall (the old bottom girder no longer reaches x<110). Fall threshold unchanged (115; the widest single drop is 107).
+  Floor 3's grill (M6b) does not fit below the new bottom girder in a 610 world (dev "+ carne/griglia" grill is placed at y=551 for now): decide in M6b (grow the world ~35 px or a smaller grill).
+  `refs/ferma_algidone/review/layout_extra_row.png` (new layout on both phone sizes).
+- **Floor exit = Algidone climbs away** (floors 1-2; dev run on floor 1): stock frozen, throws stopped, items cleared, no hits. Algidone (code only, `fa_alg_throw1` arms up) tilts/bobs and climbs a code-drawn ladder off the top
+  of the screen in about 2.5 s (ladder slides in first), the climber celebrates with two hops, then the stock-bonus panel (Rigioca / Esci until M6). The kick-out stays in the code for the last floor (`lv.last`) and the dev preview.
+- **Dev buttons**: "Test uscita Algidone" (the floor's exit = climb) and new "Test cacciata finale" (kick-out preview); both dev runs, save nothing, both in the `bindOpt` whitelist.
+- **`index.html` size delta: +13635 bytes.**
+- Verified headless: real clicks/keys (desktop) and touch (mobile) - intro/pause/skip/Riprova/Rigioca flow, both dev buttons in real time, climb + kick frame strips (`review/m6_climb_d.png`, `m6_kickfinal_m.png`),
+  real ArrowUp/Space, ladder-grab boundary tests, sausage window, girder-hit grid on the new indices (0), scripted spawn-to-goal run through every row, 90 s item-flow run (0 frames of items in the safe zone), 0 console errors.
+- Not tested: real-phone feel of the tighter grab, the new layout and the climb-away.
