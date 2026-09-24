@@ -1,0 +1,372 @@
+{
+ "schema": 1,
+ "project": "Mangiasassi — Ferma Algidone! (M-chunks, v0.4)",
+ "pixel_rule": "1 art pixel = 1 image pixel. Draw with imageSmoothingEnabled=false, integer scale preferred.",
+ "anchor_rule": "bottom-center = feet/base line at the bottom centre of the cell; all fa_alg_* frames share one cell size; animation groups share a cell.",
+ "frames": {
+  "fa_alg_idle0": {
+   "file": "frames/fa_alg_idle0.png",
+   "w": 124,
+   "h": 158,
+   "anchor": "bottom-center",
+   "source": "Algidone_idle___throw.png",
+   "note": "idle"
+  },
+  "fa_alg_idle1": {
+   "file": "frames/fa_alg_idle1.png",
+   "w": 124,
+   "h": 158,
+   "anchor": "bottom-center",
+   "source": "Algidone_idle___throw.png",
+   "note": "idle (respiro)"
+  },
+  "fa_alg_throw0": {
+   "file": "frames/fa_alg_throw0.png",
+   "w": 124,
+   "h": 158,
+   "anchor": "bottom-center",
+   "source": "Algidone_idle___throw.png",
+   "note": "afferra la salsiccia"
+  },
+  "fa_alg_throw1": {
+   "file": "frames/fa_alg_throw1.png",
+   "w": 124,
+   "h": 158,
+   "anchor": "bottom-center",
+   "source": "Algidone_idle___throw.png",
+   "note": "salsiccia sopra la testa"
+  },
+  "fa_alg_throw2": {
+   "file": "frames/fa_alg_throw2.png",
+   "w": 124,
+   "h": 158,
+   "anchor": "bottom-center",
+   "source": "Algidone_idle___throw.png",
+   "note": "rilascio — la salsiccia in volo e stata rimossa, l oggetto lo genera il gioco"
+  },
+  "fa_alg_throw3": {
+   "file": "frames/fa_alg_throw3.png",
+   "w": 124,
+   "h": 158,
+   "anchor": "bottom-center",
+   "source": "Algidone_idle___throw.png",
+   "note": "ritorno a riposo"
+  },
+  "fa_alg_eat0": {
+   "file": "frames/fa_alg_eat0.png",
+   "w": 124,
+   "h": 158,
+   "anchor": "bottom-center",
+   "source": "Eating___Hungry.png",
+   "note": "prende un prosciutto"
+  },
+  "fa_alg_eat1": {
+   "file": "frames/fa_alg_eat1.png",
+   "w": 124,
+   "h": 158,
+   "anchor": "bottom-center",
+   "source": "Eating___Hungry.png",
+   "note": "morde"
+  },
+  "fa_alg_eat2": {
+   "file": "frames/fa_alg_eat2.png",
+   "w": 124,
+   "h": 158,
+   "anchor": "bottom-center",
+   "source": "Eating___Hungry.png",
+   "note": "mastica"
+  },
+  "fa_alg_angry0": {
+   "file": "frames/fa_alg_angry0.png",
+   "w": 124,
+   "h": 158,
+   "anchor": "bottom-center",
+   "source": "Eating___Hungry.png",
+   "note": "arrabbiato, pesta i piedi (polvere)"
+  },
+  "fa_alg_angry1": {
+   "file": "frames/fa_alg_angry1.png",
+   "w": 124,
+   "h": 158,
+   "anchor": "bottom-center",
+   "source": "Eating___Hungry.png",
+   "note": "furioso, vapore dalla testa"
+  },
+  "fa_alg_kick0": {
+   "file": "frames/fa_alg_kick0.png",
+   "w": 124,
+   "h": 158,
+   "anchor": "bottom-center",
+   "source": "Algidone_kicked_out.png",
+   "note": "colpito"
+  },
+  "fa_alg_kick1": {
+   "file": "frames/fa_alg_kick1.png",
+   "w": 124,
+   "h": 158,
+   "anchor": "bottom-center",
+   "source": "Algidone_kicked_out.png",
+   "note": "in volo (cappello che vola incluso)"
+  },
+  "fa_alg_kick2": {
+   "file": "frames/fa_alg_kick2.png",
+   "w": 124,
+   "h": 158,
+   "anchor": "bottom-center",
+   "source": "Algidone_kicked_out.png",
+   "note": "a terra, stelline"
+  },
+  "fa_fiamma0": {
+   "file": "frames/fa_fiamma0.png",
+   "w": 25,
+   "h": 32,
+   "anchor": "bottom-center",
+   "source": "Flame___Grill.png",
+   "note": ""
+  },
+  "fa_fiamma1": {
+   "file": "frames/fa_fiamma1.png",
+   "w": 25,
+   "h": 32,
+   "anchor": "bottom-center",
+   "source": "Flame___Grill.png",
+   "note": ""
+  },
+  "fa_fiamma2": {
+   "file": "frames/fa_fiamma2.png",
+   "w": 25,
+   "h": 32,
+   "anchor": "bottom-center",
+   "source": "Flame___Grill.png",
+   "note": ""
+  },
+  "fa_fiamma3": {
+   "file": "frames/fa_fiamma3.png",
+   "w": 25,
+   "h": 32,
+   "anchor": "bottom-center",
+   "source": "Flame___Grill.png",
+   "note": ""
+  },
+  "fa_griglia0": {
+   "file": "frames/fa_griglia0.png",
+   "w": 45,
+   "h": 33,
+   "anchor": "bottom-center",
+   "source": "Flame___Grill.png",
+   "note": "braci spente"
+  },
+  "fa_griglia1": {
+   "file": "frames/fa_griglia1.png",
+   "w": 45,
+   "h": 33,
+   "anchor": "bottom-center",
+   "source": "Flame___Grill.png",
+   "note": "braci accese"
+  },
+  "fa_salsiccia": {
+   "file": "frames/fa_salsiccia.png",
+   "w": 52,
+   "h": 32,
+   "anchor": "center",
+   "source": "Meat_Items.png",
+   "note": "ruotata di 90° in orizzontale; la rotazione mentre rotola si fa in codice"
+  },
+  "fa_porchetta0": {
+   "file": "frames/fa_porchetta0.png",
+   "w": 60,
+   "h": 31,
+   "anchor": "center",
+   "source": "Meat_Items.png",
+   "note": "rotolo intero (principale)"
+  },
+  "fa_porchetta1": {
+   "file": "frames/fa_porchetta1.png",
+   "w": 88,
+   "h": 56,
+   "anchor": "center",
+   "source": "Meat_Items.png",
+   "note": "variante con fetta tagliata davanti — alternativa, non un vero frame di \"schiacciamento\""
+  },
+  "fa_carne0": {
+   "file": "frames/fa_carne0.png",
+   "w": 44,
+   "h": 32,
+   "anchor": "bottom-center",
+   "source": "Meat_Items.png",
+   "note": "normale"
+  },
+  "fa_carne1": {
+   "file": "frames/fa_carne1.png",
+   "w": 44,
+   "h": 32,
+   "anchor": "bottom-center",
+   "source": "Meat_Items.png",
+   "note": "schiacciata (atterraggio)"
+  },
+  "fa_scorte0": {
+   "file": "frames/fa_scorte0.png",
+   "w": 55,
+   "h": 58,
+   "anchor": "bottom-center",
+   "source": "Stock_pile.png",
+   "note": "piena"
+  },
+  "fa_scorte1": {
+   "file": "frames/fa_scorte1.png",
+   "w": 55,
+   "h": 58,
+   "anchor": "bottom-center",
+   "source": "Stock_pile.png",
+   "note": "2/3"
+  },
+  "fa_scorte2": {
+   "file": "frames/fa_scorte2.png",
+   "w": 55,
+   "h": 58,
+   "anchor": "bottom-center",
+   "source": "Stock_pile.png",
+   "note": "1/3"
+  },
+  "fa_scorte3": {
+   "file": "frames/fa_scorte3.png",
+   "w": 55,
+   "h": 58,
+   "anchor": "bottom-center",
+   "source": "Stock_pile.png",
+   "note": "vuota"
+  },
+  "fa_scorte_b0": {
+   "file": "frames/fa_scorte_b0.png",
+   "w": 56,
+   "h": 60,
+   "anchor": "bottom-center",
+   "source": "Stock_pile.png",
+   "note": "variante alternativa (riga inferiore del foglio)"
+  },
+  "fa_scorte_b1": {
+   "file": "frames/fa_scorte_b1.png",
+   "w": 56,
+   "h": 60,
+   "anchor": "bottom-center",
+   "source": "Stock_pile.png",
+   "note": "variante alternativa (riga inferiore del foglio)"
+  },
+  "fa_scorte_b2": {
+   "file": "frames/fa_scorte_b2.png",
+   "w": 56,
+   "h": 60,
+   "anchor": "bottom-center",
+   "source": "Stock_pile.png",
+   "note": "variante alternativa (riga inferiore del foglio)"
+  },
+  "fa_scorte_b3": {
+   "file": "frames/fa_scorte_b3.png",
+   "w": 56,
+   "h": 60,
+   "anchor": "bottom-center",
+   "source": "Stock_pile.png",
+   "note": "variante alternativa (riga inferiore del foglio)"
+  },
+  "fa_bld_coccia": {
+   "file": "frames/fa_bld_coccia.png",
+   "w": 294,
+   "h": 215,
+   "anchor": "bottom-center",
+   "source": "Coccia_Building.png",
+   "note": ""
+  },
+  "fa_bld_macelleria": {
+   "file": "frames/fa_bld_macelleria.png",
+   "w": 213,
+   "h": 126,
+   "anchor": "bottom-center",
+   "source": "Macelleria.png",
+   "note": "furgone incluso; bordo superiore dell edificio tagliato dal foglio originale"
+  },
+  "fa_bld_fabbrica": {
+   "file": "frames/fa_bld_fabbrica.png",
+   "w": 280,
+   "h": 218,
+   "anchor": "bottom-center",
+   "source": "Fabbrica_di_salsiccie.png",
+   "note": ""
+  },
+  "fa_bg_coccia": {
+   "file": "frames/fa_bg_coccia.png",
+   "w": 270,
+   "h": 480,
+   "anchor": "fill",
+   "source": "Coccia_Backdrop.png",
+   "note": ""
+  },
+  "fa_bg_fabbrica": {
+   "file": "frames/fa_bg_fabbrica.png",
+   "w": 270,
+   "h": 480,
+   "anchor": "fill",
+   "source": "Fabbrica_backdrop.png",
+   "note": ""
+  },
+  "fa_bg_macelleria": {
+   "file": "frames/fa_bg_macelleria.png",
+   "w": 270,
+   "h": 480,
+   "anchor": "fill",
+   "source": "Macelleria_backdrop.png (portrait 9:16, regenerated)",
+   "note": ""
+  }
+ },
+ "animations": {
+  "alg_idle": [
+   "fa_alg_idle0",
+   "fa_alg_idle1"
+  ],
+  "alg_throw": [
+   "fa_alg_throw0",
+   "fa_alg_throw1",
+   "fa_alg_throw2",
+   "fa_alg_throw3"
+  ],
+  "alg_eat": [
+   "fa_alg_eat0",
+   "fa_alg_eat1",
+   "fa_alg_eat2"
+  ],
+  "alg_angry": [
+   "fa_alg_angry0",
+   "fa_alg_angry1"
+  ],
+  "alg_kicked_out": [
+   "fa_alg_kick0",
+   "fa_alg_kick1",
+   "fa_alg_kick2"
+  ],
+  "fiamma": [
+   "fa_fiamma0",
+   "fa_fiamma1",
+   "fa_fiamma2",
+   "fa_fiamma3"
+  ],
+  "griglia": [
+   "fa_griglia0",
+   "fa_griglia1"
+  ],
+  "carne_bounce": [
+   "fa_carne0",
+   "fa_carne1"
+  ],
+  "scorte_levels": [
+   "fa_scorte0",
+   "fa_scorte1",
+   "fa_scorte2",
+   "fa_scorte3"
+  ],
+  "scorte_levels_alt": [
+   "fa_scorte_b0",
+   "fa_scorte_b1",
+   "fa_scorte_b2",
+   "fa_scorte_b3"
+  ]
+ }
+}
