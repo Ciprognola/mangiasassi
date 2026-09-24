@@ -17,6 +17,31 @@ playability fix, D4 and the art package (`refs/ferma_algidone/`, spec in §10.7,
   don't touch the art. The M1 demo values (stock 90 s, physics from D3) are starting points; tuning is M9.
 - The package `60c07bf` and any other owner commits may land via the GitHub web UI — always `git pull --ff-only` first (§1).
 
+**State at handoff:** `git status` clean, everything pushed to `main`, HEAD `81a40d5` (plus this note's own docs commit), `VERSION` = `0.3_19`.
+Commits this session (oldest → newest): `6eccdfe` M0-fix (D2/D3/D5 playable, DK death rules) · `27254ce` M0-D4 floor map ·
+`1053d06` round 4 answers · `60c07bf` art package (owner, web upload) · `a8cfba5` M0 closed + art spec · `81a40d5` M1 build.
+
+**Waiting on the owner:** they will reply to the M1 report — expect feedback on M1 (esp. whether the Coccia backdrop is
+too busy behind the girders) and/or "go ahead with M2". Address feedback first; if it is just "go", start M2 (Sonnet · high).
+Do not start M3+ before M2 is signed off.
+
+**Demos (all live on Pages, never linked from the game):** `prototypes/algidone/` `01-level-layout`, `02-climb-jump-feel`
+(D3, tuning sliders), `03-items` (D2), `04-hud` (D5, canonical fixed version), `05-floor-map` (D4). The M0-fix root causes
+(x-only collision, unsafe spawn, no item clearing on death) are documented in §10.9 — do not re-introduce them in M2–M4:
+hit tests need vertical overlap on the same level; respawn clears all items; spawn area is safe.
+
+**Practical notes for the next session:**
+- Verification pattern that worked: Playwright (Python, headless Chromium) with `page.evaluate` on top-level `let`/`const`
+  globals (e.g. `screen`, `FA`, `P`); keep helper scripts in the scratchpad, not in the repo. `node --check` on each
+  `<script>` block first, then the smoke test (menu renders, run starts, zero console errors, new screen loads).
+- Build patches to `index.html` with a Python script that asserts each anchor appears exactly once; never print base64.
+  Embed art via script (read PNG → base64), like `fa_bg_coccia` in `FA_IMG_SRC`.
+- Long Bash heredocs containing quotes have broken on this machine (Git Bash) — write longer scripts with the Write tool.
+- M1 logical world is 360×560 (D2's coordinates); Algidone art (124×158 cell at ×0.5 = 62×79) needs the ≥79 px headroom
+  above girder 5 that the layout already gives (girder y=90). The `FA.debug` overlay shows safe/goal/grill zones.
+- Each further chunk: bump `VERSION` to `0.3_NN`, append a `CHANGELOG.md` entry with the `index.html` size delta, update the
+  §10.8 row, commit `v0.3_NN: …`, push. Embed each art frame in the chunk that first draws it (§10.9 round 4 amendment).
+
 This note can be deleted at the start of the next session as part of confirming the sync.
 
 ---
