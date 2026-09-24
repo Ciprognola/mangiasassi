@@ -36,6 +36,10 @@ hit tests need vertical overlap on the same level; respawn clears all items; spa
   `<script>` block first, then the smoke test (menu renders, run starts, zero console errors, new screen loads).
 - Build patches to `index.html` with a Python script that asserts each anchor appears exactly once; never print base64.
   Embed art via script (read PNG → base64), like `fa_bg_coccia` in `FA_IMG_SRC`.
+- **Smoke tests must click the UI entry point, not call the function** (0.3_19's dev-panel button was dead because
+  `bindOpt` forwards only whitelisted selectors to `bindDev`; a direct `startFerma()` call passed anyway). New dev-panel
+  buttons: add the selector to that whitelist in `bindOpt`. Path: splash `#rsi` → `[data-tile=opt]` → `[data-otab=dev]` →
+  open the accordion (`details.acc:has(#id) > summary`) → click; run desktop + mobile touch (`has_touch`, `tap`).
 - Long Bash heredocs containing quotes have broken on this machine (Git Bash) — write longer scripts with the Write tool.
 - M1 logical world is 360×560 (D2's coordinates); Algidone art (124×158 cell at ×0.5 = 62×79) needs the ≥79 px headroom
   above girder 5 that the layout already gives (girder y=90). The `FA.debug` overlay shows safe/goal/grill zones.

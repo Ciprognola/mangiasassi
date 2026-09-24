@@ -1414,3 +1414,13 @@ for anything not itemised below.
 - Not tested: real device/touch, iOS/Safari. Backdrop is busy behind the girders — legibility is for the owner to judge
   before M2 (girders can be given a darker outline without touching the art).
 
+
+## 0.3_20 — 2026-09-24
+- **Bugfix**: the dev-panel "Ferma Algidone!" button (`#mgfa`, added in 0.3_19) did nothing. Root cause: `bindOpt` only forwards
+  a whitelist of selectors to `bindDev`'s click handler, and `#mgfa` was missing from it, so the click fell through to
+  `optClick` and was ignored (no error). Added `#mgfa` to the whitelist; nothing else changed.
+- **`index.html` size delta: +6 bytes** (`#mgfa,` in the whitelist; version string is the same length).
+  to this build: measured against the committed 0.3_19 file, the diff itself is 2 lines / +4 chars).
+- Verified in headless Chromium by **clicking the real button** (desktop 1280x800 and mobile 390x780 with touch tap): splash → menu →
+  Opzioni → Sviluppatore → Strumenti di test → Avvia → `screen="fa"` canvas renders, ✕ returns to the menu, zero console errors.
+- Not tested: real phone. The 0.3_19 smoke test called `startFerma()` directly, which is why it missed this.
