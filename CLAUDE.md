@@ -2,26 +2,6 @@
 
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
-## SESSION HANDOFF (2026-09-23 → next session)
-Work paused here for the day; owner said "will continue tomorrow, reply to this message." Nothing is
-pending or half-done — every change through this point is **committed and pushed to `main`**
-(`git status` clean at handoff, HEAD `47047bd`, build `0.3_12`). §10.8's chunk table is up to date
-(R1–R4 all `done`); §10.9's decisions log has every `[Q]` answered so far.
-
-**Where things stand in the §10 v0.4 release plan:**
-- Done: B1a, B1a-fix, B1b, B2, B3, B4 (§10.2 bugfixes) · A0 (§10.3 built-in audio layer) · P1 (popup
-  framework) · R1–R4 (roadmap, §10.4) — all shipped, builds 0.3_1 through 0.3_12.
-- **Next up per the suggested order (§10.8): K1** (skin system — overlay hook in every draw path,
-  `SPRITE_INVENTORY.md`, missing-frame warning). No `[Q]` pending for K1 specifically, but K2/K3 (the
-  actual skins) are `wait-assets` — asset sheets from the owner needed when those start.
-- Still `todo`, not started: C1 (customisation page), M0–M9 (Algidone's mini-game, the big one), REL.
-- A1…An (audio submissions) slot in whenever a submission arrives — check §1b at the start of the next
-  session as always.
-
-**Read this file in full as usual** (per the instruction below) — this handoff note is just an index into
-what's already there, not a replacement for it. Once read, this note can be deleted at the start of the
-next session as part of confirming the sync.
-
 ---
 
 Owner: **Ciprognola** ("El Cipro") — product owner and master developer.
@@ -599,7 +579,7 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | A0 | Built-in audio layer (IDB → built-in → synth) + matching export targets | — | Sonnet · medium | done (0.3_7) |
 | A1…An | One build per approved audio submission (roccia sounds, algidone sounds, BJ voiceover, professor voiceover, professor intro music) | submissions | Sonnet · medium | wait-assets |
 | P1 | Popup unlock framework + asset/ghost/character/mini-game triggers + old-save seeding + dev preview | [Q] wording, grouping (answered) | Sonnet · medium | done (0.3_8) |
-| R1 | Roadmap state, entry button, snake screen, regular girone tiles | [Q] per-character (answered) | Sonnet · medium | done (0.3_9) |
+| R1 | Roadmap state, entry button, snake screen, regular girone tiles | [Q] per-character (answered, amended 0.3_13 → combined) | Sonnet · medium | done (0.3_9, amended 0.3_13) |
 | R2 | Special tiles 3 and 5 (10 hands won), `S.p.gam.won`, new blackjack achievement, "?" tiles | [Q] achievement, "?" (answered) | Sonnet · medium | done (0.3_10) |
 | R3 | Gift container (animated gift) + generic reward claim | [Q] reward mapping (answered) | Sonnet · medium | done (0.3_11) |
 | R4 | Milestone popups wired to the roadmap | P1, R2 | Sonnet · low | done (0.3_12) |
@@ -640,6 +620,7 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-23 | R3 | Reward mapping | Tile 3 → GEKA SNC hat (Uomo roccia), tile 5 → kebab costume (Algidone) — spec default confirmed |
 | 2026-09-23 | R2 | Tile 3/5 faces | Reuse existing art: the pixel pokéball from the professor throw scene for tile 3, existing El Gamblador card art for tile 5. "?" stays text (no new art needed) |
 | 2026-09-23 | R3 | Readiness gate | `ROAD_REWARDS` registry with a `ready:false` flag per reward, flipped to `true` only in K2/K3 (never elsewhere). A tile whose reward isn't ready behaves exactly like a "?" tile — unlocked, "Premio in arrivo", not claimable, no pulse — even once its own unlock condition (R2) is met. Only `ready:true` rewards can pulse/claim |
+| 2026-09-24 | R1 (amendment) | Roadmap tiles per-character or combined | **Supersedes** the 2026-09-23 R1 answer above. Regular/"?" tiles now unlock on the **combined** girone count across both characters (`roadGir()` = sum of `S.p.ch.roccia.gir` + `S.p.ch.algidone.gir`), not the active character's `cs().gir` alone. Tiles 3/5 and `S.p.road.claimed` were already global and are unaffected. Shipped 0.3_13 |
 
 **Built-in audio slots** (filled by A-chunks):
 

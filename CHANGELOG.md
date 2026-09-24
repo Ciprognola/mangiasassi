@@ -1118,3 +1118,32 @@ for anything not itemised below.
   the flee (`res.run`) branch are untouched.
 - Tested: `node --check` passes both inline `<script>` blocks. Not tested: real playback/audio timing in
   a browser, real device/touch, in-game review by the owner. No save-data changes.
+
+## 0.3_13 — 2026-09-24
+- **Amendment to R1 — roadmap girone count is now global (both characters combined), not per-character.**
+  Owner correction to the §10.9-logged R1 decision ("Regular tiles are per-character"): the 50-tile path
+  is a single shared progression, so a regular/"?" tile's unlock threshold is now the **sum** of
+  `S.p.ch.roccia.gir` and `S.p.ch.algidone.gir`, not the current character's `cs().gir` alone. New helper
+  `roadGir()` (sums `.gir` across `Object.values(S.p.ch)`) replaces the three `cs().gir` call sites inside
+  the roadmap module: `roadUnlocked()`'s regular-tile branch, `renderRoad()`'s current-tile marker, and the
+  screen header ("Girone N"). Tiles 3 and 5 were already global (§10.9 R2, dedicated conditions unrelated
+  to girone count) and are unchanged. The unrelated `cs().gir` read inside the per-character career modal
+  ("Gironi completati") is intentionally left alone — that stat is character-specific by design, only the
+  roadmap reads it globally now.
+- No new state, no migration: `roadGir()` is computed from the existing per-character `.gir` fields, which
+  already exist in `DEF`/`CHDEF()` and already load on old saves. `S.p.road.claimed` was already global
+  (§10.9 R1), so claim state is unaffected by this change.
+- Consequence for existing saves noted for the owner: a player who has completed gironi on both characters
+  will see more roadmap tiles already unlocked than before (the combined count can only be ≥ either
+  character's own count). This does **not** trigger a flood of milestone popups — `scanNewUnlocks()`'s
+  milestone branch only watches `ROAD_REWARDS` (tiles 3/5), which never used girone count in the first
+  place; regular/"?" tiles carry no popup event at all.
+- Updated the module's own doc comment (just above `ROAD_N`) to describe the new global rule instead of the
+  superseded per-character one, and added a decision-log amendment row + updated the R1 row's chunk-table
+  note in CLAUDE.md §10.9 (see that file's own diff) rather than silently rewriting the original logged
+  answer.
+- **Verified in headless Chromium**: injected `roccia.gir=2`, `algidone.gir=3` on a fresh save → `roadGir()`
+  reads 5, screen header shows "Girone 5", tile 4 (`4<=5`) shows `unlocked`, tile 6 (`6>5`) stays `locked`.
+  Menu renders with zero console errors; a real run still starts normally via `startGame()`.
+- Not tested: real device/touch, in-game review by the owner, the R2 popup path for tiles 3/5 (unchanged
+  by this build, already covered by 0.3_10's testing).
