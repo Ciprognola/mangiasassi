@@ -2,6 +2,55 @@
 
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
+## SESSION HANDOFF (2026-09-24 → next session)
+Paused mid-M0, waiting on the owner to try two demos before continuing. Nothing is half-committed —
+everything through this point is **committed and pushed to `main`** (`git status` clean at handoff, HEAD
+`b5d98a5`, build still `0.3_18` — M0 is prototype-only, see below, so it hasn't bumped `VERSION`).
+
+**Where things stand in the §10 v0.4 release plan:**
+- Done through K3: B1–B4, A0, P1, R1–R4, K1a, K1b, C1, K2 (GEKA cap), K3 (BK costume) — all shipped,
+  builds 0.3_1 through 0.3_18. Both roadmap skin rewards (tiles 3 and 5) are fully live end-to-end.
+- **In progress: M0** (Algidone's mini-game, "Ferma Algidone!" — design rounds + demos, §10.7). This is
+  explicitly allowed to span sessions (§10.8's own note). **`index.html` has NOT been touched for M0** —
+  everything so far lives in `prototypes/algidone/*.html` (standalone demos, never linked from the game,
+  each its own `M0-Dn: …` commit) and in §10.9's decisions log.
+- Still `todo`, not started: M1–M9 (the actual `index.html` implementation, blocked on M0 finishing), REL.
+
+**M0 progress in detail:**
+- Rounds 1–3 of the §10.7 question bank all asked and answered, every answer logged in §10.9: name
+  ("Ferma Algidone!"), unlock (low-rate random from girone 5+, forced by girone 10, replayable after),
+  floors for v1 (Coccia → Macelleria → Fabbrica di salsicce, one new DK mechanic per floor), controls/
+  orientation (portrait, d-pad + jump button), item behaviours (sausages roll + random ladder-drop,
+  porchetta un-jumpable, meat pieces bounce, grill→flame), lives/scoring/difficulty scaling, floor-win
+  sequence, rewards (existing formula + 3 new "Minigiochi" achievements), run impact (lose=free, win=pays
+  out), roadmap tile 10 (new milestone, unlocks on first real clear of floor 1, deferred to M8), and item
+  art staying placeholder until M5/M6.
+- Two small side items closed this session too: the 3 procedural skin places (eating icons, Acciaio
+  effect) marked **settled — no skin needed** in `SPRITE_INVENTORY.md`; tile 3's unlock re-confirmed as
+  `S.p.pr.seen`-only (never girone count) — no bug, a report's wording had just been loose.
+- **Demos live and playable** (Pages redeploys automatically from `main`, no linking from the game):
+  - `01-level-layout.html` (D1) — floor 1 "Coccia" structure: 5 girders, ladders incl. 2 **broken** ones,
+    Algidone + stock pile top-left, a separate goal-zone marker, a grill at the bottom, reserved HUD strip.
+  - `02-climb-jump-feel.html` (D3) — full player physics (gravity, slope-walking, ladder climbing, jump,
+    coyote time, jump buffering, fall damage) with **live tuning sliders** + a "Copia valori" button, and a
+    toggle comparing jump-off-ladder on/off (default **off**, classic DK).
+  - `03-items.html` (D2) — sausages/porchetta/bouncing meat/flame on D1's layout with D3's physics,
+    Algidone auto-throwing + manual spawn buttons, height-based jump-clear scoring.
+  - `04-hud.html` (D5) — real DOM HUD (score, draining stock bar, lives, pause) replacing the placeholder
+    strip; pause genuinely freezes the whole loop, not just the visuals.
+  - D1 and D3 were each updated once after their first version (layout got Algidone/goal/grill/broken-
+    ladders added; D3 got the sliders/toggle/fall-damage/touch-forgiveness pass) — the links above are
+    already the current versions, no separate old links to worry about.
+- **Waiting on the owner**: they were asked to try D2 and D5 before round 4 gets asked (§10.7's remaining
+  bank: art list Q12, audio Q13, plus demo D4 — the floor-progression map). **Do not ask round 4 until
+  they've given feedback on D2/D5** — if they reply with feedback/tweaks instead of "go ahead", address
+  that first.
+
+**Read this file in full as usual** (per the instruction below) — this handoff note is just an index into
+what's already there (mainly §10.7 for the mini-game concept and §10.9 for every logged answer), not a
+replacement for it. Once read, this note can be deleted at the start of the next session as part of
+confirming the sync.
+
 ---
 
 Owner: **Ciprognola** ("El Cipro") — product owner and master developer.
