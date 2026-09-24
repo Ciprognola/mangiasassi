@@ -6,46 +6,65 @@
 <title>M0 · D3 — Sensazione di salto e arrampicata</title>
 <style>
   :root{color-scheme:dark;--bg:#0b1220;--panel:#131d2e;--border:#223047;--text:#e6ecf5;--mute:#8fa0b8;
-    --girder:#c98a3b;--girder-dk:#96601f;--ladder:#5bb0d9;--ladder-dk:#2f7594;--player:#e5484d;--goal:#ffce3d}
+    --girder:#c98a3b;--girder-dk:#96601f;--ladder:#5bb0d9;--ladder-dk:#2f7594;--ladder-broken:#6b6155;
+    --player:#e5484d;--goal:#ffce3d;--grill:#e0483c}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
   body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,sans-serif;
     padding:8px;display:flex;flex-direction:column;align-items:center;gap:6px;
     min-height:100vh;touch-action:none}
   h1{font-size:16px;margin:0;text-align:center}
-  .sub{color:var(--mute);font-size:12px;text-align:center;max-width:380px;margin:0}
+  .sub{color:var(--mute);font-size:11.5px;text-align:center;max-width:380px;margin:0}
   .stage-wrap{position:relative;border:2px solid var(--border);border-radius:10px;overflow:hidden;
     background:linear-gradient(#0d1626,#0a121f)}
   canvas{display:block;touch-action:none}
-  .hud{position:absolute;top:6px;left:8px;font:11px/1.4 ui-monospace,monospace;color:#9fb0c3;
-    background:rgba(10,16,26,.55);padding:4px 7px;border-radius:6px;pointer-events:none}
-  .pad{display:flex;gap:22px;align-items:center;margin-top:2px}
-  .dpad{display:grid;grid-template-columns:44px 44px 44px;grid-template-rows:44px 44px 44px;gap:4px}
-  .dpad button{grid-column:2;background:var(--panel);border:1px solid var(--border);border-radius:8px;
-    color:var(--text);font-size:18px;display:flex;align-items:center;justify-content:center}
+  .flash{position:absolute;inset:0;background:#e5484d;opacity:0;pointer-events:none;transition:opacity .08s linear}
+  .flash.on{opacity:.55}
+  .pad-row{display:flex;justify-content:space-between;align-items:flex-end;width:360px;max-width:100%}
+  .dpad{display:grid;grid-template-columns:58px 58px 58px;grid-template-rows:58px 58px 58px;gap:4px}
+  .dpad button{grid-column:2;background:var(--panel);border:1px solid var(--border);border-radius:9px;
+    color:var(--text);font-size:20px;display:flex;align-items:center;justify-content:center}
   #du{grid-row:1}
   #dl{grid-row:2;grid-column:1}
   #dfill{grid-row:2;grid-column:2;visibility:hidden}
   #dr{grid-row:2;grid-column:3}
   #dd{grid-row:3}
-  .jumpbtn{width:74px;height:74px;border-radius:50%;background:var(--player);border:1px solid #8f1f24;
+  .jumpbtn{width:76px;height:76px;border-radius:50%;background:var(--player);border:1px solid #8f1f24;
     color:#fff;font-weight:700;font-size:13px}
   button{cursor:pointer}
   button:active,button.held{background:var(--girder);border-color:var(--girder);color:#1a1204}
   .jumpbtn:active,.jumpbtn.held{background:#ff8a8e;border-color:var(--player)}
-  footer{color:var(--mute);font-size:11px;text-align:center;max-width:380px}
-  kbd{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font:11px monospace}
+  .toggles{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .togglebtn{background:var(--panel);border:1px solid var(--border);color:var(--mute);border-radius:8px;
+    padding:6px 10px;font:11.5px inherit}
+  .togglebtn.on{background:#2a3f2a;border-color:#4ade80;color:#bff3cf}
+  details{width:360px;max-width:100%;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:8px 12px}
+  summary{cursor:pointer;font-size:12.5px;color:var(--mute)}
+  .slider-row{display:grid;grid-template-columns:96px 1fr 52px;align-items:center;gap:8px;margin-top:8px;font-size:11.5px}
+  .slider-row label{color:var(--mute)}
+  .slider-row output{font:11px ui-monospace,monospace;color:var(--text);text-align:right}
+  input[type=range]{width:100%}
+  .copyrow{display:flex;gap:8px;align-items:center;margin-top:10px}
+  .copybtn{background:var(--girder);border:none;color:#1a1204;border-radius:8px;padding:7px 12px;font:12px inherit;font-weight:700}
+  #copyOut{flex:1;font:10.5px ui-monospace,monospace;background:#0a121f;color:#9fb0c3;border:1px solid var(--border);
+    border-radius:6px;padding:5px 7px;min-height:16px;word-break:break-all}
+  footer{color:var(--mute);font-size:10.5px;text-align:center;max-width:380px}
+  kbd{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font:10.5px monospace}
 </style>
 </head>
 <body>
 <h1>M0 · D3 — Sensazione di salto e arrampicata</h1>
-<p class="sub">Stessa struttura di D1. Blocco colorato al posto dell'Uomo roccia — solo fisica, non aspetto finale.</p>
+<p class="sub">Stessa struttura di D1 (scale rotte incluse). Blocco colorato, solo fisica.</p>
 
 <div class="stage-wrap">
   <canvas id="cv" width="360" height="560"></canvas>
-  <div class="hud" id="hud"></div>
+  <div class="flash" id="flash"></div>
 </div>
 
-<div class="pad">
+<div class="toggles">
+  <button class="togglebtn" id="tJump">Salto dalla scala: NO (classico)</button>
+</div>
+
+<div class="pad-row">
   <div class="dpad">
     <button id="du">▲</button>
     <button id="dl">◀</button>
@@ -56,46 +75,102 @@
   <button class="jumpbtn" id="jbtn">SALTA</button>
 </div>
 
-<footer>Tastiera: <kbd>←</kbd><kbd>→</kbd> cammina, <kbd>↑</kbd><kbd>↓</kbd> sale/scende sulle scale,
-<kbd>Spazio</kbd> salta (anche dalla scala). Tocco: le stesse frecce + il pulsante SALTA qui sotto.</footer>
+<details>
+  <summary>Regolazioni fisica (per tarare col telefono)</summary>
+  <div class="slider-row"><label for="sGrav">Gravità</label><input type="range" id="sGrav" min="400" max="1600" step="20" value="980"><output id="oGrav"></output></div>
+  <div class="slider-row"><label for="sJump">Forza salto</label><input type="range" id="sJump" min="150" max="500" step="5" value="330"><output id="oJump"></output></div>
+  <div class="slider-row"><label for="sWalk">Velocità cammino</label><input type="range" id="sWalk" min="60" max="220" step="5" value="120"><output id="oWalk"></output></div>
+  <div class="slider-row"><label for="sClimb">Velocità scala</label><input type="range" id="sClimb" min="50" max="200" step="5" value="105"><output id="oClimb"></output></div>
+  <div class="slider-row"><label for="sLadder">Zona presa scala</label><input type="range" id="sLadder" min="10" max="50" step="2" value="28"><output id="oLadder"></output></div>
+  <div class="slider-row"><label for="sCoyote">Coyote time</label><input type="range" id="sCoyote" min="0" max="200" step="10" value="80"><output id="oCoyote"></output></div>
+  <div class="slider-row"><label for="sBuffer">Jump buffering</label><input type="range" id="sBuffer" min="0" max="250" step="10" value="100"><output id="oBuffer"></output></div>
+  <div class="copyrow"><button class="copybtn" id="copyBtn">Copia valori</button><div id="copyOut"></div></div>
+</details>
+
+<footer>Tastiera: <kbd>←</kbd><kbd>→</kbd> cammina, <kbd>↑</kbd><kbd>↓</kbd> scala, <kbd>Spazio</kbd> salta.
+Cadere più di un piano = vita persa (lampo rosso + si riparte dall'inizio).</footer>
 
 <script>
-const cv = document.getElementById('cv'), x = cv.getContext('2d'), hud = document.getElementById('hud');
+const cv = document.getElementById('cv'), x = cv.getContext('2d'), flashEl = document.getElementById('flash');
 const W = cv.width, H = cv.height;
 
 /* ============ STESSI DATI DI LIVELLO DI D1 (01-level-layout.html) ============ */
+const HUD_H = 46;
 const GIRDERS = [
-  { x1: 20, y1: 535, x2: 340, y2: 514 },
-  { x1: 20, y1: 427, x2: 340, y2: 448 },
-  { x1: 20, y1: 361, x2: 340, y2: 340 },
-  { x1: 20, y1: 252, x2: 340, y2: 273 },
-  { x1: 20, y1: 175, x2: 340, y2: 175 },
+  { x1: 20, y1: 441, x2: 340, y2: 419 },
+  { x1: 20, y1: 334, x2: 340, y2: 356 },
+  { x1: 20, y1: 271, x2: 340, y2: 249 },
+  { x1: 20, y1: 164, x2: 340, y2: 186 },
+  { x1: 20, y1: 90,  x2: 340, y2: 90  },
 ];
 const LADDERS = [
   { x: 300, gTop: 1, gBot: 0 },
   { x: 60,  gTop: 2, gBot: 1 },
+  { x: 190, gTop: 2, gBot: 1, broken: true, brokenFrac: 0.6 },
   { x: 300, gTop: 3, gBot: 2 },
   { x: 60,  gTop: 4, gBot: 3 },
+  { x: 230, gTop: 4, gBot: 3, broken: true, brokenFrac: 0.55 },
 ];
 function girderYAt(g, px) {
   const cx = Math.max(g.x1, Math.min(g.x2, px));
   const t = (cx - g.x1) / (g.x2 - g.x1);
   return g.y1 + (g.y2 - g.y1) * t;
 }
-const GOAL = { x: 300, gi: 4 };
+function ladderTopY(l) {
+  const yBotG = girderYAt(GIRDERS[l.gBot], l.x), yTopG = girderYAt(GIRDERS[l.gTop], l.x);
+  return l.broken ? (yBotG + (yTopG - yBotG) * (1 - l.brokenFrac)) : yTopG;
+}
+const ALGIDONE = { x: 55, gi: 4 };
+const GRILL = { x1: 258, x2: 338 };
+const START = { x: 40, gi: 0 };
 
-/* ============ FISICA (numeri da tarare col feedback) ============ */
-const GRAVITY = 980, WALK_SPEED = 120, CLIMB_SPEED = 105, JUMP_VY = -330, JUMP_OFF_LADDER_VY = -260;
-const LADDER_SNAP_X = 20; // quanto vicino alla x di una scala per poterla usare
+/* ============ FISICA (regolabile dai cursori qui sotto) ============ */
+let GRAVITY = 980, WALK_SPEED = 120, CLIMB_SPEED = 105, JUMP_VY = -330;
+let LADDER_SNAP_X = 28, COYOTE_MS = 80, BUFFER_MS = 100;
+let ALLOW_LADDER_JUMP = false;
+const JUMP_OFF_LADDER_VY = -260;
+const FALL_DAMAGE_DIST = 95; // cadere piu' di ~un piano (le file sono alte ~77-107px con la pendenza)
 
-const P = { x: 40, y: 0, vx: 0, vy: 0, onGround: true, gi: 0, climbing: null, facing: 1, w: 18, h: 26 };
-P.y = girderYAt(GIRDERS[0], P.x);
+const sliders = [
+  ['sGrav', 'oGrav', v => GRAVITY = v, v => v],
+  ['sJump', 'oJump', v => JUMP_VY = -v, v => v],
+  ['sWalk', 'oWalk', v => WALK_SPEED = v, v => v],
+  ['sClimb', 'oClimb', v => CLIMB_SPEED = v, v => v],
+  ['sLadder', 'oLadder', v => LADDER_SNAP_X = v, v => v],
+  ['sCoyote', 'oCoyote', v => COYOTE_MS = v, v => v + ' ms'],
+  ['sBuffer', 'oBuffer', v => BUFFER_MS = v, v => v + ' ms'],
+];
+sliders.forEach(([id, outId, apply, fmt]) => {
+  const el = document.getElementById(id), out = document.getElementById(outId);
+  const sync = () => { const v = +el.value; apply(v); out.textContent = fmt(v); };
+  el.addEventListener('input', sync);
+  sync();
+});
+
+document.getElementById('tJump').onclick = e => {
+  ALLOW_LADDER_JUMP = !ALLOW_LADDER_JUMP;
+  e.target.classList.toggle('on', ALLOW_LADDER_JUMP);
+  e.target.textContent = 'Salto dalla scala: ' + (ALLOW_LADDER_JUMP ? 'SÌ (confronto)' : 'NO (classico)');
+};
+
+document.getElementById('copyBtn').onclick = async () => {
+  const txt = `gravity=${GRAVITY} jumpVy=${-JUMP_VY} walkSpeed=${WALK_SPEED} climbSpeed=${CLIMB_SPEED} `
+    + `ladderSnap=${LADDER_SNAP_X} coyoteMs=${COYOTE_MS} bufferMs=${BUFFER_MS} allowLadderJump=${ALLOW_LADDER_JUMP}`;
+  document.getElementById('copyOut').textContent = txt;
+  try { await navigator.clipboard.writeText(txt); }
+  catch (e) { /* niente clipboard: il testo resta comunque visibile qui sotto da copiare a mano */ }
+};
+
+/* ============ STATO GIOCATORE ============ */
+const P = { x: START.x, y: 0, vx: 0, vy: 0, onGround: true, gi: START.gi, climbing: null, facing: 1, w: 18, h: 26 };
+P.y = girderYAt(GIRDERS[START.gi], P.x);
+let lives = 3, coyoteTimer = 1e9, bufferTimer = 1e9, airStartY = null, flashT = 0;
 
 const keys = {};
 addEventListener('keydown', e => {
   if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)) e.preventDefault();
   keys[e.key] = true;
-  if (e.key === ' ') doJump();
+  if (e.key === ' ') requestJump();
 });
 addEventListener('keyup', e => { keys[e.key] = false; });
 
@@ -113,7 +188,7 @@ bindHold('dl', () => touch.l = true, () => touch.l = false);
 bindHold('dr', () => touch.r = true, () => touch.r = false);
 bindHold('du', () => touch.u = true, () => touch.u = false);
 bindHold('dd', () => touch.d = true, () => touch.d = false);
-document.getElementById('jbtn').addEventListener('pointerdown', e => { e.preventDefault(); doJump(); });
+document.getElementById('jbtn').addEventListener('pointerdown', e => { e.preventDefault(); requestJump(); });
 
 function inputLeft()  { return keys['ArrowLeft']  || keys['a'] || keys['A'] || touch.l; }
 function inputRight() { return keys['ArrowRight'] || keys['d'] || keys['D'] || touch.r; }
@@ -130,44 +205,58 @@ function nearestLadder() {
   return best;
 }
 
-function doJump() {
+function requestJump() {
   if (P.climbing) {
-    // salta via dalla scala
+    if (!ALLOW_LADDER_JUMP) return; // salto dalla scala disattivato (comportamento classico)
     P.climbing = null; P.onGround = false; P.vy = JUMP_OFF_LADDER_VY;
     P.vx = inputLeft() ? -WALK_SPEED : inputRight() ? WALK_SPEED : 0;
+    airStartY = P.y;
     return;
   }
-  if (P.onGround) { P.onGround = false; P.vy = JUMP_VY; }
+  if (P.onGround || coyoteTimer < COYOTE_MS) { doJumpNow(); }
+  else { bufferTimer = 0; } // salto arrivato troppo presto: bufferizzato, scatta all'atterraggio
+}
+function doJumpNow() {
+  P.onGround = false; P.vy = JUMP_VY; airStartY = P.y; coyoteTimer = 1e9;
+}
+
+function loseLife() {
+  lives -= 1; if (lives <= 0) lives = 3; // per il prototipo: si ricomincia sempre da 3, niente game-over vero
+  flashT = 0.18;
+  P.x = START.x; P.gi = START.gi; P.y = girderYAt(GIRDERS[START.gi], P.x);
+  P.vx = 0; P.vy = 0; P.onGround = true; P.climbing = null;
 }
 
 let last = performance.now();
 function step(now) {
   const dt = Math.min(0.033, Math.max(0, (now - last) / 1000)); last = now;
+  coyoteTimer += dt * 1000; bufferTimer += dt * 1000;
 
   if (P.climbing) {
     const l = P.climbing;
-    const yTop = girderYAt(GIRDERS[l.gTop], l.x), yBot = girderYAt(GIRDERS[l.gBot], l.x);
+    const yTop = ladderTopY(l), yBot = girderYAt(GIRDERS[l.gBot], l.x);
     if (inputUp())      P.y -= CLIMB_SPEED * dt;
     else if (inputDown()) P.y += CLIMB_SPEED * dt;
     P.x = l.x;
-    if (P.y <= yTop) { P.y = yTop; P.gi = l.gTop; P.climbing = null; P.onGround = true; }
-    else if (P.y >= yBot) { P.y = yBot; P.gi = l.gBot; P.climbing = null; P.onGround = true; }
+    if (P.y <= yTop) {
+      P.y = yTop;
+      if (!l.broken) { P.gi = l.gTop; P.climbing = null; P.onGround = true; }
+      // scala rotta: non si puo' proseguire oltre yTop, resta appesi li'
+    } else if (P.y >= yBot) { P.y = yBot; P.gi = l.gBot; P.climbing = null; P.onGround = true; }
   } else {
-    // movimento orizzontale
     P.vx = inputLeft() ? -WALK_SPEED : inputRight() ? WALK_SPEED : 0;
     if (P.vx < 0) P.facing = -1; else if (P.vx > 0) P.facing = 1;
     P.x += P.vx * dt;
     P.x = Math.max(14, Math.min(W - 14, P.x));
 
     if (P.onGround) {
-      // aggancio alla scala se vicino e si preme su/giu' in modo coerente
       const l = nearestLadder();
       if (l && inputUp() && l.gBot === P.gi) { P.climbing = l; P.onGround = false; P.x = l.x; }
-      else if (l && inputDown() && l.gTop === P.gi) { P.climbing = l; P.onGround = false; P.x = l.x; }
+      else if (l && inputDown() && l.gTop === P.gi && !l.broken) { P.climbing = l; P.onGround = false; P.x = l.x; }
       else {
         const g = GIRDERS[P.gi];
-        if (P.x >= g.x1 && P.x <= g.x2) P.y = girderYAt(g, P.x);
-        else P.onGround = false; // caduto oltre il bordo dell'impalcatura
+        if (P.x >= g.x1 && P.x <= g.x2) { P.y = girderYAt(g, P.x); coyoteTimer = 0; }
+        else { P.onGround = false; airStartY = P.y; coyoteTimer = 0; } // caduto oltre il bordo -> coyote time parte ora
       }
     }
 
@@ -180,14 +269,21 @@ function step(now) {
           const g = GIRDERS[i];
           if (P.x < g.x1 || P.x > g.x2) continue;
           const gy = girderYAt(g, P.x);
-          if (prevY <= gy && P.y >= gy) { P.y = gy; P.vy = 0; P.onGround = true; P.gi = i; break; }
+          if (prevY <= gy && P.y >= gy) {
+            const fellDist = airStartY == null ? 0 : (gy - airStartY);
+            P.y = gy; P.vy = 0; P.onGround = true; P.gi = i;
+            if (fellDist > FALL_DAMAGE_DIST) { loseLife(); }
+            else if (bufferTimer < BUFFER_MS) { doJumpNow(); } // salto bufferizzato: scatta appena atterrato
+            airStartY = null;
+            break;
+          }
         }
       }
-      if (P.y > H + 40) { // caduto fuori dal piano -> respawn (rete di sicurezza del prototipo)
-        P.x = 40; P.gi = 0; P.y = girderYAt(GIRDERS[0], P.x); P.vy = 0; P.onGround = true;
-      }
+      if (P.y > H + 60) loseLife(); // caduto fuori dal piano
     }
   }
+
+  if (flashT > 0) { flashT -= dt; flashEl.classList.toggle('on', flashT > 0); }
 
   draw();
   requestAnimationFrame(step);
@@ -196,44 +292,52 @@ function step(now) {
 function draw() {
   x.clearRect(0, 0, W, H);
 
+  x.save();
+  x.strokeStyle = 'rgba(143,160,184,.5)'; x.setLineDash([4, 4]); x.lineWidth = 1;
+  x.strokeRect(2, 2, W - 4, HUD_H - 6);
+  x.setLineDash([]);
+  x.fillStyle = '#8fa0b8'; x.font = '10px system-ui'; x.textAlign = 'left';
+  x.fillText('Vite: ' + '♥'.repeat(lives), 8, HUD_H / 2 + 4);
+  x.textAlign = 'right';
+  x.fillText('zona HUD (D5)', W - 8, HUD_H / 2 + 4);
+  x.restore();
+
+  x.fillStyle = 'rgba(224,72,60,.18)'; x.fillRect(GRILL.x1, 448, GRILL.x2 - GRILL.x1, 60);
+  x.strokeStyle = getVar('--grill'); x.lineWidth = 2; x.strokeRect(GRILL.x1, 448, GRILL.x2 - GRILL.x1, 60);
+
   x.lineCap = 'round';
   LADDERS.forEach(l => {
-    const yTop = girderYAt(GIRDERS[l.gTop], l.x), yBot = girderYAt(GIRDERS[l.gBot], l.x);
-    x.strokeStyle = getCss('--ladder'); x.lineWidth = 6;
-    x.beginPath(); x.moveTo(l.x, yTop); x.lineTo(l.x, yBot); x.stroke();
-    x.strokeStyle = getCss('--ladder-dk'); x.lineWidth = 3;
-    for (let py = yTop + 8; py < yBot; py += 14) { x.beginPath(); x.moveTo(l.x - 7, py); x.lineTo(l.x + 7, py); x.stroke(); }
+    const yBotG = girderYAt(GIRDERS[l.gBot], l.x), yTop = ladderTopY(l);
+    x.strokeStyle = l.broken ? getVar('--ladder-broken') : getVar('--ladder'); x.lineWidth = 6;
+    x.beginPath(); x.moveTo(l.x, yTop); x.lineTo(l.x, yBotG); x.stroke();
+    x.strokeStyle = l.broken ? '#4a4237' : getVar('--ladder-dk'); x.lineWidth = 3;
+    for (let py = yTop + 8; py < yBotG; py += 14) { x.beginPath(); x.moveTo(l.x - 7, py); x.lineTo(l.x + 7, py); x.stroke(); }
   });
 
   GIRDERS.forEach(g => {
-    x.strokeStyle = getCss('--girder-dk'); x.lineWidth = 14;
+    x.strokeStyle = getVar('--girder-dk'); x.lineWidth = 14;
     x.beginPath(); x.moveTo(g.x1, g.y1 + 3); x.lineTo(g.x2, g.y2 + 3); x.stroke();
-    x.strokeStyle = getCss('--girder'); x.lineWidth = 10;
+    x.strokeStyle = getVar('--girder'); x.lineWidth = 10;
     x.beginPath(); x.moveTo(g.x1, g.y1); x.lineTo(g.x2, g.y2); x.stroke();
   });
 
-  // obiettivo
-  const goalY = girderYAt(GIRDERS[GOAL.gi], GOAL.x);
-  x.fillStyle = getCss('--goal');
-  x.beginPath(); x.arc(GOAL.x, goalY - 18, 14, 0, 7); x.fill();
-  x.fillRect(GOAL.x - 10, goalY - 34, 20, 18);
+  const ay = girderYAt(GIRDERS[ALGIDONE.gi], ALGIDONE.x);
+  x.fillStyle = getVar('--goal');
+  x.beginPath(); x.arc(ALGIDONE.x, ay - 18, 14, 0, 7); x.fill();
+  x.fillRect(ALGIDONE.x - 10, ay - 34, 20, 18);
 
-  // giocatore (blocco colorato)
   x.save();
   x.translate(P.x, P.y);
   if (P.facing < 0) x.scale(-1, 1);
-  x.fillStyle = getCss('--player');
-  x.beginPath(); x.arc(0, -P.h - 4, 8, 0, 7); x.fill(); // testa
-  x.fillRect(-P.w/2, -P.h, P.w, P.h - 4); // corpo
-  x.fillStyle = '#1a0506'; x.fillRect(2, -P.h - 6, 3, 3); // occhio (indica il verso)
+  x.fillStyle = getVar('--player');
+  x.beginPath(); x.arc(0, -P.h - 4, 8, 0, 7); x.fill();
+  x.fillRect(-P.w/2, -P.h, P.w, P.h - 4);
+  x.fillStyle = '#1a0506'; x.fillRect(2, -P.h - 6, 3, 3);
   x.restore();
-
-  hud.textContent = 'girder ' + P.gi + (P.climbing ? ' · scala' : P.onGround ? ' · a terra' : ' · aria')
-    + ' · x=' + P.x.toFixed(0) + ' y=' + P.y.toFixed(0);
 }
 
 const _cssCache = {};
-function getCss(name) {
+function getVar(name) {
   if (!_cssCache[name]) _cssCache[name] = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   return _cssCache[name];
 }
