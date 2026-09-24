@@ -16,6 +16,30 @@ Permanent project context for Claude Code. Read it fully at the start of every s
   bottom girder now slopes down-right); the M0 safe-zone/flame rules (§10.9) still apply.
 - Package `60c07bf` and other owner commits may land via the GitHub web UI — always `git pull --ff-only` first (§1).
 
+**First thing next session:** the owner will reply to the last report (0.3_25 + 0.3_26). Expect M4 phone-test feedback and answers to these
+open questions — answer/apply feedback first, then (only if signed off) start M5:
+- Stock pile art: keep set A (`fa_scorte0-3`, in use) or switch to set B (`fa_scorte_b0-3`, not embedded)?
+- Building size: ×0.6 chosen (recommended over ×0.5 / ×0.75) — confirm.
+- Floor 1 has no grill by design (`items.grill:false`); items just exit there. Owner may want the grill visible on floor 1 (one-line cfg change).
+- Tuning flags above (stock 90 s, eat 22 percent, jump windows, item ×0.6 looks small next to the ×1.2 head, scores).
+
+**Ferma Algidone! code map (all in `index.html`, `grep -n 'FA_\|fa[A-Z]'`):** data `FA_LEVELS[0]` (girders, ladders, start/goal/grill/algidone/building,
+`items` config, `stock`); world 360×610 (`FA_W/FA_H`); `FA_PHYS` (physics, head 36, body box 22×31, contact width `hitw` 10, Algidone ×0.6, fall threshold 115);
+loop `faLoop` (fixed step, pause-aware) → `faStep` (state gate → stock → Algidone → items → fx → player → goal/collide) → `faDraw` (backdrop → building → grill →
+girders/ladders → Algidone → items → fx → player → debug/flash); items `faSpawn/faItemsStep/faCollide/faGrillHit`; HUD `faHud`; panels `faPanel`;
+input `FA_KEYS/FA_TOUCH` + `#fapad` pointer handlers. Climb view: up = `fd` set, down = `fu` set (maze convention).
+Girder gaps are 62/63/85/106–107 px; items roll downhill (bottom girder slopes down-right into the grill).
+
+**Test recipe (scratch scripts are NOT in the repo and are lost between sessions — rebuild them):** Playwright sync API, `setup()` sets dev mode via
+`store.set('mgs_dev',...)` + reload, `open_fa()` clicks splash `#rsi` → menu → `[data-tile=opt]` → `[data-otab=dev]` → accordion → `#mgfa` (`#mgfa3` = with meat/grill).
+Freeze the loop with `cancelAnimationFrame(FA.raf)` and step `faStep(1/60)` from `page.evaluate` for deterministic logic tests; use real `keyboard`/CDP touch for input tests.
+Silence random throws with `Object.assign(FA.cfg,{sausage:0,porchetta:0,meat:0,ladderP:0});FA.alg.wait=1e9`. Jump-window measurement = sweep the takeoff distance
+and divide the OK range by the relative speed. Known flaky checks under CPU load: real-time key-hold polling and random throw counts — rerun before suspecting the game.
+
+**Gotchas:** the working copy is CRLF (Python: read/write with `newline=""`); patch `index.html` with anchored-replace scripts that assert exactly one match;
+`%` in a Python `%`-formatted string crashed a docs script once (0.3_26) — use `.replace`, and re-check `git diff --stat` before committing docs; a push can fail
+transiently — retry, and only if `origin/main` really moved follow §1. The dev achievement toast overlays the bottom of the screen (`popBottom()` avoids `.dpad,#fapad`).
+
 **Demos (live on Pages, never linked from the game):** `prototypes/algidone/` 01–05. Rules from the M0-fix (§10.9) hold:
 hit tests need vertical overlap on the same level; respawn clears all items; spawn area is safe.
 
