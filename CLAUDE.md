@@ -642,6 +642,36 @@ list as a vertical tower) · D5 HUD + stock bar + lives.
 
 Skins (§10.6) apply to the climber. Player-facing text in Italian.
 
+**Art spec — `refs/ferma_algidone/` package** (arrived early, committed via the web UI as `60c07bf`; validated: 39/39 frames
+exist, sizes match `ferma_algidone_frames.json`, all animation keys resolve, all 14 `fa_alg_*` share one 124×158 cell, max
+54 KB). Pre-cut, transparent, **1 art pixel = 1 image pixel**, draw with `imageSmoothingEnabled=false`. Anchors:
+`bottom-center` (feet/base), `center` (free item), `fill` (backdrop). Girders, ladders, broken ladders, conveyors,
+elevators/rivets stay **code-drawn** (recoloured per floor); sausage roll-rotation, porchetta wobble, flame/grill glow are code.
+**Never edit, recolour, redraw or regenerate this art — report problems instead.**
+
+| Key(s) | Native size | Anim / use | In-game draw size (logical px, demos' 360-px-wide layout) |
+|---|---|---|---|
+| `fa_alg_idle0-1` | 124×158 cell | Algidone idle (top of the tower) | ×0.5 → 62×79, feet on the top girder (M1 must leave ≥79 px of headroom above girder 5) |
+| `fa_alg_throw0-3` | cell | grab → lift → release → recover (game spawns the item at release) | same ×0.5 |
+| `fa_alg_eat0-2` | cell | grab ham → bite → chew (stock draining) | same ×0.5 |
+| `fa_alg_angry0-1` | cell | stomp with dust → furious with steam (player close / stock low) | same ×0.5 |
+| `fa_alg_kick0-2` | cell | hit → flying (cap flies off) → sitting dazed (floor-win kick-out) | same ×0.5 |
+| `fa_salsiccia` | 52×32 | rolling sausage (rotated to horizontal) | ×0.5 → 26×16 (hit radius 9 in the demos) |
+| `fa_porchetta0` | 60×31 | porchetta, main frame | ×0.5 → 30×16 |
+| `fa_porchetta1` | 88×56 | alternative: roll with a slice cut off (optional, not a squash frame) | ×0.5 if used |
+| `fa_carne0-1` | 44×32 | bouncing meat: normal / squashed on landing (floor 3) | ×0.5 → 22×16 |
+| `fa_fiamma0-3` | 25×32 | flame flicker (floor 3) | ×0.5 → 13×16 |
+| `fa_griglia0-1` | 45×33 | grill at the bottom: coals dim / bright | fill D1's 80-px grill zone → ×1.78 (≈80×59) |
+| `fa_scorte0-3` | 55×58 | stock pile: full → 2/3 → 1/3 → empty (stock bar / Algidone's crate) | ×0.5 → 27×29 |
+| `fa_scorte_b0-3` | 56×60 | alternative stock-pile set | same as above (pick one set in M4) |
+| `fa_bld_coccia` | 294×215 | floor-1 intro-card building | ×1 (fits 360 px) |
+| `fa_bld_macelleria` | 213×126 | floor-2 intro-card building (van included) | ×1 |
+| `fa_bld_fabbrica` | 280×218 | floor-3 intro-card building | ×1 |
+| `fa_bg_coccia` / `fa_bg_macelleria` / `fa_bg_fabbrica` | 270×480 | level backdrops (portrait), behind the code structure | scale to 360 px wide (×1.33, cover-cropped vertically) — painted scenery, only non-integer case |
+
+The climber (Uomo roccia, head only) has **no new art**: see the Q12 row in §10.9. Sizes are decisions for M1+ and may be
+retuned by the chunk that first draws each thing if the layout demands it (say so in the log).
+
 ### 10.8 Chunk table
 Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / `wait-Q` / `done (0.3_NN)`.
 
@@ -664,12 +694,12 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | C1 | Customisation page ("Personalizza", skin selector, 2 placeholders) | K1, [Q] screen/modal (answered: full screen) | Sonnet · medium | done (0.3_16) |
 | K2 | GEKA SNC hat (Uomo roccia) | asset sheet | Sonnet · medium | done (0.3_17) |
 | K3 | Costume BK (Algidone) | asset sheet | Sonnet · medium | done (0.3_18) |
-| M0 | Design rounds + demos D1–D5 (may span several sessions) | [Q] bank | Sonnet · medium | todo |
+| M0 | Design rounds + demos D1–D5 (may span several sessions) | [Q] bank | Sonnet · medium | done (prototypes only, no build) |
 | M1 | Engine skeleton: new `screen`, level data format, girders/ladders render, fixed-timestep loop | M0 | Sonnet · high | todo |
-| M2 | Player movement: walk, climb, jump, gravity, collisions (placeholder frames). **Acceptance (§10.9 DK death rules):** fall damage measured only from where the player left the ground in free fall (~1 floor threshold), reset on landing / ladder grab / respawn; walking slopes, stepping between girder segments and leaving a ladder never count | M1 | Sonnet · high | todo |
+| M2 | Player movement: walk, climb, jump, gravity, collisions; climb = head-only `fu0`–`fu3` animated in code (§10.9 Q12 amendment). **Acceptance (§10.9 DK death rules):** fall damage measured only from where the player left the ground in free fall (~1 floor threshold), reset on landing / ladder grab / respawn; walking slopes, stepping between girder segments and leaving a ladder never count | M1 | Sonnet · high | todo |
 | M3 | Algidone thrower + item types and behaviours | M2 | Sonnet · high | todo |
 | M4 | Lives, hits/death, stock bar, scoring, HUD, pause. **Acceptance (§10.9 DK death rules):** death = short pause/blink → clear ALL items and flames → respawn at start → ~2 s blinking invulnerability → throws resume after a grace delay; spawn area is safe (no flame patrol, no item hits during invulnerability); item hits require vertical overlap on the same level (never compare x alone); stock drain gives tens of seconds per floor and costs a life only when it truly empties; reaching the goal zone shows a win message | M3 | Sonnet · medium | todo |
-| M5 | Floor 1 "Coccia": building art + kick-out win sequence | Coccia asset | Sonnet · medium | wait-assets |
+| M5 | Floor 1 "Coccia": building art + kick-out win sequence | Coccia building + backdrop **arrived** (`refs/ferma_algidone/`, §10.7) | Sonnet · medium | todo |
 | M6 | Further floors (factory, intensive farm, …) — one chunk per floor if large | M5, art | Sonnet · medium | todo |
 | M7 | Audio: synth placeholders + music/sfx slots that match export targets | A0 | Sonnet · medium | todo |
 | M8 | Integration: unlock/entry, Giochi card, popup, rewards, achievements, dev test buttons, save migration | P1 | Sonnet · medium | todo |
@@ -735,6 +765,13 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-24 | M0 Q12 | Other art for the M5/M6 request list | Algidone throw + eat (incl. kicked-out), meat items (salsicce, porchetta, pezzi di carne, flame, grill), Coccia building/backdrop (asked first), Macelleria/Fabbrica di salsicce backdrops. Exact sizes/frames specified when M5/M6 start |
 | 2026-09-24 | M0 Q13 | Audio for M7 | Synth placeholders for a **basic SFX set** (jump, land, climb step, throw, hit/death, jumped-item ping, floor win) plus a **stock-low warning beep**. **No music** in v1 placeholders (music per floor / single loop not chosen). Real audio arrives later via submissions (A0 layer) |
 | 2026-09-24 | M0 | Demos D1–D5 status | D4 floor map (`05-floor-map.html`) shipped. All five demos exist; the question bank is fully asked. M0 awaits owner sign-off on D4 to close |
+| 2026-09-24 | M0 (sign-off) | M0-fix / D4 / stock | Playability fix **approved**. D4 floor map **accepted**. Stock timer: keep **90 s** as the default, tune in M9 |
+| 2026-09-24 | M0 Q12 (amendment, lean art) | Climber art | **Supersedes** the Q12 "small climb pair" row. Uomo roccia is **head only (no body/limbs)** and climbs using the existing **`fu0`–`fu3`** frames animated in code (alternating tilt/squash). Jump, death, kick-out (headbutt) and celebrate are **code-only on existing frames**. **No new climber art, no new GEKA frames** |
+| 2026-09-24 | M0 (skins) | Algidone as thrower vs skins | Algidone in this mini-game is an **NPC**: always drawn **plain**; the BK costume never shows on him (default; owner may overturn later) |
+| 2026-09-24 | M0-fix (promotion) | Safe spawn zone & walls | **Real design decisions for M3/M4, not demo-only hacks:** items harmless left of x=90 on the bottom girder, flames confined to x≥150, walls at the ends of the bottom girder (coordinates are the demos' 360-wide space; scale with the layout) |
+| 2026-09-24 | M0 (amendment to round 3 "item art") | Item art timing | **Supersedes** "placeholder through M0–M4": the art has arrived early (`refs/ferma_algidone/`). Use the **real art in whichever chunk first draws that thing**: M1 backdrop, M3 items, M4 stock pile, M5 Coccia card/kick-out, M6 floors 2–3. No placeholders where real art exists. Package committed on its own as `60c07bf` (web upload, no VERSION bump, `index.html` untouched) |
+| 2026-09-24 | M0 (art tracking) | 3 open art issues from the package README (owner decides; **do not edit/recolour/redraw/regenerate**) | (1) `fa_salsiccia` is pink/raw vs the brown/cooked sausage in Algidone's hands (`fa_alg_throw0-1`) — accept or owner regenerates. (2) `fa_alg_eat1`/`eat2`: face looks beardless/different — acceptable, owner may regenerate. (3) `fa_alg_kick1`: duplicate cap (still wearing one while another flies off) — comedic, minor. (Macelleria backdrop issue already resolved: regenerated 9:16.) Package validation also noted: the `project` string in `ferma_algidone_frames.json` has mojibake in its em dash — cosmetic, JSON is otherwise valid |
+| 2026-09-24 | M0 → M1 | M0 closed | All rounds/demos done and signed off; M1 (engine skeleton) starts |
 
 **Built-in audio slots** (filled by A-chunks):
 
