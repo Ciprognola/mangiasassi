@@ -1593,3 +1593,24 @@ M6a — Ferma Algidone! floor 2 "Macelleria" (conveyor belts) + floor progressio
   items on belts (with/against), meat without hop, scripted spawn-to-goal run through every row of floor 2, 90 s item flow (belts and meat exercised, 0 safe-zone frames), floor-1 regressions (intro, stock, girder hits,
   ladder grab, Up key, sausage window still 0.229 s), 0 console errors.
 - Not tested: real-phone feel of the belts (speed, readability of the chevrons, the reversal warning), floor-2 difficulty.
+
+## 0.3_31 — 2026-09-24
+Owner feedback 3 after the phone test of 0.3_29/0.3_30 (all OK).
+- **Costume BK investigation (no reward bug).** Headless on a REAL non-dev save (no dev role, no sim): `S.p.gam.won` = 10 -> roadmap tile 5 `claimable` -> milestone popup "Traguardo raggiunto!" -> Guarda -> road with the tile
+  highlighted -> tap -> gift container -> open -> `S.p.ch.algidone.skins = ['bk']` **while playing Uomo roccia** -> "Personalizza" appears on Algidone's card -> equip -> the card canvases change and `activeSkin` returns the BK
+  frames (`al_st`, `al_w0`) / GEKA frames (`f0`, `fd0`). Tile 3 -> GEKA hat works the same way. Reward mapping, grant, migration, card button and draw hooks are all fine.
+  **Root cause of "not available": the condition was not met.** `S.p.gam.won` only increases when a hand is won in a REAL run (`B.dbg` false): the El Gamblador random encounter from girone 5 onwards (15 percent per eligible girone,
+  and it needs a price of at least 50). The dev button, `SIM` and the Giochi card (a display-only card, it does not launch anything) never count. The progress is stored as `S.ach.prog.m1` (achievement "Il banco trema", category
+  Minigiochi, 10 hands). **One real defect found and fixed:** tapping a locked tile 3 or 5 said "Sblocca al girone 3/5", which is wrong (neither depends on the girone; tile 3 was meant to have no hint) -> now "Tessera ancora bloccata".
+- **Reward preview shows the skin worn**: the gift pop-out and the milestone popup draw the character wearing the reward (`hero:<char>:<scale>:<skin>`, a preview override `SKIN_PV` that never touches the equipped skin).
+  Checked for Costume BK (Algidone) and the GEKA hat (Uomo roccia). There is no separate roadmap-tile expand: tapping a claimable tile opens the gift directly, so tile faces (pokéball / cards) are unchanged.
+- **"Sblocca tutto" (sim overlay) extended** - still an overlay on a copy (`S.realP`), never writes real progress, never queues popups; turning it off restores the real state (verified byte-identical). Newly covered:
+  both characters' skins (owned, equippable, "Personalizza" visible), all roadmap tiles (tiles 3 and 5 claimable; the other tiles just unlocked, "?" stay "Premio in arrivo"), a **Ferma Algidone!** card (G4) in Giochi with one
+  button per existing floor (dev-style test run, saves nothing). Already covered before: level 100, 999999 sordi, all assets/ghosts, the El Gamblador / Rocciamon cards and the two extra Giocatore cards (shown, not playable
+  as characters - not implemented yet).
+- **Row 2 left end**: player-only invisible stop (`lv.stopLeft:[2]`, floors 1 and 2): walking left stops at the girder end, jumping there works (also while holding left: no drift over the edge), other rows still walk off,
+  items are unaffected.
+- **`index.html` size delta: +2173 bytes.**
+- Verified headless (real clicks + touch): the BK/GEKA paths above, popup/gift screenshots (`review/reward_preview_m.png`), sim on/off round trip incl. the Giochi card and a floor-2 launch, row-2 stop on both floors, floor 1/2 regressions
+  (intro, Avanti/Riprova/Rigioca, belts, spawn-to-goal), 0 console errors.
+- Not tested: playing 10 real blackjack hands through a real run (the increment line was read, not exercised), the Obiettivi screen text for "Il banco trema".
