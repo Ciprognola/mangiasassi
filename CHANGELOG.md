@@ -1702,3 +1702,17 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Typical scores for the balance pass (M9, not tuned now): a maze girone is ~130 pellets x10 + 200 clear + ghosts, so roughly **1,500-2,500 per girone**. An encounter scores the stock bonus (up to ~900 per floor for an instant win, ~400-600 for a normal clear) plus jumps (+10..30 each): roughly
   **N=1 ~500-900, N=2 ~1,000-1,700, N=3 ~1,500-2,600** (measured max with instant wins: 880 / 1770 / 2660).
 - Not tested: real-device feel and the achievement popup timing on a phone; a full real play-through of an encounter (wins were triggered through `faWin`/`faFinalWin`).
+
+## 0.3_37 — 2026-09-25
+**M9b — Ferma Algidone! difficulty scaling + tap targets** (the owner's picks from `refs/ferma_algidone/M9_BALANCE.md`). Owner phone test of 0.3_36: OK.
+- **Difficulty** (implements M0 Q8; `FA_DIFF`, `FA.dm`): Facile / Media / Difficile = item speed x0.88 / x1 / x1.12 (every spawned item, flames included; belts unchanged), throw pauses x1.25 / x1 / x0.85, stock drain x0.85 / x1 / x1.15. **Media is the old behaviour**:
+  a seeded 120 s simulation of all three floors gives identical spawn traces (time, type, speed hash), spawn counts, throw counts and stock drain on 0.3_36 and 0.3_37. Encounters use the run's difficulty (`G.diff`, also for the achievement multiplier: `faClear` now passes it),
+  practice (Giochi card), dev "Incontro N" and the floor buttons use the menu difficulty (`S.opts.diff`). Stock bonus formula and payout multipliers unchanged.
+- **"Algidone è a terra"**: 400 -> **600 sordi**, exp 240 -> **360** (difficulty multipliers as for the others: 600 / 450 / 900 sordi).
+- **Tap targets, Ferma only** (global `.btn` untouched): `#fapanel .btn` (Continua, Avanti, Riprova, Rigioca, Esci, Riprendi), the invite buttons (`#fai-no`, `#fai-yes`) and the Giochi "Gioca" (`[data-fagame]`) have `min-height:44px`; the Ferma pause button (`#fahud .pause`) is 44x44 (was 38).
+  The HUD row grows by a few px, so at 360x640 the play canvas goes from 249x422 to 246x416 (x0.68); nothing overlaps at 360x640, 360x800 or 390x844. Review screenshots refreshed (`refs/ferma_algidone/review/m9_*`, plus new `m9_*_giochi.png`).
+- **`index.html` size delta: +630 bytes.**
+- Verified headless (real clicks for the Options difficulty button, the Giochi "Gioca" tap, the invite; desktop + mobile tap): measured per difficulty (simulated 60-120 s per floor): item speeds sausage 61.6 / 70 / 78.4, porchetta 29.9 / 34 / 38.1, meat 48.4 / 55 / 61.6, flame 52.8 / 60 / 67.2;
+  stock drain over 10 s = 8.5 / 10 / 11.5; mean pause between throws on floor 1 = 2.71 / 2.20 / 1.93 s (base mean 2.3 s x 1.25 / 1 / 0.85); practice card uses the menu difficulty; dev "Incontro" uses the menu difficulty; a real encounter uses `G.diff` (hard) even when the menu says easy;
+  N=3 encounter on Media pays 150 + 600 + 250 = 1000 sordi in achievements (popups 150/90, 250/150, 600/360); all Ferma buttons measured 44 px tall (panel 316-336 wide, pause 44x44, invite 96x44 / 106x44, Gioca 63x44); old save without `fa` loads; practice, dev "Incontro" and SIM leave `mgs_v1` byte-identical; 0 console errors.
+- Not tested: how the three difficulties feel on a phone (multipliers are the owner's picks, unplayed), the taller pause button on real devices.
