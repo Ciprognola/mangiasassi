@@ -465,7 +465,7 @@ Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 | ID | Chunk | Needs | Model · effort | Status |
 |---|---|---|---|---|
 | D1 | Docs: archive 0.4 plan, this plan, firestore.rules, bugs/BUGS.md | — | Sonnet · low | done (docs) |
-| I2 | dev branch + Pages deploying main at / and dev at /dev/, §1 git rules updated | — | Sonnet · medium | todo |
+| I2 | dev branch + Pages deploying main at / and dev at /dev/, §1 git rules updated | — | Sonnet · medium | done (0.4_1) |
 | I3 | Screens library: Playwright script in tools/screens/, PNGs in refs/screens/, SCREENS.md | — | Sonnet · medium | todo |
 | E1a | Dev-mode audit report (refs/dev/DEV_AUDIT.md), no build | — | Sonnet · medium | todo |
 | E1b | Dev-mode cleanup from the owner's picks | E1a picks | Sonnet · medium | todo |
@@ -494,6 +494,7 @@ Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 | 2026-09-25 | REQ | Tile-10 reward skin is for Uomo roccia (the Ferma Algidone! climber). Name and art from the owner |
 | 2026-09-25 | I3 | Screens library = Playwright PNGs in the repo (not Figma), regenerated at each release |
 | 2026-09-25 | F1 | Usernames map to <username>@mangiasassi.invalid. Old hardcoded local credentials are retired (they are readable in the public source); the owner set new passwords in the console |
+| 2026-09-25 | I2 | The dev site uses its own save (mgs_v1_dev, mgs_dev_dev, IDB name + _dev), copied once from the stable save on first open; label 'DEV <version>' only on /dev/. Build numbers in §10.3 shift by one (E1b = 0.4_2, …) |
 | 2026-09-25 | F1 | No offline backup login: if Firebase is unreachable dev mode is unavailable (a session already logged in stays valid offline) |
 
 **Built-in audio slots** (filled by A-chunks):

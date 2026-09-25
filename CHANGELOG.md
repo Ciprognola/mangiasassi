@@ -1742,3 +1742,8 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 ## infra — 2026-09-25
 
 - dev branch deployed at /dev/, stable at the root (I2 part A). No validate-submission workflow exists in the repo, so nothing to retarget.
+
+## 0.4_1 — 2026-09-25
+
+- I2b: dev site (`/dev/`) uses its own save: `mgs_v1_dev`, `mgs_dev_dev`, IndexedDB `mgs_dev`, copied once from `mgs_v1`/`mgs_dev` on first open (IDB not copied). Constants `IS_DEVSITE`, `SAVE_KEY`, `DEV_KEY`, `IDB_NAME`. Label "DEV <version>" (top centre, non-interactive) only on /dev/. `wipeData` follows the keys.
+- Size: index.html 5,632,575 bytes (+6,707 vs 0.4).
