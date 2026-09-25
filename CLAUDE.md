@@ -3,10 +3,10 @@
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
 ## SESSION HANDOFF (2026-09-25 → next session)
-**State:** `VERSION` = `0.3_37`, everything pushed to `main`, `git status` clean (the `VERSION` file in the repo root is a stale old list: `index.html` is the source of truth).
-**Done through M9b** (§10.8): M0-M8b + M9a report + M9b build. M9b: Ferma reads the difficulty (`FA_DIFF`, `FA.dm`: item speed / throw pauses / stock drain; Media = old behaviour byte for byte), "Algidone è a terra" pays 600/360, Ferma-only 44 px tap targets (panels, invite, Gioca, pause). Report: `refs/ferma_algidone/M9_BALANCE.md`.
-**Waiting for the owner:** phone test of 0.3_37 (Facile/Difficile feel, the 44 px buttons and the taller pause button). After the test M9 is closed.
-**Remaining to 0.4:** **REL** (0.4 release: VERSION "0.4", CHANGELOG, README, DEVELOPERS.md incl. the `sound.fa.<slot>` targets listed in §10.9, roll base to 0.4 in §6/§7/§9, tag `v0.4`). Audio submissions A1…An are post-0.4 (§8), not a dependency. The 0.5 backlog (§8) is NOT to be touched now.
+**State: 0.4 shipped.** `VERSION` = `"0.4"` (also the root `VERSION` file), tag `v0.4` on the release commit, everything pushed to `main`, `git status` clean. Release smoke test 23/23 (desktop + mobile, dev off). Details: `CHANGELOG.md` "0.4 — Ferma Algidone!".
+**Next = 0.5 planning in Claude web** (no Claude Code task is pending; do not start any 0.5 item before a planned chunk arrives). Backlog to plan from: §8 (0.5 backlog: hit boxes around assets in the maze game; future items; Ferma follow-ups such as roadmap tile 10 reward, a DK-style loop after floor 3, other playable characters).
+**Post-0.4, not started:** audio submissions A1…An (§8) — processed one build per approved submission via §5; any pending submission is found at session start (§1b). Built-in audio slots table in §10.9 is empty.
+**Next build number:** the first build after the release is `"0.4_1"`, then `"0.4_2"`, … (§6 rule 3, §7, §9 already rolled to 0.4).
 **No pending owner art.**
 
 **Ferma Algidone! code map** (`index.html`, `grep -n 'FA_\|fa[A-Z]'`): data `FA_LEVELS[0..2]` (fields: `title/blurb/introArt`, `girders` with optional `flow`/`conveyor:{v,rev,dir}`, `ladders`, `bolts`, `grill:{x1}`, `stopLeft`, `items` incl. `meatHop`/`grill`/`flameClimb`, `last`, `goal` (floors 1-2 only));
@@ -289,9 +289,9 @@ into `submissions/<name>/<YYYY-MM-DD>/` through a PR. Once the `validate` check 
    medium for game-file changes, high only for genuinely hard debugging).
 2. **Minimal, surgical edits.** The file is huge. `grep -n` to locate, then targeted replacement. Never reformat
    or rewrite whole sections. Never print base64.
-3. **One chunk → one build → one commit** (`v0.3_NN: short description`). Bump `const VERSION="0.3_NN"` every time
-   (numbering switched from `0.2_NN` to `0.3_NN` at the v0.3 release; the release build itself is bare `"0.3"`,
-   the next delivered build is `"0.3_1"`, then `"0.3_2"`, and so on — see §7).
+3. **One chunk → one build → one commit** (`v0.4_NN: short description`). Bump `const VERSION="0.4_NN"` every time
+   (numbering switched to `0.4_NN` at the v0.4 release, after `0.2_NN` → `0.3_NN` at v0.3; the release build itself is bare `"0.4"`,
+   the next delivered build is `"0.4_1"`, then `"0.4_2"`, and so on — see §7).
 4. **Syntax-check before committing**:
    ```bash
    python3 -c "import re;h=open('index.html',encoding='utf-8').read();[open(f'/tmp/s{i}.js','w',encoding='utf-8').write(b) for i,b in enumerate(re.findall(r'<script[^>]*>([\s\S]*?)</script>',h))]"
@@ -351,7 +351,17 @@ full detail on every entry above.
 suffix — that's what `const VERSION` reads in the tagged commit). Every build delivered **after** the release
 bumps `0.3_NN` starting at `0.3_1`, the same `V<base>_<n>` pattern as before with the base rolled from `0.2` to
 `0.3`; the counter resets rather than continuing the old `_59`. Rule 3 in §6 and the delivery checklist in §9
-already reflect this — update both again the next time the base rolls (0.4, ...).
+already reflect this. **Rolled again at v0.4** (below).
+
+| Range | Content |
+|---|---|
+| 0.3_1 → 0.3_13 | v0.4 bugfixes and framework: B1-B4 (menu music gapless loop, battle music start, win/lose track, Rocciamon card), A0 built-in audio layer, P1 unlock popups, R1-R4 Percorso roadmap (tiles 3/5, gift container, milestone popups), roadmap tiles combined across characters (0.3_13) |
+| 0.3_14 → 0.3_18 | Skins: K1a/K1b system (registry, overlay/replace modes, every draw path), C1 Personalizza page, K2 Cappello GEKA SNC, K3 Costume BK |
+| 0.3_19 → 0.3_34 | Ferma Algidone! mini-game (M0 design + demos, M1-M7): engine, movement, thrower and items, lives/stock/HUD, floor 1 Coccia, floor 2 Macelleria (belts), floor 3 Fabbrica (bolts, grill, flames, collapse finale), owner-feedback passes, synth audio `sound.fa.<slot>` |
+| 0.3_35 → 0.3_37 | Integration: M8a random encounters (1/2/3 floors), Giochi card, popup, `S.p.fa`; M8b encounter rewards, Minigiochi achievements, roadmap tile 10; M9a balance report, M9b difficulty scaling + 44 px tap targets |
+| **0.4** | **Release build** (bare `"0.4"`, tag `v0.4`): Ferma Algidone!, encounters, Percorso, costumi + Personalizza, unlock popups, audio layer, 34 achievements. The next delivered build is `"0.4_1"` |
+
+**`v0.4` tag** points at the release commit `v0.4: release — Ferma Algidone!`. **Numbering switch at the v0.4 release**: the release build carries the bare `"0.4"`; builds after it bump `0.4_NN` from `0.4_1` (counter resets).
 
 ---
 
@@ -432,12 +442,14 @@ are processed **after the 0.4 release** via the §5 procedure and the A0 built-i
 - [ ] Italian text, in-universe wording, no cross-character assets
 - [ ] Historical log updated with this version's entry
 - [ ] Short patch note: what changed, how to test, what wasn't tested
-- [ ] Commit `v0.3_NN: …`, push (Pages redeploys automatically)
+- [ ] Commit `v0.4_NN: …`, push (Pages redeploys automatically)
 - [ ] §10.8 chunk table: status updated for the chunk just delivered
 
 ---
 
-## 10. v0.4 RELEASE — plan for Claude Code (VS Code)
+## 10. v0.4 RELEASE — plan for Claude Code (VS Code) — **v0.4 — shipped (2026-09-25, tag `v0.4`)**
+
+_All §10.8 chunks are done; this section is kept as the record of the release plan and the §10.9 decisions log._
 
 This is a **whole release**, not a quick task. Work it in many small chunks (§10.8), one chunk = one build =
 one commit, in the order given unless the owner says otherwise. Before each chunk, state the recommended
@@ -693,8 +705,8 @@ Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / 
 | M8a | Integration part 1: entry (random encounter), encounter rule, Giochi card, unlock popup, save migration, dev buttons | P1, M7; six §10.9 proposals (confirmed 2026-09-25) | Sonnet · medium | done (0.3_35) |
 | M8b | Integration part 2: rewards (encounter score added to the run score on a win), the 3 Minigiochi achievements, roadmap tile 10 as "Premio in arrivo" | M8a | Sonnet · medium | done (0.3_36), awaiting phone test |
 | M9a | Balance + controls REPORT (`refs/ferma_algidone/M9_BALANCE.md`, no build) | M8b | Sonnet · medium | done (report, no build), waiting for the owner's picks |
-| M9b | Build the owner's picks from the M9a report (mobile controls polish + balance) | M9a picks | Sonnet · medium | done (0.3_37); M9 closed after the owner's phone test |
-| REL | Release build "0.4": VERSION, CHANGELOG, README, DEVELOPERS.md (new audio targets), roll base to 0.4 in §6/§7/§9, tag `v0.4` | M8a, M8b, M9b (audio submissions A1…An are NOT a dependency: post-0.4) | Sonnet · low | todo |
+| M9b | Build the owner's picks from the M9a report (mobile controls polish + balance) | M9a picks | Sonnet · medium | done (0.3_37, owner phone test OK) |
+| REL | Release build "0.4": VERSION, CHANGELOG, README, DEVELOPERS.md (new audio targets), roll base to 0.4 in §6/§7/§9, tag `v0.4` | M8a, M8b, M9b (audio submissions A1…An are NOT a dependency: post-0.4) | Sonnet · low | done (v0.4, tag `v0.4`) |
 
 Suggested order: B1–B4 → A0 → P1 → R1–R4 → K1 → C1 → K2/K3 (as art arrives) → M0 … M7 (done) → M8a → M8b → M9 → REL.
 Audio submissions (A1…An) are out of 0.4 scope (§8 backlog, processed after the release; any pending submission is still found at session start via §1b).
@@ -784,6 +796,8 @@ Every answer to a [Q] goes here: date · chunk · question · answer. Also the t
 | 2026-09-25 | M9b (owner picks from M9_BALANCE.md section 3) | Picks | **1 YES** difficulty scaling for Ferma (item speed x0.88 / x1 / x1.12, throw pauses x1.25 / x1 / x0.85, stock drain x0.85 / x1 / x1.15; Media = today's behaviour; encounters use the run's difficulty, practice / Giochi card / dev use the menu's); **2 keep 90 s**; **3 no** (no N=3 payout bonus); **4 YES** "Algidone è a terra" 400 -> 600 sordi (exp 240 -> 360); **5 no** (pad stays 66 px); **6 keep** the 0.7 s belt warning. Encounter rate unchanged (effective 12.75 %, forced at girone 10). Every other value in the report: keep. Tap targets (Ferma only, global `.btn` untouched): Ferma panel buttons, invite buttons and Giochi "Gioca" >= 44 px tall, Ferma pause 44x44 |
 | 2026-09-25 | M9a report | Limits of the numbers | The maze clear time (32-76 s) is a nearest-neighbour lower bound (the pellet-eating bot stalled, no measured human play), and the maze girone score (~1,500-2,500) and encounter score ranges (N=1 500-900, N=2 1,000-1,700, N=3 1,500-2,600) are estimates; only the instant-win maximums (880 / 1,770 / 2,660) were measured. Revisit after real play |
 | 2026-09-25 | M9b (0.3_37) | Choice made while building (Claude) | The achievement difficulty multiplier for a real encounter now uses the run's difficulty (`G.diff`), like the encounter itself, instead of the menu's. Belts are not scaled by the difficulty (the pick listed only item speed, throw pauses and stock drain); flames count as items and are scaled |
+| 2026-09-25 | 0.3_37 (owner phone test) | Result | **OK.** Claude's 0.3_37 choices accepted: belts are not scaled by the difficulty; the achievement multiplier of a real encounter uses the run's difficulty (`G.diff`). **M9 done. No further 0.4 chunks** |
+| 2026-09-25 | REL | Release 0.4 | `const VERSION="0.4"`, root `VERSION` file "0.4", tag `v0.4`. Release smoke test 23/23 (dev off, old 0.3 save, desktop + mobile). `index.html` 5,625,868 bytes vs 4,311,167 for 0.3 (+1,314,701). Rocciamon smoke: the professor battle ends either at the menu (win) or at the splash (throw-out after a loss), both clean. Post-0.4: audio submissions A1…An and the 0.5 backlog (§8) |
 | 2026-09-24 | 0.3_34 (owner phone test) | Bug: no audio in dev runs of Ferma Algidone! | Everything else fine. Root cause: the mini-game had **no audio at all yet** (M7 unbuilt); nothing was gated by dev/test/SIM. Rule confirmed: sound plays in dev runs, `SIM()` and "Sblocca tutto" exactly as in a real run (dev only blocks saving, never audio). Built as M7 in 0.3_34 |
 | 2026-09-24 | 0.3_34 (M7) | Audio slots and export targets (**list for DEVELOPERS.md at REL**) | Bucket `SND.fa`, IDB `snd_fa_<slot>`, target **`sound.fa.<slot>`** (shared) for: `jump`, `land`, `climb`, `throw`, `hit`, `ping`, `win`, `low`, `bolt`, `belt`, `flame`, `collapse` (labels in `FA_SLOTS`). File name convention like the others: `sound_fa_jump.mp3`. No music. `low` = one beep per 2 s under 25 percent stock; `belt` fires with the red chevron blink; `win` is used for a floor exit and the final victory; `collapse` is the ~1.6 s rumble of the final collapse |
 | 2026-09-24 | 0.3_33 (owner phone test of 0.3_31/0.3_32) | Accepted | Gameplay good. Flames climbing to the second girder accepted. Headbutt kick-out removal in 0.3_32 accepted (recoverable from 0.3_28, noted in §8). Future Giocatore cards read "In arrivo" under Sblocca tutto |

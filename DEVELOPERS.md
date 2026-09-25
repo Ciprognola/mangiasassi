@@ -95,9 +95,21 @@ effect, or silence for voice lines, or the original embedded music track).
 | `sound.gam.deal` / `.flip` / `.shuffle` / `.chip` / `.win` / `.lose` / `.push` / `.bj` / `.bust` / `.lighter` / `.select` / `.confirm` / `.collect` | El Gamblador's 13 table SFX | None (silent) |
 | `sound.vo.<id>` — El Gamblador lines: `intro, pricefirst, pricenext, lighter, shuffle, deal, checkbj, turn, stand, double, surrender, playerbj, dealerbj, bust, dealerbust, win, lose, push, again, raise, raiseok, raiseback, broke, leave` | The dealer's 24 voice lines | None (silent) |
 | `sound.vo.<id>` — Il Professore lines: `pr_q, pr_c_no, pr_c_yes, pr_no, pr_y1, pr_y2, pr_y3, pr_pk, pr_ang` | The professor's 9 voice lines | None (silent) |
+| `sound.fa.jump` / `.land` / `.climb` / `.throw` / `.hit` / `.ping` / `.win` / `.low` / `.bolt` / `.belt` / `.flame` / `.collapse` | Ferma Algidone!'s 12 sound effects (`character: shared`; file names `sound_fa_<slot>.mp3`, e.g. `sound_fa_jump.mp3`): salto, atterraggio, passo sulla scala, lancio di Algidone, colpo/caduta, oggetto scavalcato, piano completato / vittoria finale, scorta bassa (beep every 2 s under 25 %), bullone tolto, avviso di inversione del nastro, vampata della griglia / fiamma, crollo finale (~1.6 s). No music for this mini-game | Synthesized |
 | `music.menu` | Main menu music | The game's original menu track |
 | `music.gam` | El Gamblador table music | The game's original table track |
 | `music.pr.intro` / `.battle` / `.win` / `.lose` | Professor mini-game music (4 slots) | The game's original tracks for each |
+
+## Skin delivery format (artists)
+A skin (costume/accessory drawn on the character, always for **one** character: Uomo roccia or Algidone) arrives as art under `refs/skins/<skin>/`. A skin declares a render mode:
+`overlay` (an accessory drawn on top of the base frame) or `replace` (drawn instead of the base frame, for a full costume that recolours the character). Frames a skin does not provide simply render without it.
+
+**Pre-cut (preferred):** `refs/skins/<skin>/frames/sk_<skin>_<frameKey>.png`, one transparent PNG per frame, already cut (max 200 KB each), plus `refs/skins/<skin>/<skin>_frames.json` giving the `mode` and, per frame, `file, w, h, base_w, base_h, ox, oy`
+(`ox, oy` = where the base frame's top-left sits inside the skin image: a skin frame can be **larger** than its base, e.g. a cap brim or a cape). `refs/skins/SPRITE_INVENTORY.md` lists every frame key per character with its pixel size, direction and use; artists draw against that list.
+
+**Template + cells (optional fallback):** the artist draws on a template sheet and supplies a matching `<skin>_cells.json` describing the cell mapping; `refs/skins/cut_from_cells.py` cuts it into the same `sk_<skin>_<frameKey>.png` naming.
+
+If a direction or frame is missing, the maintainer lists the missing frames and asks for them — they are never created or adapted for you.
 
 ## Questions
 Open an issue on the repo or contact the maintainer directly.
