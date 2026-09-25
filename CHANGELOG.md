@@ -1665,3 +1665,23 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
   win on the floor-1 exit), AudioContext `running`, 14 oscillator nodes in a run, 0 when muted; upload of a real wav -> `SND.fa.jump` set, ▶ plays the custom buffer, export lists `sound.fa.jump`, Rimuovi restores the synth; launch from the
   Sblocca tutto Giochi card plays sound; 0 console errors.
 - Not tested: actual audible output and loudness on a real phone (headless cannot hear), iOS/Safari audio unlock.
+
+## 0.3_35 — 2026-09-25
+**M8a — Ferma Algidone! integration part 1** (entry, encounter rule, Giochi card, unlock popup, save, dev buttons). No new art; no sordi/exp/achievements yet (M8b).
+- **Save**: `S.p.fa={enc:0,seen:false}` (save-wide, both characters) in `DEF` + migration; old saves load with 0/false (verified with a save that has no `fa`).
+- **Trigger** (`bjAfterClear`, El Gamblador's own logic untouched: guaranteed at girone 5 when `bjPrice>=50`, else 15 % from girone 6): Ferma rolls 15 % on the same gaps from girone 5 when El Gamblador does not fire
+  (so normally from 6, and at 5 only if El Gamblador skipped it via the price gate); **forced** when `enc===0` from the gap of girone 10 on; a forced Ferma beats a random El Gamblador; one mini-game per gap. No price gate for Ferma.
+  If Ferma fires at a gap where `miniInterlude()` would show (multiples of 5), the interlude card is shown after Continua / "Non ora" exactly as it would have been. Nuovo gioco and Hardcore identical. Dev runs and SIM never roll by themselves.
+- **Invite** (`faInvite`, a centred modal with the Algidone icon): "Non ora" (declining counts nothing) hidden only on the forced first-ever encounter; "Fermalo!" -> `enc++`, `seen=true`, persist, then play.
+- **Encounter mode** (`startFerma({run:true,encounter:N})`, `N=min(enc,3)`, `FA.enc={n,run,mult5}`): intro card adds "Obiettivo: 1 piano / N piani"; starts at floor 1 and ends after floor N: floors before N show **Avanti** only, the last floor (win panel, or the floor-3 final panel) and game over show
+  one button **Continua**; pause "Esci" = encounter lost. No Riprova/Rigioca. `faExit` returns to the maze (`faBackToMaze`) as El Gamblador does (state "ready", 1.6 s), or to the interlude card when one was due.
+- **Giochi card G4 "Ferma Algidone!"**: unlocked when `S.p.fa.seen`; icon = `fa_alg_idle0` drawn as in game (mirrored, x0.6, art untouched); honours `S.ov["game_3"]` label/colour/scale (+ dev pencil). Real player: one **Gioca** button = practice (3 floors, Riprova, no rewards);
+  "Sblocca tutto" keeps its three floor buttons. Label fits (109 of 109 px in a 174 px card).
+- **Popup**: the unlock queues the P1 "Nuovo minigioco!" popup once ever (`game:3`, also seeded in `seedPopSeen`); Guarda opens Lista desideri > Giochi. Fixed the double punctuation "Ferma Algidone!." in the popup body.
+- **Dev** (in the `bindOpt` whitelist, save nothing): "Incontro 1 piano / 2 piani / 3 piani" (encounter mode, test, Continua -> menu) and "Forza incontro: no/sì" (the next gap of a dev jump / SIM run triggers Ferma at 100 %, one-shot; simulated encounter number cycles 1, 2, 3+).
+  Dev/test/SIM encounters never touch `S.p.fa` and never queue popups. "Sblocca tutto" unchanged.
+- **`index.html` size delta: +4274 bytes.**
+- Verified headless (real clicks, desktop + mobile tap, `Math.random` stubbed only inside `bjAfterClear`): gap 6 -> invite with "Non ora" (declining leaves `fa` at 0/false); gap 6 with price>=50 -> El Gamblador and no Ferma; girone 5 with price>=50 -> El Gamblador; girone 5 with price 0 -> Ferma may roll;
+  encounter 1 ends after floor 1 (Continua -> maze, stage kept, `enc:1`), encounter 2 after floor 2 (Avanti then Continua), encounter 3 after the floor-3 final panel, 4th encounter stays N=3; game over -> Continua; pause Esci -> maze; forced at girone 10 (enc 0) without "Non ora", Continua -> the "Girone 10 / Mangiaroccia ricomincia" card;
+  girone 10 with enc>=1 and no roll -> interlude only; home -> popup -> Guarda -> Giochi card with Gioca -> practice (Riprova, `enc` null); old save without `fa` loads; dev buttons and Forza incontro leave `mgs_v1` byte-identical, queue empty; Sblocca tutto card keeps its floor buttons; 0 console errors.
+- Not tested: real-device touch feel and timing of the invite/panels, and a random (unstubbed) encounter rate over many runs.
