@@ -222,7 +222,9 @@ docs/releases/                 archived release plans (0.4.md, …)
 bugs/                          bug triage (BUGS.md)
 firestore.rules                copy of the Firestore rules published in the console
 tools/                         helper scripts
+tools/screens/                 screens library scripts (capture.py, make_index.py)
 refs/                          reference art and review images
+refs/screens/                  screens library: one PNG per screen + SCREENS.md (canonical ids)
 ```
 
 GitHub Pages deploys from `main` via GitHub Actions on every push.
@@ -466,7 +468,7 @@ Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 |---|---|---|---|---|
 | D1 | Docs: archive 0.4 plan, this plan, firestore.rules, bugs/BUGS.md | — | Sonnet · low | done (docs) |
 | I2 | dev branch + Pages deploying main at / and dev at /dev/, §1 git rules updated | — | Sonnet · medium | done (0.4_1) |
-| I3 | Screens library: Playwright script in tools/screens/, PNGs in refs/screens/, SCREENS.md | — | Sonnet · medium | todo |
+| I3 | Screens library: Playwright script in tools/screens/, PNGs in refs/screens/, SCREENS.md | — | Sonnet · medium | done (docs) |
 | E1a | Dev-mode audit report (refs/dev/DEV_AUDIT.md), no build | — | Sonnet · medium | todo |
 | E1b | Dev-mode cleanup from the owner's picks | E1a picks | Sonnet · medium | todo |
 | F1 | Firebase dev login, roles, Cambia password, old local login removed | — | Sonnet · high | todo |
@@ -479,7 +481,7 @@ Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 | REQ | Tile-10 reward skin (Uomo roccia) made with F4 | owner art | Sonnet · medium | wait-assets |
 | B1 | Maze hitboxes around assets | screenshot / bug report | Sonnet · medium | wait-assets |
 | F2 | Player login + cloud save, flag off | F1 | Sonnet · high | todo |
-| REL | Release "0.4.5": VERSION, CHANGELOG, DEVELOPERS.md, roll base to 0.4.5_N in §6/§7/§9, tag v0.4.5, merge dev → main | all | Sonnet · low | todo |
+| REL | Release "0.4.5": VERSION, CHANGELOG, DEVELOPERS.md, roll base to 0.4.5_N in §6/§7/§9, regenerate refs/screens/, tag v0.4.5, merge dev → main | all | Sonnet · low | todo |
 
 ### 10.4 Decisions log
 | Date | Chunk | Decision |
@@ -495,6 +497,7 @@ Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 | 2026-09-25 | I3 | Screens library = Playwright PNGs in the repo (not Figma), regenerated at each release |
 | 2026-09-25 | F1 | Usernames map to <username>@mangiasassi.invalid. Old hardcoded local credentials are retired (they are readable in the public source); the owner set new passwords in the console |
 | 2026-09-25 | I2 | The dev site uses its own save (mgs_v1_dev, mgs_dev_dev, IDB name + _dev), copied once from the stable save on first open; label 'DEV <version>' only on /dev/. Build numbers in §10.3 shift by one (E1b = 0.4_2, …) |
+| 2026-09-25 | I3 | Screen ids in refs/screens/SCREENS.md are canonical; F5/F6 send them. Regenerate with tools/screens/capture.py at each release (add to the REL row) |
 | 2026-09-25 | F1 | No offline backup login: if Firebase is unreachable dev mode is unavailable (a session already logged in stays valid offline) |
 
 **Built-in audio slots** (filled by A-chunks):

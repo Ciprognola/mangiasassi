@@ -1747,3 +1747,8 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 
 - I2b: dev site (`/dev/`) uses its own save: `mgs_v1_dev`, `mgs_dev_dev`, IndexedDB `mgs_dev`, copied once from `mgs_v1`/`mgs_dev` on first open (IDB not copied). Constants `IS_DEVSITE`, `SAVE_KEY`, `DEV_KEY`, `IDB_NAME`. Label "DEV <version>" (top centre, non-interactive) only on /dev/. `wipeData` follows the keys.
 - Size: index.html 5,632,575 bytes (+6,707 vs 0.4).
+
+## docs — 2026-09-25 (I3)
+
+- validate-submission workflow added (`.github/workflows/validate-submission.yml`, job "validate", PRs to dev/main touching submissions/**; runs the existing `scripts/validate_submission.py`, which finds the changed packages itself via git diff — it takes no folder argument).
+- Screens library `refs/screens/` (93 screens, 1.9 MB) + `SCREENS.md`; scripts `tools/screens/capture.py` and `make_index.py`. Ids are canonical. No build.

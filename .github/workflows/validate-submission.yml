@@ -1,0 +1,23 @@
+name: validate-submission
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - "submissions/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Validate changed submission packages
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          ACTOR: ${{ github.actor }}
+        run: python3 scripts/validate_submission.py
