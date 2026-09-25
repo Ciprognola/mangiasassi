@@ -102,7 +102,8 @@ def sim_on(c):
 
 
 def dev_view_off(c):
-    """Keep the Sblocca tutto overlay but hide the developer UI (pens, dev toggle)."""
+    """Keep the Sblocca tutto overlay but hide the developer UI (pens, dev toggle).
+    Since E1b the ✎ button ends the overlay together with dev mode (Trello #12), so the script sets devOn directly."""
     c.ev("devOn=false;render()")
     c.p.wait_for_timeout(300)
 
@@ -235,7 +236,8 @@ def sc_popups(b, only):
         c.ev(f"popPreview('{t}')")
         c.shot(f"popup-{t}", 500)
         c.click("#popd", 300)
-    c.ev("document.getElementById('capstyle').remove();achPopup({n:'Popup di prova',s:0,x:0,up:0})")
+    c.ev("document.getElementById('capstyle').remove()")
+    c.ev("popPreview('ach')")
     c.shot("popup-achievement", 600)
     c.close()
 
@@ -265,11 +267,10 @@ def sc_export(b, only):
 
 
 def dev_jump(c, mapi):
-    """Dev run on map <mapi> (0-4 = the five themes) through the real dev-panel select + VAI button."""
+    """Dev run on map <mapi> (0-4 = the five themes, 5-14 = the extra maps) through the dev map select + Vai (E1b: one select, all maps)."""
     go_tile(c, "opt"); c.click("[data-otab=dev]", 300)
     c.click("details.acc:has(#jmsel) > summary", 300)
-    # the select only lists the 10 extra maps; add the 5 themed base maps as options so VAI (a real click) can start them
-    c.ev(f"(()=>{{const s=document.querySelector('#jmsel');const o=document.createElement('option');o.value='{mapi}';s.appendChild(o);s.value='{mapi}';}})()")
+    c.p.select_option("#jmsel", str(mapi))
     c.click("#jmg", 700)
 
 
@@ -362,7 +363,7 @@ def sc_bj(b, only):
         if m.startswith("deal") and "bj-raise" in seen:
             bj_pick(c, "leave"); break
         if not m and st["say"].strip() and "bj-line" in seen:
-            c.p.keyboard.press("Enter")  # Enter advances the dealer line (a click on the stage crashes headless Chromium)
+            c.p.keyboard.press("Enter")  # Enter advances the dealer line (a stage click works too: the I3 crash was two capture runs at once, not the game)
         time.sleep(0.5)
     for want in ("bj-line", "bj-table", "bj-result", "bj-menu", "bj-raise"):
         if want not in seen:

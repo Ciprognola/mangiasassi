@@ -299,7 +299,7 @@ into `submissions/<name>/<YYYY-MM-DD>/` through a PR. Once the `validate` check 
 
 ### Practical notes (verification, patch scripts, git)
 
-- **Verification = real clicks.** Playwright (Python, headless Chromium): click the UI entry point, never call the function (`bindOpt` forwards only whitelisted selectors to `bindDev`; **new dev-panel buttons must be added to that whitelist**). Path: splash `#rsi` → `[data-tile=opt]` →
+- **Verification = real clicks.** Playwright (Python, headless Chromium): click the UI entry point, never call the function (`bindOpt` forwards to `bindDev` every click inside a `data-dev` block of the Sviluppatore tab (each accordion body carries it); **new dev-panel buttons need the `data-dev` attribute (or sit inside an accordion body)**). Path: splash `#rsi` → `[data-tile=opt]` →
   `[data-otab=dev]` → open the accordion (`details.acc:has(#id) > summary`) → click (`#mgfa` floor 1, `#mgfa2` floor 2, `#mgfa4` floor 3, `#mgfk` floor-1 exit test, `#mgfk2` collapse test); desktop + mobile touch (`has_touch`, `tap`). Dev mode:
   `store.set('mgs_dev',{role:'master',devOn:true})` + reload ("Sblocca tutto" = role master, `[data-sim="1"]`). For deterministic logic: freeze with `window.requestAnimationFrame=()=>0;cancelAnimationFrame(FA.raf)` (cancelling alone is NOT enough) and call `faStep(1/60)`;
   silence throws with `Object.assign(FA.cfg,{sausage:0,porchetta:0,meat:0,ladderP:0});FA.alg.wait=1e9`; `faLoadFloor(i,3,0);faIntroEnd()` jumps to a floor. Playwright quirks: an `evaluate` string whose last value is a function gets invoked - wrap in `(()=>{...})()`; never name a page-side
@@ -470,7 +470,7 @@ Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 | I2 | dev branch + Pages deploying main at / and dev at /dev/, §1 git rules updated | — | Sonnet · medium | done (0.4_1) |
 | I3 | Screens library: Playwright script in tools/screens/, PNGs in refs/screens/, SCREENS.md | — | Sonnet · medium | done (docs) |
 | E1a | Dev-mode audit report (refs/dev/DEV_AUDIT.md), no build | — | Sonnet · medium | done (report) |
-| E1b | Dev-mode cleanup from the owner's picks | E1a picks | Sonnet · medium | todo |
+| E1b | Dev-mode cleanup from the owner's picks | E1a picks | Sonnet · medium | done (0.4_2) |
 | F1 | Firebase dev login, roles, Cambia password, old local login removed | — | Sonnet · high | todo |
 | F6a | Bug report button + popup, devs only, player path flag off | F1, I3 | Sonnet · medium | todo |
 | F6b | Bug pipeline: GitHub Action → bugs/inbox/, triage into bugs/BUGS.md | F6a, service account (owner) | Sonnet · medium | todo |
@@ -498,6 +498,7 @@ Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 | 2026-09-25 | F1 | Usernames map to <username>@mangiasassi.invalid. Old hardcoded local credentials are retired (they are readable in the public source); the owner set new passwords in the console |
 | 2026-09-25 | I2 | The dev site uses its own save (mgs_v1_dev, mgs_dev_dev, IDB name + _dev), copied once from the stable save on first open; label 'DEV <version>' only on /dev/. Build numbers in §10.3 shift by one (E1b = 0.4_2, …) |
 | 2026-09-25 | I3 | Screen ids in refs/screens/SCREENS.md are canonical; F5/F6 send them. Regenerate with tools/screens/capture.py at each release (add to the REL row) |
+| 2026-09-25 | E1b | Owner picks from DEV_AUDIT.md: yes to all 16. Built 3–10, 12, 14–16; 1–2 go with F1, 11 with F3, 13 after F4b. Sblocca tutto ends with dev mode (fixes Trello #12) |
 | 2026-09-25 | F1 | No offline backup login: if Firebase is unreachable dev mode is unavailable (a session already logged in stays valid offline) |
 
 **Built-in audio slots** (filled by A-chunks):

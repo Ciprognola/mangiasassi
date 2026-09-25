@@ -500,7 +500,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4_1";
+const VERSION="0.4_2";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -1365,6 +1365,7 @@ function popShow(preview){
   m.querySelector("#popg").onclick=()=>{advance();popGoto(group)};
 }
 function popPreview(type){
+  if(type==="ach")return achPopup({n:"Popup di prova",s:0,x:0,up:0});
   const samples={
     asset:{type:"asset",items:[{kind:"plane",i:0,name:"Esempio asset"}]},
     char:{type:"char",items:[{key:"gam",name:"El Gamblador"}]},
@@ -1398,9 +1399,9 @@ function renderMenu(){
 function tileAction(id){
   if(id==="new"||id==="hard"){const o=id==="hard"?{hard:true}:null; if(S.quick)confirmBox("Nuova partita","Hai un gioco salvato. Vuoi sovrascriverlo?","Sì, nuovo","No",()=>{S.quick=null;persist();startGame(false,o)});else startGame(false,o)}
   else if(id==="cur")startGame(true);
-  else if(id==="wish"){ach("dbg_wish",{});go("wish")}
+  else if(id==="wish"){go("wish")}
   else if(id==="dev")go("dev");
-  else if(id==="opt"){ach("dbg_opt",{});go("opt")}
+  else if(id==="opt"){go("opt")}
   else if(id==="quit")confirmBox("Quitta","Vuoi davvero uscire?","Sì, esco","Resta",()=>{if(window.MGApp&&MGApp.quit)MGApp.quit();else if(window.MGApp)go("bye");else go("splash")});
   else toast("Sezione vuota: assegnale un contenuto in dev mode");
 }
@@ -1428,7 +1429,7 @@ function bindMenu(){
     const pen=e.target.closest("[data-pen]"),del=e.target.closest("[data-del]"),tile=e.target.closest("[data-tile]");
     if(e.target.closest("#trop"))return go("ach");
     if(e.target.closest("#road"))return go("road");
-    if(e.target.closest("#devt")){devOn=!devOn;persistDev();toast(devOn?"Dev mode attiva":"Dev mode disattivata");return render()}
+    if(e.target.closest("#devt")){devOn=!devOn;if(!devOn)simOff();persistDev();toast(devOn?"Dev mode attiva":"Dev mode disattivata");return render()}
     if(e.target.closest("#career"))return careerModal();
     if(e.target.closest("#addTile")){
       const id="t"+Date.now().toString(36);S.tiles.push({id,label:"Nuova sezione",color:"#9db4c9",scale:1,custom:true});persist();return render();}
@@ -1595,7 +1596,7 @@ function fitCheck(fs){
   return worst<=avail && hud<=Math.min(480,innerWidth)-28;
 }
 let optTab="gen",optOpen={gen:null,dev:null};
-function optAcc(id,title,body,cls){return `<details class="acc ${cls||""}" data-acc="${id}" ${optOpen[optTab]===id?"open":""}><summary class="accs">${title}</summary><div class="accb">${body}</div></details>`}
+function optAcc(id,title,body,cls){return `<details class="acc ${cls||""}" data-acc="${id}" ${optOpen[optTab]===id?"open":""}><summary class="accs">${title}</summary><div class="accb"${optTab==="dev"?" data-dev":""}>${body}</div></details>`}
 function renderOpt(){
   const cur=pendingFs??S.opts.fs,ok=fitCheck(cur),changed=cur!==S.opts.fs;
   if(optTab==="dev"&&!devUI())optTab="gen";
@@ -1633,7 +1634,7 @@ function bindOpt(){
     if(t.closest("#ver")){const n=Date.now();taps=n-tapT<900?taps+1:1;tapT=n;if(taps>=5){taps=0;loginModal()}}
   };
   root.onclick=optClick;
-  if(devUI()){bindDev();const dv=root.onclick;root.onclick=e=>e.target.closest("#mgpac,#mggam,#mgfa,#mgfa3,#mgfa2,#mgfa4,#mgfk,#mgfk2,#mgfe1,#mgfe2,#mgfe3,#mgff,#mgrow,#mgrok,#mgrob,[data-pmp],[data-pmr],#jg4,#jg7,#jgt,#jgw,#jmg,[data-vtr],#gmr,#popt,[data-popprev],[data-roadprev],[data-devskin],#dbgr,[data-sim],[data-sp],[data-sr],#lvs,#mp,#mr,#ad,[data-rd],#cp,#rs,#lo")?dv(e):optClick(e)}
+  if(devUI()){bindDev();const dv=root.onclick;root.onclick=e=>e.target.closest("[data-dev]")?dv(e):optClick(e)} // ogni elemento dentro un blocco data-dev della scheda Sviluppatore va a bindDev
 }
 async function wipeData(){
   try{localStorage.removeItem(SAVE_KEY)}catch(e){}
@@ -1886,9 +1887,8 @@ function gamDevHTML(){
   const snd=Object.keys(BJ_SLOTS).map(s=>`<div style="display:flex;gap:6px;align-items:center;margin-top:8px"><span style="flex:1;font-size:.85rem">${BJ_SLOTS[s]}<small>${lbl(s,"gam")}</small></span>${ctl("gam",s)}</div>`).join("");
   const vo=Object.keys(BJ_LINES).map(id=>`<div style="margin-top:12px"><small>${esc(BJ_LINES[id][2])}</small><textarea data-vt="${id}" rows="2" style="margin:4px 0;resize:vertical">${esc(TXT(id))}</textarea><div style="display:flex;gap:6px;align-items:center"><span style="flex:1;font-size:.8rem;color:var(--mute)">Voce: ${SND.vo[id]?"caricata":"nessuna"}</span>${ctl("vo",id)}<button class="btn ghost sm" data-vtr="${id}" title="Ripristina il testo originale">↺ testo</button></div></div>`).join("");
   const mini=`<div class="opt" style="flex-direction:column;align-items:stretch"><div>Minigiochi<small>Provali subito, con gli asset scelti nella lista desideri</small></div>
-     <div style="display:flex;gap:8px;align-items:center;margin-top:10px"><span style="flex:1">Mangiaroccia</span><button class="btn sm" id="mgpac">Avvia</button></div>
      <div style="display:flex;gap:8px;align-items:center;margin-top:10px"><span style="flex:1">El Gamblador<small>punti di prova</small></span><input type="text" inputmode="numeric" id="mgscore" value="1000" style="width:84px"><button class="btn sm" id="mggam">Avvia</button></div>
-     <div style="display:flex;gap:8px;align-items:center;margin-top:10px"><span style="flex:1">Ferma Algidone!<small>giocatore e oggetti (M2-M3)</small></span><button class="btn sm" id="mgfa">Avvia</button><button class="btn ghost sm" id="mgfa3">+ carne/griglia</button><button class="btn ghost sm" id="mgfa2">Piano 2 (nastri)</button><button class="btn ghost sm" id="mgfa4">Piano 3 (bulloni)</button><button class="btn ghost sm" id="mgfk">Test uscita Algidone</button><button class="btn ghost sm" id="mgfk2">Test cacciata finale</button><button class="btn ghost sm" id="mgfe1">Incontro 1 piano</button><button class="btn ghost sm" id="mgfe2">Incontro 2 piani</button><button class="btn ghost sm" id="mgfe3">Incontro 3 piani</button><button class="btn ghost sm" id="mgff">Forza incontro: ${FA_FORCE.on?"s\u00ec":"no"}</button></div>
+     <div style="display:flex;gap:8px;align-items:center;margin-top:10px"><span style="flex:1">Ferma Algidone!<small>giocatore e oggetti (M2-M3)</small></span><button class="btn sm" id="mgfa">Avvia</button><button class="btn ghost sm" id="mgfa3">+ carne/griglia</button><button class="btn ghost sm" id="mgfa2">Piano 2 (nastri)</button><button class="btn ghost sm" id="mgfa4">Piano 3 (bulloni)</button><button class="btn ghost sm" id="mgfk">Test uscita Algidone</button><button class="btn ghost sm" id="mgfk2">Test cacciata finale</button><button class="btn ghost sm" id="mgfe1">Incontro 1 piano</button><button class="btn ghost sm" id="mgfe2">Incontro 2 piani</button><button class="btn ghost sm" id="mgfe3">Incontro 3 piani</button><button class="btn ghost sm" id="mgff">Forza incontro: ${FA_FORCE.on?"s\u00ec":"no"}</button><button class="btn ghost sm" id="mgfd">Overlay debug: ${FA_DBG.on?"s\u00ec":"no"}</button></div>
      <div style="display:flex;gap:8px;align-items:center;margin-top:10px"><span style="flex:1">Professore<small>prova dialogo, sprite e musica</small></span><button class="btn sm" id="mgrow">Avvia</button></div>
      <div style="display:flex;gap:8px;align-items:center;margin-top:10px"><span style="flex:1">Professore · cacciata<small>solo animazione e suono dello stagno</small></span><button class="btn sm" id="mgrok">Avvia</button></div>
      ${pbTestRow()}</div>`;
@@ -1907,7 +1907,6 @@ function devRows(){
     ${S.creds.devs.map((d,i)=>`<label class="f">Sviluppatore 1 · n.${i+1}</label><input type="text" data-c="d${i}:u" value="${esc(d.u)}"><input type="text" data-c="d${i}:p" value="${esc(d.p)}" style="margin-top:6px"><button class="btn red sm" data-rd="${i}" style="margin-top:6px">Rimuovi</button>`).join("")}
     <div class="acts"><button class="btn sm" id="ad">+ Sviluppatore</button></div></div>`:"";
   const account=`<div class="opt"><div>Ruolo<small>${m?"Master developer":"Developer tipo 1"}</small></div><button class="btn red sm" id="lo">Esci</button></div>
-   <div class="opt"><div>Come si modifica<small>Usa il pulsante ✎ in alto nel menu per attivare o disattivare la dev mode. Con la dev mode attiva: ✎ su tessere e schede, + per aggiungere, − per eliminare.</small></div></div>
    ${creds}`;
   const audio=`${m?`<div class="opt" style="flex-direction:column;align-items:stretch"><div>Musica del menu<small>Carica un file .mp3 (max 8 MB). Resta salvato in questa installazione; per inserirlo nella build ufficiale mandalo a Claude.</small></div>
     <input type="file" id="mf" accept="audio/mpeg,.mp3" style="margin-top:8px;color:var(--ink)"><div class="err" id="me"></div>
@@ -1922,29 +1921,24 @@ function devRows(){
        <label class="btn ghost sm" style="cursor:pointer">Carica<input type="file" accept="audio/*" data-sf="all:ach" hidden></label>
        <button class="btn ghost sm" data-sp="all:ach">▶</button><button class="btn red sm" data-sr="all:ach" ${SND.all.ach?"":"disabled"}>Rimuovi</button></div><div class="err" id="se_all"></div>
 </div>`;
+  const devMapOpts=()=>THEMES.slice(0,5).map((t,i)=>`<option value="${i}">${i+1}. ${esc(t.n)}</option>`).join("")+NEWMAPS.map((d,i)=>`<option value="${5+i}">${5+i-4}. ${esc(d.name)} (${d.rows[0].length}×${d.rows.length})</option>`).join("")+`<option value="100">Prova torrenti</option><option value="101">Prova mappa larga</option>`;
   const test=`${m?`<div class="opt" style="flex-direction:column;align-items:stretch"><div>Sblocca tutto <b class="disp" style="color:${S.sim?"#b48cff":"var(--mute)"}">${S.sim?"attivo":"spento"}</b><small>Simulazione: livello 100, tutti gli asset visibili e utilizzabili, tutti i gironi, anche in partita. I dati reali del salvataggio non vengono toccati: disattivando torni a quelli.</small></div>
      <div class="seg" style="margin-top:8px"><button data-sim="1" class="${S.sim?"on":""}" style="flex:1">Attiva</button><button data-sim="0" class="${!S.sim?"on":""}" style="flex:1">Disattiva</button></div></div>`:""}
-   <div class="opt" style="flex-direction:column;align-items:stretch"><div>Salta al girone<small>Strumento di test: avvia una partita di prova al girone 4 (poi il tavolo di El Gamblador al 5), al girone 7 (abilità segrete attive), alla mappa con torrenti di acqua e lava o alla mappa larga con telecamera che segue il giocatore. Partita di prova: nessun sordo, exp, obiettivo o progresso salvato.</small></div>
-     <div class="acts"><button class="btn sm" id="jg4">Girone 4</button><button class="btn sm" id="jg7">Girone 7</button><button class="btn sm" id="jgt">Mappa torrenti</button><button class="btn sm" id="jgw">Mappa larga</button></div>
-     <div class="acts" style="margin-top:8px"><select id="jmsel" style="flex:1;background:#0f1824;border:2px solid var(--steel);border-radius:10px;color:var(--ink);padding:8px;font:inherit">${NEWMAPS.map((d,i)=>`<option value="${5+i}">${5+i-4}. ${esc(d.name)} (${d.rows[0].length}×${d.rows.length})</option>`).join("")}</select><button class="btn sm" id="jmg">Vai</button></div></div>
-   <div class="opt" style="flex-direction:column;align-items:stretch"><div>Livello di prova<small>Strumento di test: imposta il livello del personaggio selezionato (sblocca schede, ecc.)</small></div>
+   <div class="opt" style="flex-direction:column;align-items:stretch"><div>Salta al girone<small>Strumento di test: avvia una partita di prova al girone 4 (poi il tavolo di El Gamblador al 5), al girone 7 (abilità segrete attive) o su una mappa a scelta (5 temi + mappe extra, torrenti, mappa larga). Partita di prova: nessun sordo, exp, obiettivo o progresso salvato.</small></div>
+     <div class="acts"><button class="btn sm" id="jg4">Girone 4</button><button class="btn sm" id="jg7">Girone 7</button></div>
+     <div class="acts" style="margin-top:8px"><select id="jmsel" style="flex:1;background:#0f1824;border:2px solid var(--steel);border-radius:10px;color:var(--ink);padding:8px;font:inherit">${devMapOpts()}</select><button class="btn sm" id="jmg">Vai</button></div></div>
+   <div class="opt" style="flex-direction:column;align-items:stretch"><div>Livello di prova — scrive nel salvataggio<small>Strumento di test: imposta il livello del personaggio selezionato (sblocca schede, ecc.). Attenzione: modifica il salvataggio (in "Sblocca tutto" solo la copia di prova).</small></div>
      <div style="display:flex;gap:8px;margin-top:8px"><input type="number" id="lvt" min="1" max="100" value="${cs().lvl}" style="width:90px;background:#0f1824;border:2px solid var(--steel);border-radius:10px;color:var(--ink);padding:8px;font:inherit"><button class="btn sm" id="lvs">Imposta</button></div></div>
    <div class="opt" style="flex-direction:column;align-items:stretch"><div>Regali del percorso<small>Anteprima dell'animazione del regalo per ogni premio registrato. Non modifica il salvataggio.</small></div>
      <div class="acts">${Object.keys(ROAD_REWARDS).map(n=>`<button class="btn ghost sm" data-roadprev="${n}">${esc(ROAD_REWARDS[n].name)}</button>`).join("")}</div></div>
    <div class="opt" style="flex-direction:column;align-items:stretch"><div>Skin di prova (K1b)<small>Verifica l'aggancio degli skin senza uno skin vero: contorno magenta = overlay, tinta magenta = replace. Mai salvato, sparisce disattivando la modalità sviluppatore.</small></div>
      <div class="acts" style="flex-wrap:wrap">${["roccia","algidone"].map(c=>["overlay","replace"].map(m=>`<button class="btn ${DEV_SKIN_TEST&&DEV_SKIN_TEST.char===c&&DEV_SKIN_TEST.mode===m?"":"ghost"} sm" data-devskin="${c}:${m}">${c==="roccia"?"Roccia":"Algidone"} · ${m}</button>`).join("")).join("")}<button class="btn ${DEV_SKIN_TEST?"ghost":""} red sm" data-devskin="off">Disattiva</button></div></div>
    ${g.mini}`;
-  const obj=`<div class="opt" style="flex-direction:column;align-items:stretch"><div>Obiettivi di prova<small>5 obiettivi finti, sbloccabili con azioni semplici (nuova partita, lista desideri, opzioni, primo boccone, pausa). Visibili nella scheda Debug degli obiettivi. Ripristina per riprovarli.</small></div>
-     <div class="acts"><button class="btn red sm" id="dbgr">Ripristina obiettivi di prova</button></div></div>
-   <div class="opt"><div>Popup di prova<small>Mostra il popup che compare quando sblocchi un obiettivo</small></div><button class="btn ghost sm" id="popt">Mostra</button></div>
-   <div class="opt" style="flex-direction:column;align-items:stretch"><div>Popup di sblocco<small>Anteprima dei popup mostrati sul menu principale (nuovo asset, personaggio, minigioco, traguardo). Non modifica il salvataggio.</small></div>
-     <div class="acts"><button class="btn ghost sm" data-popprev="asset">Asset</button><button class="btn ghost sm" data-popprev="char">Personaggio</button><button class="btn ghost sm" data-popprev="game">Minigioco</button><button class="btn ghost sm" data-popprev="milestone">Traguardo</button></div></div>`;
+  const obj=`<div class="opt" style="flex-direction:column;align-items:stretch"><div>Popup di sblocco<small>Anteprima dei popup mostrati sul menu principale (nuovo asset, personaggio, minigioco, traguardo) e del popup obiettivo. Non modifica il salvataggio.</small></div>
+     <div class="acts"><button class="btn ghost sm" data-popprev="asset">Asset</button><button class="btn ghost sm" data-popprev="char">Personaggio</button><button class="btn ghost sm" data-popprev="game">Minigioco</button><button class="btn ghost sm" data-popprev="milestone">Traguardo</button><button class="btn ghost sm" data-popprev="ach">Obiettivo</button></div></div>`;
   const exp=`<div class="opt"><div>Esporta modifiche<small>Crea uno zip con solo ciò che hai cambiato, pronto da caricare su GitHub</small></div><button class="btn sm" id="xopen">Prepara</button></div>
-   <div class="opt" style="flex-direction:column;align-items:stretch"><details><summary style="cursor:pointer">Testo grezzo (alternativa per una chat con Claude)</summary><small style="color:var(--mute)">Copia questo testo e invialo a Claude per la verifica.</small>
-    <textarea id="ex" rows="5" readonly>${esc(JSON.stringify({tiles:S.tiles,ov:S.ov,extra:S.extra}))}</textarea>
-    <div class="acts"><button class="btn sm" id="cp">Copia</button></div></details></div>
    <div class="opt"><div>Ripristina build originale<small>Cancella le modifiche locali di testi e schede</small></div><button class="btn red sm" id="rs">Ripristina</button></div>`;
-  return optAcc("account","Account",account)+optAcc("test","Strumenti di test",test)+optAcc("audio","Audio e testi",audio)+optAcc("obj","Obiettivi",obj)+optAcc("exp","Consegna",exp);
+  return optAcc("account","Account",account)+optAcc("test","Strumenti di test",test)+optAcc("audio","Audio e testi",audio)+optAcc("obj","Anteprime",obj)+optAcc("exp","Consegna",exp);
 }
 function bindDev(){
   root.onchange=async e=>{
@@ -1969,32 +1963,31 @@ function bindDev(){
   root.onclick=e=>{
     const t=e.target;
     if(t.closest("#back"))return go("menu");
+    if(t.closest("#xopen"))return exportDialog();
     if(t.closest("#lo")){simOff();role=null;devOn=false;DEV_SKIN_TEST=null;persistDev();return go("menu")}
     const sm=t.closest("[data-sim]");if(sm&&role==="master"){if(sm.dataset.sim==="1")simOn();else simOff();toast(S.sim?"Simulazione attiva":"Dati reali ripristinati");return render()}
-    if(t.closest("#mgpac")){startGame(false);return}
     if(t.closest("#mgrow")){prTest();return}
     if(t.closest("#mgrok")){prTestKick();return}
     if(t.closest("#mgrob")){prTestBattle(+$("#pbsp").value,+$("#pbsr").value);return}
     const pmp=t.closest("[data-pmp]");if(pmp){const k=pmp.dataset.pmp;if(PRM.slot===k){prMusicStop(200)}else{if(bgm)bgm.pause();prMusic(k,{fadeIn:300,force:true})}return}
     const pmr=t.closest("[data-pmr]");if(pmr){const k=pmr.dataset.pmr;IDB.del("musicPr_"+k).catch(()=>{});prTrackInvalidate(k);toast("Musica originale ripristinata");return}
     if(t.closest("#jmg")){devJump(4,+$("#jmsel").value);return}
-    const jg=t.closest("#jg4,#jg7,#jgt,#jgw");if(jg){devJump(jg.id==="jgt"||jg.id==="jgw"?3:jg.id==="jg4"?4:7,jg.id==="jgt"?100:jg.id==="jgw"?101:null);return}
+    const jg=t.closest("#jg4,#jg7");if(jg){devJump(jg.id==="jg4"?4:7);return}
     const fe=t.closest("#mgfe1,#mgfe2,#mgfe3");if(fe){startFerma({test:true,encounter:+fe.id.slice(-1)});return} // prova dev: incontro (nessun salvataggio), Continua -> menu
+    const fdb=t.closest("#mgfd");if(fdb){FA_DBG.on=!FA_DBG.on;fdb.textContent="Overlay debug: "+(FA_DBG.on?"s\u00ec":"no");return}
     const ffz=t.closest("#mgff");if(ffz){FA_FORCE.on=!FA_FORCE.on;ffz.textContent="Forza incontro: "+(FA_FORCE.on?"s\u00ec":"no");return}
-    if(t.closest("#mgfa")){startFerma({debug:true,test:true});return}
-    if(t.closest("#mgfa4")){startFerma({debug:true,test:true,level:2});return}
-    if(t.closest("#mgfa2")){startFerma({debug:true,test:true,level:1});return}
-    if(t.closest("#mgfk")){startFerma({debug:true,test:true,goal:true});return}
-    if(t.closest("#mgfk2")){startFerma({debug:true,test:true,level:2,finale:true});return}
-    if(t.closest("#mgfa3")){startFerma({debug:true,test:true,extra:true});return}
+    if(t.closest("#mgfa")){startFerma({debug:FA_DBG.on,test:true});return}
+    if(t.closest("#mgfa4")){startFerma({debug:FA_DBG.on,test:true,level:2});return}
+    if(t.closest("#mgfa2")){startFerma({debug:FA_DBG.on,test:true,level:1});return}
+    if(t.closest("#mgfk")){startFerma({debug:FA_DBG.on,test:true,goal:true});return}
+    if(t.closest("#mgfk2")){startFerma({debug:FA_DBG.on,test:true,level:2,finale:true});return}
+    if(t.closest("#mgfa3")){startFerma({debug:FA_DBG.on,test:true,extra:true});return}
     if(t.closest("#mggam")){const v=Math.max(50,parseInt(($("#mgscore")||{}).value,10)||1000);startGamblador({run:false,score:v});return}
     const vtr=t.closest("[data-vtr]");if(vtr){delete S.gtext[vtr.dataset.vtr];persist();toast("Testo originale ripristinato");return render()}
     if(t.closest("#gmr")){IDB.del("musicGam").catch(()=>{});bgmGam=null;toast("Musica originale ripristinata");return}
-    if(t.closest("#popt")){achPopup({n:"Popup di prova",s:0,x:0,up:0});return}
     const popprev=t.closest("[data-popprev]");if(popprev){popPreview(popprev.dataset.popprev);return}
     const roadprev=t.closest("[data-roadprev]");if(roadprev){roadPreviewGift(roadprev.dataset.roadprev);return}
     const dsk=t.closest("[data-devskin]");if(dsk){const v=dsk.dataset.devskin;DEV_SKIN_TEST=v==="off"?null:{char:v.split(":")[0],mode:v.split(":")[1]};return render()}
-    if(t.closest("#dbgr")){for(const a of DBG){delete S.ach.done[a.id];delete S.ach.prog[a.id]}persist();return toast("Obiettivi di prova ripristinati")}
     const sp=t.closest("[data-sp]");if(sp){const [c,s]=sp.dataset.sp.split(":");started=true;const was=S.opts.sound;S.opts.sound=true;playSnd(s,c);S.opts.sound=was;return}
     const sr=t.closest("[data-sr]");if(sr){const [c,s]=sr.dataset.sr.split(":");return confirmBox("Ma che sei gojo?","Rimuovere il suono personalizzato e tornare a quello predefinito?","Sì, deo caro","Noneee",async()=>{try{await IDB.del("snd_"+c+"_"+s)}catch(x){}SND[c][s]=await decodeSlotAudio("snd_"+c+"_"+s,sndTarget(c,s));toast("Suono predefinito");render()})}
     if(t.closest("#lvs")){const v=Math.max(1,Math.min(100,parseInt($("#lvt").value)||1));cs().lvl=v;cs().exp=0;persist();return toast("Livello impostato a "+v)}
@@ -2002,7 +1995,6 @@ function bindDev(){
     if(t.closest("#mr"))return confirmBox("Ma che sei gojo?","Tornare alla musica originale?","Sì, deo caro","Noneee",async()=>{try{await IDB.del("menuMusic")}catch(x){}await initMusic();toast("Musica originale")});
     if(t.closest("#ad")){S.creds.devs.push({u:"dev"+(S.creds.devs.length+1),p:"dev-"+Math.floor(1000+Math.random()*9000)});persist();return render()}
     const rd=t.closest("[data-rd]");if(rd){S.creds.devs.splice(+rd.dataset.rd,1);persist();return render()}
-    if(t.closest("#cp")){const x=$("#ex");x.select();try{navigator.clipboard.writeText(x.value);toast("Copiato")}catch(er){document.execCommand&&document.execCommand("copy")}return}
     if(t.closest("#rs"))return confirmBox("Ma che sei gojo?","Cancellare tutte le modifiche locali e tornare alla build originale?","Sì, deo caro","Noneee",()=>{S.tiles=JSON.parse(JSON.stringify(DEF_TILES));S.ov={};S.extra={plane:[],rock:[],algidone:{plane:[],rock:[]}};persist();render()});
   };
 }
@@ -2048,13 +2040,6 @@ const ACH=[
  {id:"m4",c:"min",n:"Senza un graffio",d:"Supera un piano di Ferma Algidone! senza perdere una vita",ev:"faclear",m:"max",goal:1,f:c=>c.flawless,r:[250,150]},
 ];
 let achQ=[],A_t=0,achTab="gen",popQ=[],popCur=null,popInt=0;
-const DBG=[
- {id:"d1",c:"dev",n:"Debug: nuova partita",d:"Avvia una nuova partita",ev:"dbg_new",m:"sum",goal:1,r:[5,5]},
- {id:"d2",c:"dev",n:"Debug: lista desideri",d:"Apri la lista desideri",ev:"dbg_wish",m:"sum",goal:1,r:[5,5]},
- {id:"d3",c:"dev",n:"Debug: opzioni",d:"Apri le opzioni",ev:"dbg_opt",m:"sum",goal:1,r:[5,5]},
- {id:"d4",c:"dev",n:"Debug: primo boccone",d:"Mangia una roccia o uno snack in partita",ev:"eat",m:"sum",goal:1,r:[5,5]},
- {id:"d5",c:"dev",n:"Debug: pausa",d:"Metti in pausa una partita",ev:"dbg_pause",m:"sum",goal:1,r:[5,5]},
-];
 function popBottom(){const dp=document.querySelector(".dpad,#fapad");let b=16;try{if(dp&&dp.getBoundingClientRect){const r=dp.getBoundingClientRect();if(r&&r.top>0)b=Math.max(16,innerHeight-r.top+8)}}catch(e){}return b}
 function achPopup(it){popQ.push(it);pumpPop()}
 function pumpPop(){
@@ -2075,7 +2060,7 @@ const ownedCount=()=>Object.values(S.p.ch).reduce((n,c)=>n+c.ownP.length+c.ownR.
 function ach(ev,ctx){
   if(G&&G.dev)return;
   ctx=ctx||{};const d=ctx.d||S.opts.diff||"medium",A=S.ach;
-  for(const a of (devUI()?ACH.concat(DBG):ACH)){
+  for(const a of ACH){
     if(A.done[a.id]||a.ev!==ev)continue;
     if(a.min&&DR[d]<DR[a.min])continue;
     if(a.f&&!a.f(ctx))continue;
@@ -2100,8 +2085,8 @@ function showAchQ(){}
 const achFmt=(a,v)=>a.u==="time"?(v>=3600?(v/3600).toFixed(1).replace(".",",")+" h":Math.floor(v/60)+" min"):a.u==="lv"?"Liv. "+Math.floor(v):Math.floor(v).toLocaleString("it-IT");
 function renderAch(){
   const A=S.ach,total=ACH.length,done=ACH.filter(a=>A.done[a.id]).length;
-  if(achTab==="dev"&&!devUI())achTab="gen";
-  const cats=ACH_CATS.concat(devUI()?[["dev","Debug",5]]:[]),cat=cats.find(c=>c[0]===achTab),items=(achTab==="dev"?DBG:ACH).filter(a=>a.c===achTab),ph=cat[2]-items.length,dn=items.filter(a=>A.done[a.id]).length;
+  if(achTab==="dev")achTab="gen";
+  const cats=ACH_CATS,cat=cats.find(c=>c[0]===achTab),items=ACH.filter(a=>a.c===achTab),ph=cat[2]-items.length,dn=items.filter(a=>A.done[a.id]).length;
   const rows=items.map(a=>{
     const dd=A.done[a.id],p=A.prog[a.id]||0,pct=dd?100:Math.min(100,p/a.goal*100);
     const req=a.min?` · ${a.min==="hard"?"Solo Difficile":"Da Media in su"}`:"";
@@ -2109,7 +2094,7 @@ function renderAch(){
   const phs=Array.from({length:ph},()=>`<div class="ach ph"><div class="ai">?</div><div class="at"><b>???</b><small>Obiettivo bloccato</small></div></div>`).join("");
   shell(`<div class="screen"><div class="top"><button class="btn ghost sm" id="back">‹</button><h2>Obiettivi</h2><span class="wallet">${done}/${total}</span></div>
    <div class="tabs">${cats.map(c=>`<button data-atab="${c[0]}" class="${achTab===c[0]?"on":""}">${c[1]}</button>`).join("")}</div>
-   <p style="margin:0 0 10px;text-align:center;color:var(--mute);font-size:.85rem">${dn}/${items.length} sbloccati ${achTab==="dev"?"· solo per sviluppatori, fuori dal conteggio":`· ${cat[2]} posti in questa categoria`}</p>
+   <p style="margin:0 0 10px;text-align:center;color:var(--mute);font-size:.85rem">${dn}/${items.length} sbloccati · ${cat[2]} posti in questa categoria</p>
    <div class="scroll" style="flex:1;min-height:0">${rows}${phs}</div></div>`);
 }
 function bindAch(){
@@ -2530,7 +2515,7 @@ function updateHud(){
   const lv=$("#lv");lv.innerHTML="";for(let i=0;i<G.lives;i++){const c=document.createElement("canvas");c.width=48;c.height=44;lv.appendChild(c);const x=c.getContext("2d");if(gcar()==="algidone"){const im=IMG.al_st;drawSkinned(x,"algidone","al_st",im,24-im.width*.21,1,im.width*.42,im.height*.42)}else drawFace(x,24,22,46,2,false)}
 }
 function pauseMenu(again){
-  if(G.state==="over")return;const prev=again?(G.prevState||"play"):G.state;G.prevState=prev;G.state="pause";if(!again)ach("dbg_pause",{ch:G.char,d:G.diff});
+  if(G.state==="over")return;const prev=again?(G.prevState||"play"):G.state;G.prevState=prev;G.state="pause";
   const m=openModal(`<h3>Pausa</h3><p>Punti: ${G.score} · Girone ${G.stage}</p><div class="acts" style="flex-direction:column"><button class="btn" id="r">Riprendi</button><button class="btn ghost" id="s">Salva ed esci</button><button class="btn red" id="q">Abbandona partita</button></div>`);
   m.querySelector("#r").onclick=()=>{closeModal();G.state=prev;G.last=performance.now()};
   m.querySelector("#s").onclick=()=>{closeModal();cancelAnimationFrame(raf);quicksave();go("menu");toast("Partita salvata")};
@@ -3556,6 +3541,7 @@ async function startGamblador(o){
   bjLoop();
   bjMain();
 }
+let FA_DBG={on:false}; // overlay di debug di Ferma Algidone! (dev): solo in memoria, spento di default
 let FA_FORCE={on:false,n:0}; // dev "Forza incontro": il prossimo intervallo di una partita di prova (o SIM) lancia Ferma Algidone! al 100% (una volta); n = numero d'incontro simulato (1, 2, 3+)
 function bjAfterClear(){
   // guaranteed at girone 5, then a flat, low 15% chance every girone after

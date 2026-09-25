@@ -77,19 +77,21 @@ Home menu: only the ✎ toggle. Pens, "+", "−" go with F5. The "Debug" achieve
 ## 4. Owner picks
 
 (Answer as "1 yes, 2 no, …")
-1. Replace the local login, role source and `S.creds` (#1–#3, #11) with F1, keeping the ×5 gesture as the entry — recommend **yes**. Scripts: `opt-login-modal` capture uses the gesture.
-2. Delete the Credenziali block and "+ Sviluppatore" / "Rimuovi" (#11) — **yes** (with F1). No script use.
-3. Delete the "Come si modifica" help text (#10) — **yes**.
-4. Turn Sblocca tutto off whenever dev mode is switched off (fixes Trello #12) — **yes** (alternative: keep it and show a "SIM attivo" badge on ✎). `capture.py` relies on SIM staying on after `devOn=false` (for `wish-*-unlocked`): I would adapt the script (hide pens by CSS).
-5. Merge the four map buttons and the map select (#13/#14) into one select of all 15 maps + Vai, keep Girone 4 / 7 — **yes**. `capture.py` (`dev_jump`, `#jg4`) must be adapted.
-6. Delete "Mangiaroccia Avvia" `#mgpac` (#18; a real run that saves progress) — **yes**. Not used by scripts.
-7. Keep "Livello di prova" (#15) but label it as writing to the save — **yes**.
-8. Merge "Popup di prova" (#32) into the unlock-popup previews (#33) — **yes**. `capture.py` calls `popPreview`/`achPopup` directly: unaffected.
-9. Make the Ferma debug overlay (#23) a toggle, default OFF — **yes**; the `fa-*` screens would be regenerated cleaner.
-10. Delete "Testo grezzo" (#34) — **yes**, replaced by F3.
-11. Hide `window.mgExport` unless logged in (#35) — **yes** (or delete with F3).
-12. Delete the debug achievements and the "Debug" tab (#31; they write +5 sordi/exp) — **yes**. `capture.py` injects a style hiding their toast (`capstyle`); the Debug tab is not in `SCREENS.md`, so nothing else breaks.
-13. Delete `DEV_SKIN_TEST` (#17) after F4b — **yes** (later, no action now).
-14. Replace the `bindOpt` whitelist (#36) with a `data-dev` attribute so new dev buttons need no code edit — **yes**. The ids stay, so scripts are unaffected.
-15. Keep the two-level role split (#3): master-only = Sblocca tutto and the menu/GAM music uploads — **yes**.
-16. Correct the I3 note about the El Gamblador click (2b) and the Enter-workaround comment in `capture.py` — **yes** (doc-only, next docs chunk).
+1. Replace the local login, role source and `S.creds` (#1–#3, #11) with F1, keeping the ×5 gesture as the entry — recommend **yes**. Scripts: `opt-login-modal` capture uses the gesture. **[owner: yes · LATER — yes — with F1]**
+2. Delete the Credenziali block and "+ Sviluppatore" / "Rimuovi" (#11) — **yes** (with F1). No script use. **[owner: yes · LATER — yes — with F1]**
+3. Delete the "Come si modifica" help text (#10) — **yes**. **[owner: yes · DONE — built 0.4_2]**
+4. Turn Sblocca tutto off whenever dev mode is switched off (fixes Trello #12) — **yes** (alternative: keep it and show a "SIM attivo" badge on ✎). `capture.py` relies on SIM staying on after `devOn=false` (for `wish-*-unlocked`): I would adapt the script (hide pens by CSS). **[owner: yes · DONE — built 0.4_2]**
+5. Merge the four map buttons and the map select (#13/#14) into one select of all 15 maps + Vai, keep Girone 4 / 7 — **yes**. `capture.py` (`dev_jump`, `#jg4`) must be adapted. **[owner: yes · DONE — built 0.4_2]**
+6. Delete "Mangiaroccia Avvia" `#mgpac` (#18; a real run that saves progress) — **yes**. Not used by scripts. **[owner: yes · DONE — built 0.4_2]**
+7. Keep "Livello di prova" (#15) but label it as writing to the save — **yes**. **[owner: yes · DONE — built 0.4_2]**
+8. Merge "Popup di prova" (#32) into the unlock-popup previews (#33) — **yes**. `capture.py` calls `popPreview`/`achPopup` directly: unaffected. **[owner: yes · DONE — built 0.4_2]**
+9. Make the Ferma debug overlay (#23) a toggle, default OFF — **yes**; the `fa-*` screens would be regenerated cleaner. **[owner: yes · DONE — built 0.4_2]**
+10. Delete "Testo grezzo" (#34) — **yes**, replaced by F3. **[owner: yes · DONE — built 0.4_2]**
+11. Hide `window.mgExport` unless logged in (#35) — **yes** (or delete with F3). **[owner: yes · LATER — yes — with F3]**
+12. Delete the debug achievements and the "Debug" tab (#31; they write +5 sordi/exp) — **yes**. `capture.py` injects a style hiding their toast (`capstyle`); the Debug tab is not in `SCREENS.md`, so nothing else breaks. **[owner: yes · DONE — built 0.4_2]**
+13. Delete `DEV_SKIN_TEST` (#17) after F4b — **yes** (later, no action now). **[owner: yes · LATER — yes — after F4b]**
+14. Replace the `bindOpt` whitelist (#36) with a `data-dev` attribute so new dev buttons need no code edit — **yes**. The ids stay, so scripts are unaffected. **[owner: yes · DONE — built 0.4_2]**
+15. Keep the two-level role split (#3): master-only = Sblocca tutto and the menu/GAM music uploads — **yes**. **[owner: yes · DONE — decided, no code change (roles already consistent)]**
+16. Correct the I3 note about the El Gamblador click (2b) and the Enter-workaround comment in `capture.py` — **yes** (doc-only, next docs chunk). **[owner: yes · DONE — done (docs, 0.4_2)]**
+
+**Decided 2026-09-25 (owner: yes to all 16).** Role split (pick 15): master-only = Sblocca tutto + menu/GAM music uploads (+ credentials until F1); dev1 = everything else. Checked in 0.4_2: `devRows` gates exactly these with `role==="master"`; no inconsistency found.

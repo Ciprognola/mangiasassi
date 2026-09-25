@@ -1756,3 +1756,15 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 ## docs — 2026-09-25 (E1a)
 
 - Dev-mode audit report `refs/dev/DEV_AUDIT.md` (E1a); screens not-captured list (`tools/screens/not_captured.txt`, SCREENS.md regenerated). No build.
+
+## 0.4_2 — 2026-09-25
+
+- E1b dev-mode cleanup (owner picks 3–10, 12, 14–16 of DEV_AUDIT.md):
+  - Sblocca tutto now ends with dev mode: the ✎ toggle calls `simOff()` (Trello #12); load already reverts it. "Esci" already did.
+  - One dev map select (5 themes + 10 extra + the two old test maps "Prova torrenti"/"Prova mappa larga") + Vai, dev run, nothing saved; Girone 4 / 7 kept; the four map buttons and the old select are gone.
+  - Removed: "Come si modifica" text, Mangiaroccia "Avvia", "Popup di prova" (now the "Obiettivo" button of the popup previews), "Testo grezzo", the debug achievements and the "Debug" achievements tab (old saves keep their d1–d5 data untouched; 34 real achievements unchanged).
+  - "Livello di prova — scrive nel salvataggio" label; Ferma debug overlay is a toggle ("Overlay debug"), off by default, in memory only.
+  - `bindOpt` whitelist replaced by `data-dev` on each accordion body of the Sviluppatore tab (all ids kept; `#xopen` moved to `bindDev`). Accordion "Obiettivi" renamed "Anteprime" (id `obj` unchanged).
+  - Role split kept (pick 15). The I3 note about the El Gamblador click is corrected: it was two capture runs at once, not the game (SCREENS.md notes, capture.py comment).
+  - Screens library regenerated (93 screens, 1.55 MB): dev-*, fa-* (no overlay), wish-*.
+- Size: index.html 5,624,483 bytes (−2,207 vs 0.4_1, LF-normalised).

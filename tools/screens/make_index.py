@@ -18,7 +18,7 @@ META = {
     "opt-generali": ("Home → Opzioni", "`opt`", "`renderOpt`, `bindOpt`, `optAcc`", "Generali tab; `-audio/-screen/-game/-data` = that accordion open"),
     "opt-login-modal": ("Opzioni → tap \"Build locale\" 5 times", "modal", "`loginModal`", "Old local dev login (replaced by Firebase in F1)"),
     "dev-tab": ("Opzioni → Sviluppatore tab (dev mode on)", "`opt`, `optTab=\"dev\"`", "`devRows`, `bindDev`", "One image per accordion: `dev-acc-<id>`"),
-    "dev-acc": ("Sviluppatore tab → open the accordion", "`opt`, `optTab=\"dev\"`", "`devRows`, `optAcc`, `gamDevHTML`, `prDevPanel`", "account = Sblocca tutto, test = jumps/level, audio = sounds, obj = objects, exp = Esporta modifiche"),
+    "dev-acc": ("Sviluppatore tab → open the accordion", "`opt`, `optTab=\"dev\"`", "`devRows`, `optAcc`, `gamDevHTML`, `prDevPanel`", "account = Sblocca tutto, test = jumps/level, audio = sounds, obj = Anteprime (popup previews), exp = Consegna / Esporta modifiche"),
     "dev-menu-home": ("Dev mode on, home", "`menu`", "`renderMenu` (`devUI()` pens, +)", "Dev pens on every tile"),
     "wish-enemies": ("Home → Lista desideri → first tab (aerei / attrezzi)", "`wish`, `tab=\"planes\"`", "`renderWish`, `cardHTML`", "Enemies list; per character"),
     "wish-items": ("Lista desideri → second tab (rocce / snack)", "`wish`, `tab=\"rocks\"`", "`renderWish`, `cardHTML`", "Per character"),
@@ -38,7 +38,7 @@ META = {
     "maze-play": ("Home → Nuovo gioco, ~3 s", "`game`", "`startGame`, `update`, `draw`", "Random map theme"),
     "maze-pause": ("Maze → ❚❚", "modal", "`pauseMenu`", ""),
     "maze-over": ("Maze, last life lost", "`over`", "`finishRun`", "Partita finita; state forced (`G.lives=1`, dying) on a dev run"),
-    "maze-": ("Dev run on the theme's map (Opzioni → Sviluppatore → Test)", "`game`", "`devJump`, `draw`, `THEMES`", "Themes: steel, water, fire, ice, forest. `acciaio`/`cinghiale` = ability active"),
+    "maze-": ("Dev run on the theme's map (Opzioni → Sviluppatore → Test → Mappa select + Vai)", "`game`", "`devJump`, `draw`, `THEMES`", "Themes: steel, water, fire, ice, forest. `acciaio`/`cinghiale` = ability active"),
     "bj-invite": ("Opzioni → Sviluppatore → Minigiochi → El Gamblador (dev run)", "`bj`", "`startGamblador`, `bjPresent`", "In a real run the same card appears in the gap after a girone"),
     "bj-": ("El Gamblador dev run, scripted hand (Enter advances, menu clicks)", "`bj`", "`bjMain`, `bjHand`, `bjChoose`, `bjDraw`", "Random deal: the hand result varies"),
     "pr-": ("Splash → Roccia no → Sì (real run)", "`pr`", "`prIntro`, `prIntroYes`, `prSay`, `prChoice`", ""),
@@ -75,7 +75,9 @@ def main():
     md += ["", "## Notes", "",
            "- Dev runs (`G.dev`), \"Sblocca tutto\" (SIM) and a few forced states (foe HP, last life, faInvite) are used only to reach content that is otherwise random or locked; they write no progress.",
            "- Animated screens are a single frame; the maze, Ferma and battle frames vary run to run (random map, item positions).",
-           "- Toasts of the debug achievements are hidden by the script (they would sit on every frame)."]
+           "- Achievement toasts (real ones) are hidden by the script; the debug achievements were removed in 0.4_2 (E1b).",
+           "- The Ferma debug overlay is off by default since 0.4_2, so the `fa-*` frames are clean.",
+           "- An earlier note said a mouse click on the El Gamblador stage crashes headless Chromium: that was the test setup (two capture runs at once), not the game (E1a/E1b). The script still advances dealer lines with Enter."]
     open(os.path.join(OUT, "SCREENS.md"), "w", encoding="utf-8").write("\n".join(md) + "\n")
     print(len(ids), "screens", round(size / 1048576, 2), "MB")
 
