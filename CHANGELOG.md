@@ -1734,3 +1734,7 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Release smoke test (real clicks, dev mode OFF, desktop + mobile tap, an old 0.3-style save): 23/23 checks — splash, maze run, El Gamblador, Rocciamon (professor battle), Ferma Algidone! (encounter + practice) start and exit cleanly; Percorso (50 tiles), Obiettivi (34), Personalizza and Lista desideri › Giochi open; the dev tab and every dev button are absent and injected clicks on them do nothing; 0 console errors.
 - Not tested: real-device audio and touch feel beyond the owner's phone tests of each build, iOS/Safari.
 - Post-0.4: audio submissions A1…An, and the 0.5 backlog (CLAUDE.md §8).
+
+## docs — 2026-09-25
+
+- v0.4.5 plan (D1), 0.4 plan archived to docs/releases/0.4.md, firestore.rules, bugs/BUGS.md. No build.

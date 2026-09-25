@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isDev() {
+      return signedIn() && exists(/databases/$(database)/documents/devs/$(request.auth.uid));
+    }
+    match /devs/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+    match /saves/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+    match /bugs/{id} {
+      allow create: if isDev()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 1000
+        && request.resource.data.keys().hasOnly(['uid','text','screen','version','char','ts','ua','meta']);
+      allow read, update, delete: if false;
+    }
+  }
+}

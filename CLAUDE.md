@@ -2,36 +2,11 @@
 
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
-## SESSION HANDOFF (2026-09-25 → next session)
-**State: 0.4 shipped.** `VERSION` = `"0.4"` (also the root `VERSION` file), tag `v0.4` on the release commit, everything pushed to `main`, `git status` clean. Release smoke test 23/23 (desktop + mobile, dev off). Details: `CHANGELOG.md` "0.4 — Ferma Algidone!".
-**Next = the 0.5 build, which the owner says is mainly DEV tools and features** (session closed 2026-09-25; the owner will give the brief in a new chat once ready). Do not start any 0.5 item before a planned chunk arrives, and do not touch the 0.5 backlog items on your own. Backlog to plan from: §8 (0.5 backlog: hit boxes around assets in the maze game; future items; Ferma follow-ups such as roadmap tile 10 reward, a DK-style loop after floor 3, other playable characters).
-**Post-0.4, not started:** audio submissions A1…An (§8) — processed one build per approved submission via §5; any pending submission is found at session start (§1b). Built-in audio slots table in §10.9 is empty.
-**Next build number:** the first build after the release is `"0.4_1"`, then `"0.4_2"`, … (§6 rule 3, §7, §9 already rolled to 0.4).
-**No pending owner art.**
-
-**Ferma Algidone! code map** (`index.html`, `grep -n 'FA_\|fa[A-Z]'`): data `FA_LEVELS[0..2]` (fields: `title/blurb/introArt`, `girders` with optional `flow`/`conveyor:{v,rev,dir}`, `ladders`, `bolts`, `grill:{x1}`, `stopLeft`, `items` incl. `meatHop`/`grill`/`flameClimb`, `last`, `goal` (floors 1-2 only));
-world 360×610; `FA_PHYS`; loop `faLoop` → `faStep` → `faDraw`; entry `startFerma({level,test,debug,extra,goal,finale,run,encounter,mult5})` (dev buttons, the Giochi card "Gioca" = practice, and the real encounter `faInvite`→accept; `FA.enc={n,run,mult5}` only in encounter mode; `faBackToMaze/faResume` return to the maze; `FA_FORCE` = dev "Forza incontro"); items `faSpawn/faItemsStep/faCollide/faSeparated/faGrillHit`;
-belts `faInitBelts` (also inits bolts/holes) `faBeltV/faBeltStep/faDrawBelt`; bolts `faBoltPick/faBoltsStep/faInGap/faDrawBolts/faDrawGirder`; grill `faGrill()`; HUD `faHud`; panels `faPanel`; audio `faSnd(slot)` → `playSnd(slot,"fa")`, `FA_SLOTS`, `DEFSND.fa`;
-state `FA.state` = `intro|play|dying|climb|collapse|win|over` + `FA.paused`; floors `faLoadFloor(i,lives,score)`, `faRestart` (Riprova = floor 1), `faNextFloor` (Avanti), `faAct` (`retry|next|replay|exit|resume`); `faIntro/faIntroEnd`, `faDie`, `faFinishDeath`, `faOver`,
-`faWin` → `faClimbStep` (floors 1-2) → `faWinPanel` (+`faCountStep`); `faFinalWin` → `faCollapseStep` → `faFinalPanel` (floor 3), `faColOff`, `faAlgPose`; `faExit` returns to the menu. Demos (Pages, never linked): `prototypes/algidone/` 01–05. Review images: `refs/ferma_algidone/review/`.
-
-**Practical notes:**
-- **Verification = real clicks.** Playwright (Python, headless Chromium): click the UI entry point, never call the function (`bindOpt` forwards only whitelisted selectors to `bindDev`; **new dev-panel buttons must be added to that whitelist**). Path: splash `#rsi` → `[data-tile=opt]` →
-  `[data-otab=dev]` → open the accordion (`details.acc:has(#id) > summary`) → click (`#mgfa` floor 1, `#mgfa2` floor 2, `#mgfa4` floor 3, `#mgfk` floor-1 exit test, `#mgfk2` collapse test); desktop + mobile touch (`has_touch`, `tap`). Dev mode:
-  `store.set('mgs_dev',{role:'master',devOn:true})` + reload ("Sblocca tutto" = role master, `[data-sim="1"]`). For deterministic logic: freeze with `window.requestAnimationFrame=()=>0;cancelAnimationFrame(FA.raf)` (cancelling alone is NOT enough) and call `faStep(1/60)`;
-  silence throws with `Object.assign(FA.cfg,{sausage:0,porchetta:0,meat:0,ladderP:0});FA.alg.wait=1e9`; `faLoadFloor(i,3,0);faIntroEnd()` jumps to a floor. Playwright quirks: an `evaluate` string whose last value is a function gets invoked - wrap in `(()=>{...})()`; never name a page-side
-  variable `L` or another global const. Audio can be checked by spying on `playSnd` and on `BaseAudioContext.prototype.createOscillator/createBufferSource`. Scratch scripts are NOT in the repo and are lost between sessions - rebuild them; they go stale when level indices or Riprova semantics change.
-  `node --check` every `<script>` block first, then the smoke test. Real-time polling is flaky under CPU load.
-- **Patch scripts:** edit `index.html` with a Python script that asserts each anchor appears exactly once; the working copy is CRLF, so read with `newline=""`, normalise `chr(13)+chr(10)`→`chr(10)` for multi-line anchors and convert back on write. Use raw strings (`r'''...'''`) for JS containing
-  `\u00e8`-style escapes. Never print base64; embed art in the chunk that first draws it. Measure size deltas against `git show HEAD:index.html` with CRLF normalised.
-- **Git Bash heredocs with quotes break on this machine** — write longer scripts with the Write tool (avoid `\n` inside one-line `python -` patches: it becomes a real newline). Console output of non-ASCII needs `PYTHONIOENCODING=utf-8`.
-- **Docs are committed together with the code.** Build doc text with `.replace` (no `%` formatting), and check `git diff --stat` shows CHANGELOG/CLAUDE.md before committing.
-- Each chunk: bump `VERSION` to `0.3_NN`, CHANGELOG entry with size delta, update the §10.8 row, commit `v0.3_NN: …`, push. A push can fail transiently — retry; follow §1 only if `origin/main` really moved.
-- Owner commits often land via the GitHub web UI (art uploads land at odd paths) — always `git pull --ff-only` first (§1). Briefs arrive pasted from Claude web, one build per message: if one looks cut off, say so first (§6 rule 10).
-
-This note can be deleted at the start of the next session as part of confirming the sync.
+## SESSION HANDOFF
+State: 0.4 shipped (tag v0.4). Working on v0.4.5 (DEV tools), plan in §10. Next chunk: whatever the owner pastes; the §10.3 table shows status. 0.5 and 0.6 are being drafted in Claude chat: nothing to do for them. No pending owner art.
 
 ---
+
 
 Owner: **Ciprognola** ("El Cipro") — product owner and master developer.
 Repo: `https://github.com/Ciprognola/mangiasassi` · Live: `https://ciprognola.github.io/mangiasassi/`
@@ -52,11 +27,7 @@ So in Claude Code:
 - One approved chunk = one build = one commit. Don't batch several chunks unless told to.
 - If you discover something that changes the plan (a bug, a blocker, a bad assumption), report it and wait.
 
-**Exception for the v0.4 release (§10):** the owner explicitly asked for the 0.4 design questions to be asked
-*in the working session*, with small structural demos, instead of bouncing every question back to Claude.
-So: when a §10 chunk is marked **[Q]**, ask its listed questions (with `AskUserQuestion`-style short options where
-possible), wait for answers, then write every answer into **§10.9 Decisions log** before implementing.
-Anything *not* covered by a §10 question still follows the rule above: stop and report.
+In 0.4.5 every decision arrives pre-made in the brief; there are no in-session question rounds.
 
 ---
 
@@ -228,6 +199,14 @@ Developer options must be **completely invisible** when the dev toggle is off. D
 ("Salta al girone 4/6") and `PR.test` battles start test runs that **save no progress** and never set real
 unlock flags (`seen`, achievements).
 
+### Ferma Algidone! (screen fa)
+
+**Ferma Algidone! code map** (`index.html`, `grep -n 'FA_\|fa[A-Z]'`): data `FA_LEVELS[0..2]` (fields: `title/blurb/introArt`, `girders` with optional `flow`/`conveyor:{v,rev,dir}`, `ladders`, `bolts`, `grill:{x1}`, `stopLeft`, `items` incl. `meatHop`/`grill`/`flameClimb`, `last`, `goal` (floors 1-2 only));
+world 360×610; `FA_PHYS`; loop `faLoop` → `faStep` → `faDraw`; entry `startFerma({level,test,debug,extra,goal,finale,run,encounter,mult5})` (dev buttons, the Giochi card "Gioca" = practice, and the real encounter `faInvite`→accept; `FA.enc={n,run,mult5}` only in encounter mode; `faBackToMaze/faResume` return to the maze; `FA_FORCE` = dev "Forza incontro"); items `faSpawn/faItemsStep/faCollide/faSeparated/faGrillHit`;
+belts `faInitBelts` (also inits bolts/holes) `faBeltV/faBeltStep/faDrawBelt`; bolts `faBoltPick/faBoltsStep/faInGap/faDrawBolts/faDrawGirder`; grill `faGrill()`; HUD `faHud`; panels `faPanel`; audio `faSnd(slot)` → `playSnd(slot,"fa")`, `FA_SLOTS`, `DEFSND.fa`;
+state `FA.state` = `intro|play|dying|climb|collapse|win|over` + `FA.paused`; floors `faLoadFloor(i,lives,score)`, `faRestart` (Riprova = floor 1), `faNextFloor` (Avanti), `faAct` (`retry|next|replay|exit|resume`); `faIntro/faIntroEnd`, `faDie`, `faFinishDeath`, `faOver`,
+`faWin` → `faClimbStep` (floors 1-2) → `faWinPanel` (+`faCountStep`); `faFinalWin` → `faCollapseStep` → `faFinalPanel` (floor 3), `faColOff`, `faAlgPose`; `faExit` returns to the menu. Demos (Pages, never linked): `prototypes/algidone/` 01–05. Review images: `refs/ferma_algidone/review/`.
+
 ---
 
 ## 5. Repo layout & infrastructure
@@ -245,6 +224,11 @@ DEVELOPERS.md                  browser-only guide, no Git knowledge required
 CODEOWNERS                     → Ciprognola
 LICENSE                        MIT
 CLAUDE.md                      this file
+docs/releases/                 archived release plans (0.4.md, …)
+bugs/                          bug triage (BUGS.md)
+firestore.rules                copy of the Firestore rules published in the console
+tools/                         helper scripts
+refs/                          reference art and review images
 ```
 
 GitHub Pages deploys from `main` via GitHub Actions on every push.
@@ -317,6 +301,21 @@ into `submissions/<name>/<YYYY-MM-DD>/` through a PR. Once the `validate` check 
 9. Open source: keep it readable. UI/UX improvements are welcome when they're part of the approved task.
 10. Owner's briefs arrive pasted from Claude web, one build per message. If a brief looks cut off, say so at the start of your reply and list what you received before building.
 
+### Practical notes (verification, patch scripts, git)
+
+- **Verification = real clicks.** Playwright (Python, headless Chromium): click the UI entry point, never call the function (`bindOpt` forwards only whitelisted selectors to `bindDev`; **new dev-panel buttons must be added to that whitelist**). Path: splash `#rsi` → `[data-tile=opt]` →
+  `[data-otab=dev]` → open the accordion (`details.acc:has(#id) > summary`) → click (`#mgfa` floor 1, `#mgfa2` floor 2, `#mgfa4` floor 3, `#mgfk` floor-1 exit test, `#mgfk2` collapse test); desktop + mobile touch (`has_touch`, `tap`). Dev mode:
+  `store.set('mgs_dev',{role:'master',devOn:true})` + reload ("Sblocca tutto" = role master, `[data-sim="1"]`). For deterministic logic: freeze with `window.requestAnimationFrame=()=>0;cancelAnimationFrame(FA.raf)` (cancelling alone is NOT enough) and call `faStep(1/60)`;
+  silence throws with `Object.assign(FA.cfg,{sausage:0,porchetta:0,meat:0,ladderP:0});FA.alg.wait=1e9`; `faLoadFloor(i,3,0);faIntroEnd()` jumps to a floor. Playwright quirks: an `evaluate` string whose last value is a function gets invoked - wrap in `(()=>{...})()`; never name a page-side
+  variable `L` or another global const. Audio can be checked by spying on `playSnd` and on `BaseAudioContext.prototype.createOscillator/createBufferSource`. Scratch scripts are NOT in the repo and are lost between sessions - rebuild them; they go stale when level indices or Riprova semantics change.
+  `node --check` every `<script>` block first, then the smoke test. Real-time polling is flaky under CPU load.
+- **Patch scripts:** edit `index.html` with a Python script that asserts each anchor appears exactly once; the working copy is CRLF, so read with `newline=""`, normalise `chr(13)+chr(10)`→`chr(10)` for multi-line anchors and convert back on write. Use raw strings (`r'''...'''`) for JS containing
+  `\u00e8`-style escapes. Never print base64; embed art in the chunk that first draws it. Measure size deltas against `git show HEAD:index.html` with CRLF normalised.
+- **Git Bash heredocs with quotes break on this machine** — write longer scripts with the Write tool (avoid `\n` inside one-line `python -` patches: it becomes a real newline). Console output of non-ASCII needs `PYTHONIOENCODING=utf-8`.
+- **Docs are committed together with the code.** Build doc text with `.replace` (no `%` formatting), and check `git diff --stat` shows CHANGELOG/CLAUDE.md before committing.
+- Each chunk: bump `VERSION` to `0.4_NN` (`0.4.5_N` after the 0.4.5 release), CHANGELOG entry with size delta, update the §10.3 row, commit, push (to `dev` once I2 is done).
+- Owner commits often land via the GitHub web UI (art uploads land at odd paths) — always `git pull --ff-only` first (§1). Briefs arrive pasted from Claude web, one build per message: if one looks cut off, say so first (§6 rule 10).
+
 ---
 
 ## 7. Version history
@@ -367,6 +366,8 @@ already reflect this. **Rolled again at v0.4** (below).
 
 ## 8. Backlog — post-0.3
 
+Player-facing items below are 0.5+; the 0.5 (bugfixes/UI-UX, player login on) and 0.6 (features) plans are drafted in Claude chat — do not act on them.
+
 ### Queued — need reference art/screenshots from the owner
 - **Chunks 4+5** — pub sprite (professor's "cacciata") and dirty-pond sprite with splash sound/animation.
   **Superseded**: the night-street cutscene revamp (0.2_49–0.2_56) already replaced this placeholder art
@@ -414,19 +415,15 @@ by Claude (the planning side) before Claude Code executes them.
   economy changes (reward +40%, maze sordi −30%) don't affect this win-rate number — they're currency, not
   battle-engine balance.
 
-### 0.5 backlog — owner's words, kept as written. Do NOT investigate or fix now.
-- "there are still hit boxes around assets in Mangiasassi" (the maze game) — small things are fixed in 0.5.
+### 0.5 backlog
+Moved to 0.4.5 as B1: maze hitboxes around assets.
 
 ### Post-0.4 — audio submissions (A1…An)
 One build per approved audio submission (Uomo roccia sounds, Algidone sounds, Blackjack voiceover, Professore voiceover, professor intro music, and the new `sound.fa.<slot>` set for Ferma Algidone!). They will arrive eventually and
 are processed **after the 0.4 release** via the §5 procedure and the A0 built-in layer (keep the running slot table in §10.9; music: half-length + crossfade loop per §6 rule 7). Not a dependency of REL.
 
 ### Later phases
-- **B/C — "Esporta modifiche"**: finish the export UI and verify a real export against
-  `validate_submission.py`, then update `DEVELOPERS.md`.
-- **D/E — Firebase login + cloud save**, max 10 manually created accounts: Firebase Auth (email/password),
-  Firestore per-player saves, rules isolating each player. **D** (console setup) is the owner's job and must be
-  done before **E** (in-game implementation). Don't start E without a working config.
+- Firebase: set up (§10.2); login and cloud save are chunks F1/F2.
 
 ---
 
@@ -443,389 +440,72 @@ are processed **after the 0.4 release** via the §5 procedure and the A0 built-i
 - [ ] Historical log updated with this version's entry
 - [ ] Short patch note: what changed, how to test, what wasn't tested
 - [ ] Commit `v0.4_NN: …`, push (Pages redeploys automatically)
-- [ ] §10.8 chunk table: status updated for the chunk just delivered
+- [ ] §10.3 chunk table: status updated for the chunk just delivered
 
 ---
+## 10. v0.4.5 RELEASE — DEV tools
 
-## 10. v0.4 RELEASE — plan for Claude Code (VS Code) — **v0.4 — shipped (2026-09-25, tag `v0.4`)**
+### 10.0 Ground rules
+- Versioning: builds 0.4_NN (first is 0.4_1). Release build = bare "0.4.5", tag v0.4.5. After the release, dev-branch builds are 0.4.5_N (update §6 rule 3, §7, §9 then).
+- From chunk I2 on, Claude Code pushes only to branch `dev`; `main` changes only at the release (merge dev → main, never force-push, never rebase).
+- One chunk = one build = one commit, then STOP for the owner's phone test. Each feature is tested and approved before the next chunk. Briefs come from Claude chat, fully decided: no in-session design questions this release. Anything not covered → stop and report.
+- Never draw, edit, recolour or regenerate art. Italian in-universe text for players; dev-only screens may use plain Italian dev wording.
+- Dev runs and SIM() never write progress. Save compatibility for every new field (DEF + migration + CHDEF()).
+- Player-facing parts built in this release stay behind flags that are OFF (player login, cloud save, player bug reports). They are switched on in 0.5.
+- The game must work fully when Firebase is unreachable (offline, blocked, slow): only dev login, bug reports and cloud save become unavailable. Never block startup on Firebase.
 
-_All §10.8 chunks are done; this section is kept as the record of the release plan and the §10.9 decisions log._
+### 10.1 Scope
+F1 dev login via Firebase · F2 player login + cloud save (flag off) · F3 submission format v2 · F4 skin creation tool · F5 text edit by long-press · F6 report a bug (devs only; player path built, flag off) · REQ tile-10 reward skin made with F4 · E1 dev-mode audit + cleanup · I2 dev/stable branches · I3 screens library · B1 maze hitboxes.
+Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 
-This is a **whole release**, not a quick task. Work it in many small chunks (§10.8), one chunk = one build =
-one commit, in the order given unless the owner says otherwise. Before each chunk, state the recommended
-model + effort from the table.
+### 10.2 Firebase (set up by the owner, 2026-09-25)
+- Project id `mangiasass` (no final "i"), Spark (free) plan. Auth: Email/Password on, authorized domain ciprognola.github.io. Firestore (default) database, europe-west1, production mode.
+- Web config (public by design, security = rules):
+  apiKey "AIzaSyA6wGraS0bw4hpHUUjru2APjnfcIEkpG8c", authDomain "mangiasass.firebaseapp.com", projectId "mangiasass", storageBucket "mangiasass.firebasestorage.app", messagingSenderId "666619489138", appId "1:666619489138:web:a181c869f0d61ae3214beb". SDK: modular v12.19.0 from https://www.gstatic.com/firebasejs/12.19.0/.
+- Accounts: master, dev1…dev5, created in the console as <username>@mangiasassi.invalid. Devs type only the username; the game appends "@mangiasassi.invalid". Passwords never appear in the repo. No reset email can arrive → F1 adds "Cambia password" for logged-in devs; otherwise the owner deletes and recreates the user (new UID → new role doc).
+- Roles: Firestore `devs/{uid}`, field `role` = master|dev1…dev5, edited only by the owner in the console.
+- Collections: `devs`, `saves/{uid}` (F2), `bugs/{id}` (F6). Firebase Storage is NOT used (paid plan): sprites/audio keep the GitHub PR upload of §5.
+- `firestore.rules` in the repo is a copy of the rules published in the console. The console is the live one: any rules change = the owner pastes it in the console, Claude Code keeps the file identical.
 
-### 10.0 Ground rules for this release
-- **Versioning**: work builds stay `0.3_NN` (continue the counter). The final release build is the bare `"0.4"`
-  and gets the `v0.4` tag; after it the base rolls to `0.4_NN` (update §6 rule 3, §7 and §9 then).
-- **Submissions first** (§1b / §5): any pending package is handled before the next chunk.
-- **[Q] chunks**: ask the listed questions first, log answers in §10.9, then build. Ask a few questions at a time,
-  with 2–4 concrete options each and a recommended default.
-- **Assets**: request owner art only when the chunk that needs it starts, saying exactly what (size, frames,
-  directions, transparent PNG). **Never draw, generate or adapt character/skin assets yourself.** Placeholder
-  coloured shapes are fine only inside `prototypes/` and for the mini-game engine chunks before art arrives.
-- **Save compatibility** for every new field (`DEF` + migration block + `CHDEF()` where per-character).
-- **Dev/test runs and `SIM()` mode never write progress**, never enqueue popups, never unlock roadmap tiles.
-- Italian, in-universe player text. No "asset", "fantasma", "skin" in player-facing strings unless the owner
-  approves the word (see §10.9) — e.g. "costume", "accessorio", "premio".
-
-### 10.1 Scope (owner's list)
-**Features**: Skins · Algidone's mini-game · Progress roadmap · Character's customisation page
-**Enhancements**: Custom sounds Uomo roccia · Custom sounds Algidone · Custom voiceover Blackjack · Custom
-voiceover Professore · Popup unlock (assets, ghosts, characters, mini-games, progress milestones) · Custom music
-professor intro
-**Bugfixing**: Main menu music loop fix · Battle music starts with the beginning of the battle animation ·
-Victory/lost song starts just after the defeat · After one game with the professor, the game "Rocciamon" appears
-in the "Giochi" section of the "Lista desideri"
-
-### 10.2 Bugfixes
-- **B1 Main menu music loop** — menu track uses `initMusic`/`bgm`/`syncMusic`; the gapless Web Audio loop
-  player `makeLoopPlayer` exists (0.2_29). First check whether the menu track really goes through it after the
-  0.3 changes. **[Q]** one question to the owner: what exactly is wrong (audible gap/click at the loop point,
-  restarts when changing screen, stops after a mini-game, plays twice…)? Fix only that.
-- **B2 Battle music with the battle animation** — today `prBattleStart()` stops music, `await pbTransition()`
-  runs the sweeping-bars intro, and only afterwards `prMusic("battle",{fadeIn:700})` starts. Expected: battle
-  music starts **when the transition animation starts** (short fade-in, no silent gap).
-- **B3 Win/lose song right after the defeat** — in `pbEnding()` the `prMusic("win"/"lose")` calls come after
-  other waits. Expected: the result track starts **immediately after the last faint** (the moment the battle is
-  decided), before the dialogue / black fades. Keep `PR.test` behaviour.
-- **B4 Rocciamon in Giochi** — `gamesHTML()` only knows G1 Mangiaroccia and G2 El Gamblador; card index 2+ is
-  "???". Expected: after the **first real professor game** (`S.p.pr.seen`), card **G3 "Rocciamon"** appears
-  unlocked in Lista desideri › Giochi (with a canvas icon — pokéball or Duskull, reuse existing art). Honour
-  `S.ov["game_2"]` label/colour overrides like the other cards. This also feeds the popup (§10.3) later.
-
-### 10.3 Enhancements
-**Custom sounds / voiceover / music (A-chunks)** — all of this audio arrives **only as developer submissions**
-(Esporta modifiche → `submissions/` → §5 procedure). No audio is requested in chat for these items.
-- **A0 Built-in audio layer (prerequisite)**: today defaults are synthesized (`DEFSND`) and custom audio lives
-  per-browser in IndexedDB (`snd_<char>_<slot>`, `snd_gam_*`, `snd_vo_*`). To *hardcode* approved submission
-  audio, add a built-in layer: `BUILTIN_AUD={key:base64}` decoded at load. Lookup order everywhere:
-  **IndexedDB override (dev upload in this browser) → built-in (hardcoded from submissions) → synth default.**
-  Covers: `SND.roccia/algidone` slots (`eat, foe, power, die`), `SND.gam` (`BJ_SLOTS`), `SND.vo` (`BJ_LINES`,
-  `PR_LINES`), professor music slots (`prMusic` — incl. `intro`). "Reset" in Options clears only the IDB layer.
-  Export targets must match these keys so a submission maps 1:1.
-- **A1…An**: one build per approved submission: Uomo roccia sounds, Algidone sounds, Blackjack voiceover,
-  Professore voiceover, professor intro music (music: half-length + crossfade loop per §6 rule 7).
-  Keep a running table in §10.9 of which slots are now built-in. Report the `index.html` size delta each time.
-- Export/import bugs found while processing are fixed per §5 step 6.
-
-**Popup unlock (P-chunks)** — a centred modal (not full-screen, game pixel style) shown on the **home menu**,
-one at a time from a persisted queue. Two buttons: accept ("Vedi") / dismiss ("Dopo") — wording **[Q]**.
-Enter = accept, Esc = dismiss. Each event fires **once ever** (`S.p.pop={queue:[],seen:{}}`).
-
-| Event | Trigger | Accept goes to |
-|---|---|---|
-| New asset / ghost available | current character's level reaches `planeUnlock(i)` / `rockUnlock(i)` (item becomes buyable) | Lista desideri, tab of that item (tab 0 = aerei/attrezzi = "ghosts", tab 1 = rocce/snack) |
-| New character | a character card becomes visible/unlocked in Giocatore (El Gamblador, Il Professore, future ones) | Lista desideri › Giocatore |
-| New mini-game | a Giochi card unlocks (El Gamblador, Rocciamon, Algidone's mini-game) | Lista desideri › Giochi |
-| Roadmap milestone | a special/reward tile becomes claimable (§10.4) | Roadmap screen, tile highlighted |
-
-- Several unlocks at once (e.g. level-up gives 2 items) → **[Q]** one popup each, or one grouped popup? Default: grouped per type.
-- **Old saves**: on first load of the build that ships P1, mark everything already unlocked as `seen` so existing
-  players aren't flooded. Exception: roadmap milestones (they didn't exist before) fire once.
-- Dev panel: a button per event type to preview the popup (no save change).
-
-### 10.4 Progress roadmap (R-chunks)
-- **Entry**: the achievements entry on the home screen is the trophy icon button `#trop` in the `.brand` bar
-  (not a tile). **Decided:** add a matching icon button `#road` (path/map icon) **right next to it**.
-- **Screen** `screen="road"` (`renderRoad`/`bindRoad`): a **snake-like path of 50 square tiles**, tile 1 → 50,
-  rows alternating direction with a connecting path, scrollable, auto-scroll to the player's current tile.
-  Each square = one **girone**.
-- **Tile faces**: number, except **3 = pokéball**, **5 = playing-cards symbol**, **10, 15, 20, 25, 30, 35, 40,
-  45, 50 = "?"**.
-- **States**: locked (grey) · unlocked (coloured) · claimable (**pulsing yellow**, like the ability button) · claimed.
-- **Regular tiles**: unlocked when gironi completed ≥ N (`cs().gir`, cumulative, dev runs excluded).
-  **[Q]** per character or combined? Default: current character (matches the career modal).
-- **Tile 3 (pokéball)**: unlocked **only** when the player has played the professor mini-game ("Roccia no" at the
-  start, real game: `S.p.pr.seen`, which is set only by a real battle). **[Q]** does being kicked out on the
-  professor's "No" branch also count (`S.p.pr.visits`)? Default: no, a battle is required. **No hint anywhere** on how to unlock it (no tooltip, no text). Next time the
-  player is on the home menu → milestone popup → roadmap. Tap the pulsing tile → it expands with **"Riscatta"**.
-- **Tile 5 (cards)**: unlocked after the player has **won 10 blackjack hands** in total (owner decision — not 1).
-  Needs a new stat (`S.p.gam.won`, hands won across all runs, dev/test runs excluded — no such counter exists
-  today; old saves start at 0). Reaching 10 hands won also grants a **new achievement** (31st; name + category
-  **[Q]**), with progress shown like the other counter achievements. Then home → milestone popup → same claim flow.
-- **"?" tiles**: default: unlock with their girone like normal tiles, tap shows "Premio in arrivo", not
-  claimable yet (rewards are future, §8). **[Q]** confirm.
-- **Gift container** (reward window): a modal that does **not** take the whole screen, one-time per reward,
-  showing an **animated birthday gift package** (procedural pixel art: idle wobble/bounce). Tap the gift → it
-  opens → the reward pops out (preview + name) → close. Build it generic: reward = `{type:"skin",id,char}` so
-  future reward types reuse it.
-- A **character-related reward** (Uomo roccia or Algidone) also unlocks that character's **customisation page** (§10.5).
-- **Reward mapping** — default: tile 3 → **GEKA SNC hat** (Uomo roccia), tile 5 → **kebab costume** (Algidone).
-  **[Q]** confirm. Rewards go to their character regardless of who is being played.
-- State: `S.p.road={claimed:{}}` (+ whatever the questions add) in `DEF` + migration.
-
-### 10.5 Character's customisation page (C1)
-- In Lista desideri › Giocatore, **"Personalizza"** appears next to **"Usa"** on a character's card once that
-  character owns at least one skin.
-- Page (screen or large modal, **[Q]**) with three sections:
-  1. **Costume/skin** — "Nessuno" + owned skins, live preview canvas of the character wearing it, select = equip.
-  2. **Potere segreto** ("trasformati") — **placeholder**, disabled, "In arrivo".
-  3. **Squadra rocciamon** — **placeholder**, disabled, "In arrivo".
-- State per character: `skins:[]`, `skin:null` in `CHDEF()` + migration.
-- The placeholders' real behaviour is **future** (§8) — build only the empty containers.
-
-### 10.6 Skins (K-chunks)
-- Skins are **accessories or alternative clothing drawn on top of the existing avatar** of Uomo roccia or
-  Algidone. While selected, the character wears it **in every sprite and every place the player appears**:
-  maze (all directions incl. up/down, eat frames, abilities Acciaio/Cinghiale), menu scene, Lista desideri
-  previews, career/portraits, professor cut-scenes (walk, thrown into the pond), battle interjection, Algidone's
-  mini-game climber, any future appearance.
-- **K1 (system)**: overlay layer per sprite frame, same size/anchor as the base frame, keys `sk_<skin>_<frameKey>`,
-  hooked into every draw path (`drawHero`, `drawFace`, `drawEat`, `drawAlg`, up/down views, scene/cut-scene
-  draws, card canvases). Also write **`refs/skins/SPRITE_INVENTORY.md`**: every frame key per character, pixel size,
-  direction, whether it's a bitmap or **procedural** (drawn by code — flag these: an overlay for them still needs
-  owner art), and where it's used. This is the checklist artists draw against.
-- **Asset sheets** come from the owner, one per skin, when the chunk asks. Two delivery formats, both land
-  under `refs/skins/<skin>/`:
-  - **Pre-cut (preferred, §10.9 K2/K3)**: `refs/skins/<skin>/frames/sk_<skin>_<frameKey>.png` — one file per
-    frame, already cut — plus `<skin>_frames.json` giving `mode` and, per frame, `file,w,h,base_w,base_h,ox,oy`
-    (`ox,oy` = where the base frame's top-left sits inside the skin image, since a skin frame can be **larger**
-    than its base frame — parts of the art drawn outside it, e.g. a cape). Nothing to cut; embed directly.
-  - **Template + cells.json (optional fallback, §10.9 K1b)**: the owner draws the skin on a template sheet and
-    supplies a matching `<skin>_cells.json` describing the cell mapping. `refs/skins/cut_from_cells.py` cuts the
-    sheet into the same `sk_<skin>_<frameKey>.png` naming from there.
-  `tools/cut_sprites.py` remains the tool for the game's own non-skin reference-sheet cutting (professor,
-  cutscene assets, etc.), unchanged — unrelated to either skin format above.
-- **Missing frame rule**: if a direction/frame is missing from the sheet, **print a WARNING listing the missing
-  frames and ask the owner to upload them. Do not create or adapt them.** Until provided, that frame renders
-  without the skin.
-- **Per-skin render mode** (§10.9 K1b): every skin declares `mode:"overlay"` (accessory drawn on top of the
-  base frame, e.g. a hat) or `mode:"replace"` (drawn instead of the base frame at the same size, for a full
-  costume that recolours the character rather than just adding to it). A `replace` skin still falls back to
-  the base frame for any frame it doesn't provide.
-- **K2 GEKA SNC hat** — Uomo roccia, a hat with the text "GEKA SNC". `mode:"replace"` (§10.9 amendment — the
-  owner's art is full heads drawn with the cap already on, not an isolated cap graphic; the K1b default of
-  `overlay` didn't fit the actual art that arrived).
-- **K3 Costume BK** — Algidone, a Burger King-branded costume (real BK logo, brand-parody style, owner-approved
-  — same treatment as the existing McDonald's cup art). `mode:"replace"` (recolours cape/logo/gloves/boots, an
-  overlay would leak the base character's colours through). Reward id `"bk"` (§10.9 R3 amendment; was `"kebab"`).
-- Sprite limit 200 KB each; report the size delta. Skins belong to one character only (no crossing).
-
-### 10.7 Algidone's mini-game (M-chunks) — **high effort, the key feature of 0.4**
-**Concept (owner's words):** Algidone just got control of **"Coccia"**, a renowned place that sells excellent meat.
-He is throwing **sausages, porchetta and pieces of meat** at you (**Uomo roccia** for now; El Gamblador or Il
-Professore in a future release) while you try to reach him in a **classic Donkey Kong game**. Kick Algidone out
-of Coccia before he eats all their stock! Losing works as in regular Donkey Kong. There are different levels, and
-**at each floor Algidone takes control of a more important meat producer** — like a factory or a whole intensive farm.
-
-**Working method — ask a lot, show demos.** The owner wants many questions and **small structural demos while
-developing** (level structure, item types, climbing animation, everything creative). Demos live in
-`prototypes/algidone/NN-name.html`: standalone, coloured blocks, no embedded art, playable on the Pages site at
-`/prototypes/algidone/…`, never linked from the game. Link the demo in your reply and ask for feedback before
-moving the idea into `index.html`.
-
-**Question bank for M0 (ask in rounds of 3–4, log everything in §10.9):**
-1. Name of the mini-game and of its Giochi card (working title "Coccia").
-2. Unlock & entry: when does it first appear (after girone N? random encounter like El Gamblador? from the
-   Giochi card?), how often, can it be replayed from the menu?
-3. Floors: list of meat producers in order (1 Coccia → … → factory → … → intensive farm → ?), how many floors,
-   one screen per floor or several stages per floor? Loop after the last floor with higher speed (like DK)?
-4. Stage types: classic DK set (sloped girders + rolling barrels, conveyor belts, elevators, rivets to remove)
-   mapped to each producer?
-5. Items: sausages roll along girders like barrels? porchetta = big/slow/can't be jumped? meat pieces fall or
-   bounce like DK springs? any fire-type equivalent (e.g. a grill flame)? how fast does variety grow per floor?
-6. "Before he eats all their stock": a stock bar that drains over time (DK bonus timer)? empty = lose a life?
-7. Player verbs: walk, climb, jump — plus a hammer equivalent (e.g. "roccia luminosa" to smash meat)?
-   Uomo roccia's Acciaio ability usable here or not?
-8. Lives, difficulty link to Facile/Media/Difficile, scoring (jump-over points, smash points, stock bonus).
-9. Win per floor: how is Algidone "kicked out" (animation), cut-scene between floors with the new producer?
-10. Rewards: sordi / exp / achievements / a roadmap tile?
-11. Controls: mobile (d-pad + jump button? swipe?), desktop keys; screen orientation.
-12. Art: new frames needed — Uomo roccia climbing/jumping, Algidone throwing/eating/kicked out, Coccia building,
-    each producer's scenery, meat items. (Ask for **the Coccia building asset** first, when M5 starts.)
-13. Audio: music per floor? jump/hit/climb/throw sounds (synth placeholders first, real ones via submissions).
-
-**Demos to offer during M0**: D1 level layout grid (girders + ladders) · D2 item types moving (roll / fall /
-bounce) · D3 climb + jump feel (gravity, jump arc, ladder snapping) · D4 floor progression map (the producers
-list as a vertical tower) · D5 HUD + stock bar + lives.
-
-Skins (§10.6) apply to the climber. Player-facing text in Italian.
-
-**Art spec — `refs/ferma_algidone/` package** (arrived early, committed via the web UI as `60c07bf`; validated: 39/39 frames
-exist, sizes match `ferma_algidone_frames.json`, all animation keys resolve, all 14 `fa_alg_*` share one 124×158 cell, max
-54 KB). Pre-cut, transparent, **1 art pixel = 1 image pixel**, draw with `imageSmoothingEnabled=false`. Anchors:
-`bottom-center` (feet/base), `center` (free item), `fill` (backdrop). Girders, ladders, broken ladders, conveyors,
-elevators/rivets stay **code-drawn** (recoloured per floor); sausage roll-rotation, porchetta wobble, flame/grill glow are code.
-**Never edit, recolour, redraw or regenerate this art — report problems instead.**
-
-| Key(s) | Native size | Anim / use | In-game draw size (logical px, demos' 360-px-wide layout) |
-|---|---|---|---|
-| `fa_alg_idle0-1` | 124×158 cell | Algidone idle (top of the tower) | ×0.6 → 74×95 (was ×0.5; 0.3_23), feet on the top girder; world grown to 360×610 for the headroom |
-| `fa_alg_throw0-3` | cell | grab → lift → release → recover (game spawns the item at release) | same ×0.5 |
-| `fa_alg_eat0-2` | cell | grab ham → bite → chew (stock draining) | same ×0.5 |
-| `fa_alg_angry0-1` | cell | stomp with dust → furious with steam (player close / stock low) | same ×0.5 |
-| `fa_alg_kick0-2` | cell | hit → flying (cap flies off) → sitting dazed (floor-win kick-out) | same ×0.5 |
-| `fa_salsiccia` | 77×29 | rolling sausage, cooked, already horizontal (owner replacement, 0.3_29) | ×0.5 → 39×15 (0.3_29, no rotation; hitbox r 8 × h 14 unchanged, smaller than the sprite) |
-| `fa_porchetta0` | 60×31 | porchetta, main frame | ×0.6 → 36×19 (0.3_25; hitbox = sprite, 36×19) |
-| `fa_porchetta1` | 88×56 | alternative: roll with a slice cut off (optional, not a squash frame) | ×0.5 if used |
-| `fa_carne0-1` | 44×32 | bouncing meat: normal / squashed on landing (floor 3) | ×0.6 → 26×19 (0.3_25) |
-| `fa_fiamma0-3` | 25×32 | flame flicker (floor 3) | ×0.6 → 15×19 (0.3_25) |
-| `fa_griglia0-1` | 45×33 | grill ON the bottom girder at its low end (floor 3): coals dim / bright | ×1.2 → 54×40 (0.3_32; supersedes the ×1.78 zone) |
-| `fa_scorte0-3` | 55×58 | stock pile: full → 2/3 → 1/3 → empty (stock bar / Algidone's crate) | ×0.5 → 27×29 |
-| `fa_scorte_b0-3` | 56×60 | alternative stock-pile set | same as above (pick one set in M4) |
-| `fa_bld_coccia` | 294×215 | floor-1 **in-level layer** (behind the girders, in front of the backdrop, ×0.6 = 176×129, bottom on the top girder at x=270; 0.3_25) **+ intro card** (M5, ×1) | ×0.6 in level / ×1 on the card |
-| `fa_bld_macelleria` | 213×126 | floor-2 in-level layer (includes the delivery van) + intro card | ×0.826 in level = 176 px wide like Coccia (0.3_33; was ×0.6) / ×1 on the card (both in use) |
-| `fa_bld_fabbrica` | 280×218 | floor-3 in-level layer + intro card | ×0.629 in level = 176 px wide (0.3_33; was ×0.6) / ×1 on the card (both in use) |
-| `fa_bg_coccia` / `fa_bg_macelleria` / `fa_bg_fabbrica` | 270×480 | level backdrops (portrait), behind the code structure | scale to 360 px wide (×1.33, cover-cropped vertically) — painted scenery, only non-integer case |
-
-The climber (Uomo roccia, head only) has **no new art**: see the Q12 row in §10.9. Sizes are decisions for M1+ and may be
-retuned by the chunk that first draws each thing if the layout demands it (say so in the log).
-
-### 10.8 Chunk table
-Model/effort = recommendation for Claude Code. Status: `todo` / `wait-assets` / `wait-Q` / `done (0.3_NN)`.
-
+### 10.3 Chunk table
 | ID | Chunk | Needs | Model · effort | Status |
 |---|---|---|---|---|
-| B1a | Shared Web Audio loop player (`loopTrack`) + main menu track | [Q] symptom (answered) | Sonnet · medium | done (0.3_4, fixed 0.3_5) |
-| B1b | Move `bgmGam`/`prMusic` onto the shared loop player | B1a | Sonnet · medium | done (0.3_6) |
-| B2 | Battle music starts with battle transition | — | Sonnet · medium | done (0.3_1) |
-| B3 | Win/lose track right after the last faint | — | Sonnet · medium | done (0.3_2) |
-| B4 | Rocciamon card (G3) in Giochi after first real professor game | — | Sonnet · low | done (0.3_3) |
-| A0 | Built-in audio layer (IDB → built-in → synth) + matching export targets | — | Sonnet · medium | done (0.3_7) |
-| P1 | Popup unlock framework + asset/ghost/character/mini-game triggers + old-save seeding + dev preview | [Q] wording, grouping (answered) | Sonnet · medium | done (0.3_8) |
-| R1 | Roadmap state, entry button, snake screen, regular girone tiles | [Q] per-character (answered, amended 0.3_13 → combined) | Sonnet · medium | done (0.3_9, amended 0.3_13) |
-| R2 | Special tiles 3 and 5 (10 hands won), `S.p.gam.won`, new blackjack achievement, "?" tiles | [Q] achievement, "?" (answered) | Sonnet · medium | done (0.3_10) |
-| R3 | Gift container (animated gift) + generic reward claim | [Q] reward mapping (answered) | Sonnet · medium | done (0.3_11) |
-| R4 | Milestone popups wired to the roadmap | P1, R2 | Sonnet · low | done (0.3_12) |
-| K1a | Skin system, part 1 — data layer only: `SPRITE_INVENTORY.md`, exported base-frame PNGs, `SKINS` registry + `skinImg()` + load validation (empty registry, no draw-path changes, no player-visible change) | — | Sonnet · high | done (0.3_14) |
-| K1b | Skin system, part 2 — overlay hook wired into every draw path per §10.9's Acciaio/Cinghiale/`al_r*` decisions | K1a | Sonnet · high | done (0.3_15) |
-| C1 | Customisation page ("Personalizza", skin selector, 2 placeholders) | K1, [Q] screen/modal (answered: full screen) | Sonnet · medium | done (0.3_16) |
-| K2 | GEKA SNC hat (Uomo roccia) | asset sheet | Sonnet · medium | done (0.3_17) |
-| K3 | Costume BK (Algidone) | asset sheet | Sonnet · medium | done (0.3_18) |
-| M0 | Design rounds + demos D1–D5 (may span several sessions) | [Q] bank | Sonnet · medium | done (prototypes only, no build) |
-| M1 | Engine skeleton: new `screen`, level data format, girders/ladders render, fixed-timestep loop (+ Coccia backdrop art) | M0 | Sonnet · high | done (0.3_19) |
-| M2 | Player movement: walk, climb, jump, gravity, collisions; climb = head-only `fu0`–`fu3` animated in code (§10.9 Q12 amendment). **Acceptance (§10.9 DK death rules):** fall damage measured only from where the player left the ground in free fall (~1 floor threshold), reset on landing / ladder grab / respawn; walking slopes, stepping between girder segments and leaving a ladder never count | M1 | Sonnet · high | done (0.3_22) |
-| M3 | Algidone thrower + item types and behaviours | M2 | Sonnet · high | done (0.3_24) |
-| M4 | Lives, hits/death, stock bar, scoring, HUD, pause. **Acceptance (§10.9 DK death rules):** death = short pause/blink → clear ALL items and flames → respawn at start → ~2 s blinking invulnerability → throws resume after a grace delay; spawn area is safe (no flame patrol, no item hits during invulnerability); item hits require vertical overlap on the same level (never compare x alone); stock drain gives tens of seconds per floor and costs a life only when it truly empties; reaching the goal zone shows a win message | M3 | Sonnet · medium | done (0.3_26) |
-| M5 | Floor 1 "Coccia": building art + kick-out win sequence | Coccia building + backdrop **arrived** (`refs/ferma_algidone/`, §10.7) | Sonnet · medium | done (0.3_28) |
-| M6a | Floor 2 "Macelleria": floor progression (Avanti), belts that carry player/items and reverse, meat riding belts, climb-away exit | M5, art (arrived) | Sonnet · high | done (0.3_30) |
-| M6b | Floor 3 "Fabbrica di salsicce": bolts + holes, bouncing meat, grill on the bottom girder + flames, final collapse win + victory screen | M6a, art (arrived) | Sonnet · high | done (0.3_32) |
-| M7 | Audio: synth placeholders + slots `sound.fa.<slot>` through the A0 layer, dev upload/reset + export targets, sound in dev/SIM/sim runs | A0 | Sonnet · medium | done (0.3_34) |
-| M8a | Integration part 1: entry (random encounter), encounter rule, Giochi card, unlock popup, save migration, dev buttons | P1, M7; six §10.9 proposals (confirmed 2026-09-25) | Sonnet · medium | done (0.3_35) |
-| M8b | Integration part 2: rewards (encounter score added to the run score on a win), the 3 Minigiochi achievements, roadmap tile 10 as "Premio in arrivo" | M8a | Sonnet · medium | done (0.3_36), awaiting phone test |
-| M9a | Balance + controls REPORT (`refs/ferma_algidone/M9_BALANCE.md`, no build) | M8b | Sonnet · medium | done (report, no build), waiting for the owner's picks |
-| M9b | Build the owner's picks from the M9a report (mobile controls polish + balance) | M9a picks | Sonnet · medium | done (0.3_37, owner phone test OK) |
-| REL | Release build "0.4": VERSION, CHANGELOG, README, DEVELOPERS.md (new audio targets), roll base to 0.4 in §6/§7/§9, tag `v0.4` | M8a, M8b, M9b (audio submissions A1…An are NOT a dependency: post-0.4) | Sonnet · low | done (v0.4, tag `v0.4`) |
+| D1 | Docs: archive 0.4 plan, this plan, firestore.rules, bugs/BUGS.md | — | Sonnet · low | done (docs) |
+| I2 | dev branch + Pages deploying main at / and dev at /dev/, §1 git rules updated | — | Sonnet · medium | todo |
+| I3 | Screens library: Playwright script in tools/screens/, PNGs in refs/screens/, SCREENS.md | — | Sonnet · medium | todo |
+| E1a | Dev-mode audit report (refs/dev/DEV_AUDIT.md), no build | — | Sonnet · medium | todo |
+| E1b | Dev-mode cleanup from the owner's picks | E1a picks | Sonnet · medium | todo |
+| F1 | Firebase dev login, roles, Cambia password, old local login removed | — | Sonnet · high | todo |
+| F6a | Bug report button + popup, devs only, player path flag off | F1, I3 | Sonnet · medium | todo |
+| F6b | Bug pipeline: GitHub Action → bugs/inbox/, triage into bugs/BUGS.md | F6a, service account (owner) | Sonnet · medium | todo |
+| F3 | Submission format v2 + export code + validator + DEVELOPERS.md | I3, spec from Claude chat | Sonnet · high | todo |
+| F5 | Text edit by 3 s long-press, pens removed | F3, E1b | Sonnet · high | todo |
+| F4a | Skin tool part 1: export full character sheet + map | F3 | Sonnet · high | todo |
+| F4b | Skin tool part 2: import sheet, local preview, export as submission | F4a | Sonnet · high | todo |
+| REQ | Tile-10 reward skin (Uomo roccia) made with F4 | owner art | Sonnet · medium | wait-assets |
+| B1 | Maze hitboxes around assets | screenshot / bug report | Sonnet · medium | wait-assets |
+| F2 | Player login + cloud save, flag off | F1 | Sonnet · high | todo |
+| REL | Release "0.4.5": VERSION, CHANGELOG, DEVELOPERS.md, roll base to 0.4.5_N in §6/§7/§9, tag v0.4.5, merge dev → main | all | Sonnet · low | todo |
 
-Suggested order: B1–B4 → A0 → P1 → R1–R4 → K1 → C1 → K2/K3 (as art arrives) → M0 … M7 (done) → M8a → M8b → M9 → REL.
-Audio submissions (A1…An) are out of 0.4 scope (§8 backlog, processed after the release; any pending submission is still found at session start via §1b).
-
-### 10.9 Decisions log
-Every answer to a [Q] goes here: date · chunk · question · answer. Also the table of audio slots made built-in.
-
-| Date | Chunk | Question | Answer |
-|---|---|---|---|
-| 2026-09-23 | R1 | Roadmap entry point | Icon button next to the trophy (`#trop`) in the home `.brand` bar, not a tile |
-| 2026-09-23 | R2 | Tile 5 unlock condition | **10** blackjack hands won in total (not 1); the new achievement triggers at 10 too |
-| 2026-09-23 | B1 | Main menu music loop symptom | The track restarts correctly at the loop point, but there's still silence/a gap right before it loops (not a click, not a screen-change restart, not double-playback) |
-| 2026-09-23 | P1 | Popup accept/dismiss wording | "Guarda" (accept) / "Non ora" (dismiss) |
-| 2026-09-23 | P1 | Grouping when several unlocks fire at once | Grouped per type (one popup per unlock type, not one per item) — spec default confirmed |
-| 2026-09-23 | R1 | Roadmap tiles per-character or combined | Regular tiles (`cs().gir`) are **per-character**. Special/reward-tile claimed state stays **global** in `S.p.road.claimed` — claiming once marks it claimed on both characters' roadmaps, never claimable twice |
-| 2026-09-23 | R2 | Does the professor "No" branch count for tile 3 | **No** — only `S.p.pr.seen` (a real battle) unlocks tile 3, `S.p.pr.visits` alone does not |
-| 2026-09-23 | R2 | New achievement (31st, 10 BJ hands won) name/category | Name **"Il banco trema"**, in a **new category "Minigiochi"** (key `min`), which will also hold future mini-game achievements. Must confirm the achievements screen still fits phone width with 5 sections before implementing — if not, stop and report rather than redesign |
-| 2026-09-23 | R2 | "?" tiles unlock condition | Unlock with their girone like regular tiles; tapping shows "Premio in arrivo", not claimable yet — spec default confirmed |
-| 2026-09-23 | R3 | Reward mapping | Tile 3 → GEKA SNC hat (Uomo roccia), tile 5 → kebab costume (Algidone) — spec default confirmed |
-| 2026-09-23 | R2 | Tile 3/5 faces | Reuse existing art: the pixel pokéball from the professor throw scene for tile 3, existing El Gamblador card art for tile 5. "?" stays text (no new art needed) |
-| 2026-09-23 | R3 | Readiness gate | `ROAD_REWARDS` registry with a `ready:false` flag per reward, flipped to `true` only in K2/K3 (never elsewhere). A tile whose reward isn't ready behaves exactly like a "?" tile — unlocked, "Premio in arrivo", not claimable, no pulse — even once its own unlock condition (R2) is met. Only `ready:true` rewards can pulse/claim |
-| 2026-09-24 | R1 (amendment) | Roadmap tiles per-character or combined | **Supersedes** the 2026-09-23 R1 answer above. Regular/"?" tiles now unlock on the **combined** girone count across both characters (`roadGir()` = sum of `S.p.ch.roccia.gir` + `S.p.ch.algidone.gir`), not the active character's `cs().gir` alone. Tiles 3/5 and `S.p.road.claimed` were already global and are unaffected. Shipped 0.3_13 |
-| 2026-09-24 | K1b | Skin visibility during Acciaio | Skin stays **on**; the overlay is drawn **under** the steel effect, so the accessory picks up the steel look too, not drawn on top unaffected |
-| 2026-09-24 | K1b | Skin visibility during Cinghiale | Skin is **hidden** while transformed into the boar |
-| 2026-09-24 | K1b | Skin visibility during power-up rolling (Algidone `al_r*`) | Shown **only if that skin provides those specific frames**; otherwise falls back to the standard missing-frame rule (render plain, no skin, no error) |
-| 2026-09-24 | K1b | Per-skin render mode | Every `SKINS` entry now carries `mode:"overlay"\|"replace"`. `overlay` = drawn right after the base frame (accessories, e.g. the GEKA cap). `replace` = drawn **instead of** the base frame at the same size (full costumes, e.g. Algidone's BK costume — it recolours cape/logo/gloves/boots, so an overlay would leak red pixels from the base). In `replace` mode, a frame the skin doesn't provide falls back to the normal base frame (same missing-frame rule as `overlay`) |
-| 2026-09-24 | R3 (amendment) | Tile 5 reward identity | **Supersedes** the original R3 entry for tile 5. Reward is now id `"bk"`, name **"Costume BK"** (was `"kebab"`/"Costume kebab"). `ROAD_REWARDS[5]` updated; still `ready:false` (K3 flips it). Shipped 0.3_15 |
-| 2026-09-24 | K3 (early) | BK costume art uses the real Burger King logo | Owner decision: keep it as-is for now, same brand-parody style already used for the McDonald's cup art. Logged for the record; no code impact in K1b |
-| 2026-09-24 | K1b | Skin art delivery workflow | Skins arrive as an artist-drawn sheet on a template, plus a `<skin>_cells.json` describing the cell mapping, both under `refs/skins/<skin>/`. Cut by a new `refs/skins/cut_from_cells.py` (**not written yet** — no real sheet/cells.json exists to build or test it against; it gets written when the first skin sheet actually arrives, likely at the start of K2). This **replaces** `tools/cut_sprites.py` as the skin-specific cutting workflow — that tool stays as-is for its original (non-skin) reference-sheet cutting use. Documented in §10.6 |
-| 2026-09-24 | K1b | Dev-only skin test tool | A debug-only skin toggle in the dev panel, both modes: `overlay` mode draws a magenta outline + corner cross at each frame's exact bounds (so alignment is visually verifiable); `replace` mode draws the base frame tinted a clearly-different magenta/blue hue. Never written to `S.p.ch[*].skin` or any persisted state — a plain in-memory variable (`DEV_SKIN_TEST`), so it's automatically never saved. Gated on `devOn`; invisible and inert with dev mode off |
-| 2026-09-24 | K1b (post-review) | `drawMiniPlaceholder`'s hardcoded-to-roccia icon | **Confirmed intentional** — it's the "Mangiaroccia" mini-game brand icon, not a per-character portrait. Left unskinned, settled, no further action |
-| 2026-09-24 | K2 | GEKA render mode | **Supersedes** the K1b default (§10.6 said `overlay`). The owner's actual art is full heads drawn with the cap already on, so GEKA ships as `mode:"replace"` like BK, not `overlay` |
-| 2026-09-24 | K2/K3 | Pre-cut skin delivery format | New preferred workflow (documented in §10.6): a skin can arrive **pre-cut** as `refs/skins/<skin>/frames/sk_<skin>_<frameKey>.png` + `<skin>_frames.json` (`mode`, and per frame `file,w,h,base_w,base_h,ox,oy`). The template-sheet + `<skin>_cells.json` + `cut_from_cells.py` kit (§10.9 K1b) stays as an optional alternative when a skin isn't pre-cut |
-| 2026-09-24 | C1 | Screen vs modal | **Full screen**, `screen="cust"` (`renderCust`/`bindCust`), not a modal — matches the other full pages (Lista desideri, Opzioni, Percorso) rather than the smaller `openModal()` popups |
-| 2026-09-24 | K2 | Oversized-frame offset draw math | Implemented exactly as specified: `sx=dw/base_w, sy=dh/base_h` from the base call's own destination rect; skin frame drawn at `dx-ox*sx, dy-oy*sy`, size `skinW*sx × skinH*sy`. When the caller has applied a horizontal flip, the offset is mirrored as `skinW-base_w-ox` before the above math, so art that extends past one edge of the base frame (e.g. a cap brim) stays on the correct side once mirrored. Verified visually: the up-facing cap (large `oy`) sits correctly above the head, and the left-facing (mirrored) cap doesn't jump to the wrong side |
-| 2026-09-24 | K-chunks (post-K3) | The 3 procedural places flagged in `SPRITE_INVENTORY.md` | **Settled — no skin needed**, closing the "pending owner decision" flag from K1b. Both eating icons draw the **item being eaten** (rock/snack), not the character, so there's nothing on the character for a skin to touch. The Acciaio ring/sweep effect is drawn on top of whatever `drawTinted` already rendered — since the skin is part of that rendered character (K1b/K2), the effect already applies to a costumed character with no further work. Marked settled in `SPRITE_INVENTORY.md` |
-| 2026-09-24 | Roadmap (verification) | Tile 3 unlock condition re-confirmed | Re-checked directly against `roadUnlocked(3)` (index.html): it returns `!!(S.p.pr&&S.p.pr.seen)` **exclusively** — a real professor battle — and never falls through to the girone-count path (`roadGir()>=n`), which only regular tiles use. No bug; the K2 changelog/report's "girone threshold → popup" phrasing was loose (that test happened to set a girone count alongside `S.p.pr.seen`, but only the latter gates tile 3) |
-| 2026-09-24 | M0 Q1 | Mini-game + Giochi card name | **"Ferma Algidone!"** (replaces the working title "Coccia" as the player-facing name). Used for both the mini-game itself and its Giochi card unless a later chunk says the card needs a shorter/different label (El Gamblador's card is a single word, "Rocciamon"'s card differs from the professor mini-game's own name, so there's precedent either way — ask again at M8 if it needs to diverge) |
-| 2026-09-24 | M0 Q2 | Unlock & entry | Hybrid: a **low-rate random encounter from girone 5 onward** (same trigger shape as El Gamblador's own girone-5+ probabilistic check), with a **guaranteed forced first encounter by girone 10** if it hasn't randomly happened yet. Replayable from the Giochi card afterward, same as every other mini-game. Exact random-encounter rate **not yet specified** — El Gamblador's own rate (15% per eligible girone, `Math.random()<.15`) is a plausible starting point but needs its own confirmation, likely at M8 balance time, not M0 |
-| 2026-09-24 | M0 Q3 | Floor count for the first ship | **Fewer floors to start (2-3)**, expand later in a follow-up chunk once the core loop is proven. Producer order for the first 2-3 still needs picking (Q3's full producer list wasn't answered yet — floor *count* was, not the *names*) |
-| 2026-09-24 | M0 Q11 | Controls & orientation | **Portrait**, on-screen d-pad + jump button — matches every other screen in the game (maze, El Gamblador, professor battles all portrait) and matches classic arcade Donkey Kong's own cabinet orientation. Decides the layout of every M0 demo from here on |
-| 2026-09-24 | M0 Q3 (producers) | Floor/producer order for the first ship | **Coccia → Macelleria → Fabbrica di salsicce** (3 floors: the restaurant, then a butcher shop, then a full sausage factory — a visible escalation in scale each floor, matching "a more important meat producer" each time). Bigger producers (intensive farm, etc.) are a later expansion, not v1 |
-| 2026-09-24 | M0 Q4 | Stage mechanics per floor | **One new classic-DK element per floor**: floor 1 "Coccia" stays girders + ladders only (as already prototyped in D1/D3); floor 2 "Macelleria" adds conveyor belts; floor 3 "Fabbrica di salsicce" adds elevators or rivets-to-remove as the finale gimmick (which of the two still open, decide when that floor is actually built) |
-| 2026-09-24 | M0 Q7 | Hammer-equivalent & Acciaio usability | **Neither.** No smash pickup — pure walk/climb/jump/dodge, like most of classic DK. Acciaio (and Cinghiale) stay **maze-only**, disabled in this mini-game, consistent with El Gamblador and the professor battle already being independent of maze abilities |
-| 2026-09-24 | M0 Q6 | Stock bar behaviour | **Steady timer**, like DK's own bonus countdown — drains at a constant rate for the whole floor, resets each floor, empty = lose a life. Exact drain rate/duration not yet specified (balance detail for M4/M9, not M0) |
-| 2026-09-24 | M0 Q5 (round 3) | Item behaviours | **Salsicce**: roll along girders like DK barrels, and sometimes drop down a ladder at random; jumping over one scores. **Porchetta**: big, slow, cannot be jumped — dodge via ladder or timing only. **Pezzi di carne**: bounce like DK springs, introduced from floor 3. **Grill**: a sausage that reaches the grill at the bottom spawns a flame enemy (DK oil-drum equivalent) |
-| 2026-09-24 | M0 Q5 (round 3) | Item variety per floor | Floor 1 Coccia: salsicce + occasional porchetta. Floor 2 Macelleria: adds meat riding the conveyor belts (Q4's per-floor mechanic). Floor 3 Fabbrica di salsicce: adds bouncing pezzi di carne + the grill's flame spawns |
-| 2026-09-24 | M0 Q8 | Lives, difficulty scaling, scoring | **3 lives.** Points for jumping over items; a stock-left bonus on reaching Algidone. Facile/Media/Difficile scale throw rate, item speed, and stock-timer speed (harder = faster on all three, consistent with the maze's own "harder rewards more" pattern) — exact multipliers are a balance detail for later, not M0 |
-| 2026-09-24 | M0 Q9 | Floor win sequence | Reach Algidone → short kick-out animation → an intro card for the next producer (mirrors the existing girone-intro card pattern in the maze). v1 ends after floor 3 with a final victory screen; a DK-style faster loop after that is explicitly **future** (§8), not v1 |
-| 2026-09-24 | M0 Q10 | Rewards | Sordi + exp via the **existing** reward formula (no new economy). New **"Minigiochi"** achievements (same category `min` as "Il banco trema", §10.9 R2): clear Coccia, clear all 3 floors, clear a floor without losing a life. Exact names still TBD (Italian, decided when M8 actually adds them) |
-| 2026-09-24 | M0 (round 3) | Run impact of the random encounter | Same shape as El Gamblador: triggers mid-run, doesn't end it. **Losing costs nothing** — no reward, run continues as if it hadn't happened. **Winning pays out** (sordi/exp/achievements per the row above) and the run continues afterward |
-| 2026-09-24 | M0 (round 3) | Roadmap tile 10 | **New milestone tile**, same pattern as tile 3 (professor) / tile 5 (blackjack). Unlock condition (asked, owner's own default confirmed): **first real clear of floor 1 "Coccia."** Reward stays `{type:"skin"?...}` **undefined** — behaves like a "?" tile (`ready:false`, "Premio in arrivo") until a reward is actually planned. **Not implemented now** — this is an M8 task, logged here only so the decision isn't lost |
-| 2026-09-24 | M0 (round 3) | Item art | Every item (salsicce, porchetta, pezzi di carne, flame, grill) stays a **coloured placeholder** through M0-M4. Real art requested only when M5/M6 actually start, with exact sizes/frames specified then — **nothing requested now** |
-
-| 2026-09-24 | M0-fix (DK death rules) | D2/D3/D5 were unplayable: player kept respawning and taking damage | Root causes found headless: (1) `checkCollisions` compared **x only**, so an item on *any* girder at the player's x counted as a hit; (2) every sausage lands on the bottom girder at x=20 and rolls across the spawn point, the flame could patrol it, and death cleared no items; (3) buffered jump overwrote `airStartY`, fall distance not reset on ladder grab. **Rules adopted (required for M2/M4):** death = short pause/blink (0.8 s) → clear ALL items/flames → respawn at start → 2 s blinking invulnerability → throws resume after 2.5 s; fall damage measured only from where the ground was left in free fall, reset on landing/ladder grab/respawn, threshold ≈1 floor (95 px); spawn zone safe (items on the bottom girder are harmless left of x=90, flames confined to x≥150); hits need vertical overlap on the same level, porchetta hitbox taller than a jump (still un-jumpable); stock 90 s per floor in the demo, refilled on respawn; reaching the goal zone next to Algidone shows "Piano completato!" and resets. Demo-only: "Invincibile" toggle, on-screen "Ultimo danno: <causa>" label |
-| 2026-09-24 | M0 Q12 | Climber art | **Reuse existing Uomo roccia frames** for walk/jump; only a small climb pair is requested from the owner later (at M5, pre-cut like skins). No full new set. Skins keep applying |
-| 2026-09-24 | M0 Q12 | Other art for the M5/M6 request list | Algidone throw + eat (incl. kicked-out), meat items (salsicce, porchetta, pezzi di carne, flame, grill), Coccia building/backdrop (asked first), Macelleria/Fabbrica di salsicce backdrops. Exact sizes/frames specified when M5/M6 start |
-| 2026-09-24 | M0 Q13 | Audio for M7 | Synth placeholders for a **basic SFX set** (jump, land, climb step, throw, hit/death, jumped-item ping, floor win) plus a **stock-low warning beep**. **No music** in v1 placeholders (music per floor / single loop not chosen). Real audio arrives later via submissions (A0 layer) |
-| 2026-09-24 | M0 | Demos D1–D5 status | D4 floor map (`05-floor-map.html`) shipped. All five demos exist; the question bank is fully asked. M0 awaits owner sign-off on D4 to close |
-| 2026-09-24 | M0 (sign-off) | M0-fix / D4 / stock | Playability fix **approved**. D4 floor map **accepted**. Stock timer: keep **90 s** as the default, tune in M9 |
-| 2026-09-24 | M0 Q12 (amendment, lean art) | Climber art | **Supersedes** the Q12 "small climb pair" row. Uomo roccia is **head only (no body/limbs)** and climbs using the existing **`fu0`–`fu3`** frames animated in code (alternating tilt/squash). Jump, death, kick-out (headbutt) and celebrate are **code-only on existing frames**. **No new climber art, no new GEKA frames** |
-| 2026-09-24 | M0 (skins) | Algidone as thrower vs skins | Algidone in this mini-game is an **NPC**: always drawn **plain**; the BK costume never shows on him (default; owner may overturn later) |
-| 2026-09-24 | M0-fix (promotion) | Safe spawn zone & walls | **Real design decisions for M3/M4, not demo-only hacks:** items harmless left of x=90 on the bottom girder, flames confined to x≥150, walls at the ends of the bottom girder (coordinates are the demos' 360-wide space; scale with the layout) |
-| 2026-09-24 | M0 (amendment to round 3 "item art") | Item art timing | **Supersedes** "placeholder through M0–M4": the art has arrived early (`refs/ferma_algidone/`). Use the **real art in whichever chunk first draws that thing**: M1 backdrop, M3 items, M4 stock pile, M5 Coccia card/kick-out, M6 floors 2–3. No placeholders where real art exists. Package committed on its own as `60c07bf` (web upload, no VERSION bump, `index.html` untouched) |
-| 2026-09-24 | M0 (art tracking) | 3 open art issues from the package README (owner decides; **do not edit/recolour/redraw/regenerate**) | (1) `fa_salsiccia` is pink/raw vs the brown/cooked sausage in Algidone's hands (`fa_alg_throw0-1`) — accept or owner regenerates. (2) `fa_alg_eat1`/`eat2`: face looks beardless/different — acceptable, owner may regenerate. (3) `fa_alg_kick1`: duplicate cap (still wearing one while another flies off) — comedic, minor. (Macelleria backdrop issue already resolved: regenerated 9:16.) Package validation also noted: the `project` string in `ferma_algidone_frames.json` has mojibake in its em dash — cosmetic, JSON is otherwise valid |
-| 2026-09-24 | 0.3_21 layout | Algidone position | **Algidone top right, facing left, mirrored at draw time** (`ctx.scale(-1,1)`; PNGs never edited; every `fa_alg_*` animation mirrors the same way, so mirrored text on his belt is expected). Items start from the right; top girder slopes down-left; goal zone beside him (215–275); ladder to the top at x=60. **Bottom girder flipped to slope down-right** (grill at bottom right is the sink; items never roll onto the spawn). Spawn, safe zone x<90, flame x≥150, walls and grill unchanged. Items dropping from girder 1's right end land at the grill edge (M3 detail) |
-| 2026-09-24 | M2 | Player implementation choices | Climber always Uomo roccia head-only (`drawFace`, GEKA hat via the skin hook, whatever character is selected). D3 physics values (`FA_PHYS`) kept as-is; ladder snap 28 px; grab only in the direction the ladder serves (up from `gBot`, down from `gTop`, never down onto a broken ladder). Walking off an edge falls; a girder can't be re-landed once left (the D3 demo's ±8 px landing margin let the player stand on an invisible extension of the girder end). Fall threshold 95 px unchanged, so the 107 px steps (g3-left→g2, g2-right→g1) are fatal — flagged to the owner, tune in M9. `faDie` is a stub (respawn + debug label) until M4 |
-| 2026-09-24 | 0.3_23 (M2 feedback) | Scale, threshold, climb view | Climber head 36 px + hitbox 22×31, Algidone ×0.6, world 360×600 (level shifted +40, gaps unchanged, top space for M4 HUD). **Fall threshold raised 95→115 px** (all single-floor drops survivable, 2-floor fatal; M9 may retune). Climb view: up=`fd`, down=`fu` (maze convention), last direction kept when still |
-| 2026-09-24 | 0.3_24 (M3) | Item engine choices | Items roll **downhill** (direction from the girder slope). Ladder drops use ladders that lead DOWN from the item's girder (D2 checked the wrong set). Porchetta hitbox 60 tall (un-jumpable), drawn ×0.5 (30×16) as instructed — looks smaller than its hitbox, flagged. Carne + grill/flame off on floor 1, on via dev button "+ carne/griglia". Player contact width vs items `hitw`=16 (body 22): forgiving, needed to keep a sausage jumpable after the +20% scale. `faDie` clears items, throws resume after 2.5 s |
-| 2026-09-24 | 0.3_25 (M3 feedback) | Controls, porchetta, windows, scale, grill, meat, building | **Controls** (Ferma Algidone! only): d-pad bottom-left (66 px buttons), big round yellow "SALTA" 104 px bottom-right, 40 px gap, separate pointer captures. **Amends round 3 "porchetta cannot be jumped": porchetta is now clearable** (hitbox = sprite 36×19, no invisible box); only with a running jump (standing is impossible), window ≈0.25 s; worth more points than a sausage (M4). **Ladder refuge:** climbing ≥~17 px up any ladder (regular or the short broken ones: 35 and 41 px of height) lets items pass underneath. Sausage standing-jump window ≈0.23 s (was 0.06–0.09) via contact width 10 (body 22), sausage hitbox r8×h14; jump apex/gravity unchanged. Items ×0.6. **Grill:** item slides into the grill, `fa_griglia1` flare + code smoke puff + sparks, glow settles; same hook spawns the floor-3 flame; on floor 1 (grill off) items still just exit. **Meat hop capped** to 34 px (`FA_MEAT_HOP`=200) so it never reaches the girder above; floor 3 may retune. **Building:** `fa_bld_coccia` is an in-level layer (order: backdrop → building → girders/ladders → items/Algidone/player → HUD), ×0.6, bottom on the top girder at x=270; world height 600→610 (level shifted +10, gaps unchanged) |
-| 2026-09-24 | 0.3_26 (M4) | HUD, stock, scoring, death, pause choices | HUD = D5 layout in the DOM bar (score · stock-pile icon + bar · 3 head icons · pause); stock pile = set A `fa_scorte0-3` (set B offered for comparison, not embedded). **Stock 90 s** steady, refilled on respawn/restart, empty = one life. **Death**: 0.8 s pause+flash → clear ALL → respawn → 2 s invulnerable blink (blocks hits, not falls/empty stock) → throws after 2.5 s grace. **Scores (D5 + choices)**: jump +10 sausage/meat, +20 flame, **+30 porchetta**; goal bonus floor(stock)×10. Algidone: eat 22 percent of cycles, angry on top two girders or stock under 25 percent. Game over "Scorte perse!" Riprova/Esci; win "Piano completato!" Rigioca/Esci; pause panel Riprendi/Esci; Esc/P/HUD button/visibilitychange. ✕ button removed |
-| 2026-09-24 | 0.3_27 (owner phone test of 0.3_25/0.3_26) | Accepted as-is | Death pause 0.8 s + 2 s blink, sausage/porchetta jump windows, items x0.6, stock pile set A, mirrored belt text, building x0.6, climb view up=`fd`/down=`fu`, no grill on floor 1, `kick1` double cap (kept, comedic) |
-| 2026-09-24 | 0.3_27 | Stock behaviour | **Amends M0 Q6 / M4:** stock keeps its value across deaths (no refill on respawn), resets only at floor start / Riprova / Rigioca. Each death: Algidone eats during the death pause and stock -10 s (clamp 0). Empty = **immediate game over** "Scorte perse!" regardless of lives. Hits/falls still cost one life. Drain paused in death pause + pause menu |
-| 2026-09-24 | 0.3_27 | Hit through girders | Root cause: box overlap only. Rule: an item hits only if no girder surface lies between its base and the player's feet (body centre on a ladder) at that x (`faSeparated`). Ladder-drop hits, refuge and jump windows unchanged |
-| 2026-09-24 | 0.3_27 | Eat frames | Draw path identical to the others; the difference is in the art. Only `fa_alg_eat0` is used; bite/chew animated in code. Art issue 2 stays open (owner may regenerate eat1/eat2). Cooked-sausage art: still waiting |
-| 2026-09-24 | M0 → M1 | M0 closed | All rounds/demos done and signed off; M1 (engine skeleton) starts |
-| 2026-09-24 | 0.3_34 (M7) | Owner phone test | Sounds great; **M7 signed off** |
-| 2026-09-24 | Scope | Audio submissions out of 0.4 | A1…An are **out of 0.4 scope**: they will arrive eventually and are processed after the 0.4 release. Row moved from the §10.8 chunk table to the §8 backlog (post-0.4) and removed from REL's dependencies (REL now needs M8a, M8b, M9) |
-| 2026-09-24 | M8 (**PROPOSED by Claude; SUPERSEDED 2026-09-25 by the two rows below**) | Six proposals | (1) **Encounter rate** 15 % per girone from girone 5, forced by girone 10; at most one mini-game per gap between gironi - El Gamblador first if both trigger, Ferma Algidone! waits for the next gap. (2) The 1/2/3-floor encounter count is **combined across both characters**. (3) **Giochi card replays = practice**: no sordi, exp, achievements or roadmap tile 10. (4) **Rewards**: existing reward formula, paid **per floor cleared**, real encounter wins only. (5) **Achievements** (category Minigiochi): "Fuori da Coccia!" (clear floor 1), "Algidone \u00e8 a terra" (clear all 3 floors), "Senza un graffio" (clear a floor without losing a life). (6) **M8 split** into M8a (entry, encounter rule, Giochi card, unlock popup, save migration, dev buttons) and M8b (rewards, the 3 achievements, roadmap tile 10 as "Premio in arrivo"). Already decided earlier (0.3_33): encounter = 1/2/3 floors by encounter number, no Riprova inside encounters, loss = no reward and the maze run continues |
-| 2026-09-25 | M8 (owner-confirmed, with amendments) | The six M8 proposals | **Confirmed** as proposed, amended: (1) **Encounter rate** 15 % from the gap after girone 5 using the existing gap logic (`bjAfterClear`); El Gamblador keeps his guaranteed girone-5 slot (only when `bjPrice>=50`), so Ferma's first roll is normally at girone 6+, and if El Gamblador skips girone 5 via the price gate Ferma may roll there. **No price gate for Ferma.** Forced when `enc===0` at the gap after girone 10. One mini-game per gap: El Gamblador first, **except a forced Ferma beats a random El Gamblador**. El Gamblador's own logic stays untouched. (2) The 1/2/3-floor count is combined across both characters (`S.p.fa.enc`, save-wide). (3) Giochi card replays = practice (no rewards, no tile 10). (4) **Amended: sordi/exp paid ONCE on encounter win, scaled by the floors required (existing formula x N)**, real wins only; **achievements + roadmap tile 10 fire when the feat happens, even if the encounter is lost later** (M8b). (5) Achievements "Fuori da Coccia!" / "Algidone è a terra" / "Senza un graffio" (category Minigiochi). (6) M8 split into M8a / M8b |
-| 2026-09-25 | M8a (0.3_35) | Decisions logged with the build | **Gap convention** = El Gamblador's (`G.stage` already incremented, so "the gap of girone N" = arriving at girone N). **Invite** = modal "Ferma Algidone!" (Algidone icon), "Non ora" except on the forced first-ever encounter, declining counts nothing, "Fermalo!" -> `enc++`, `seen=true` immediately. **Encounter** N = min(enc,3), floors 1..N; intermediate floors show Avanti only; last floor / final panel / game over show ONE "Continua"; pause "Esci" = loss; back to the maze like El Gamblador (state ready, 1.6 s), or the interlude card first when one was due. **Card G4**: real player gets one "Gioca" button (practice, 3 floors, Riprova); Sblocca tutto keeps its three floor buttons; icon = `fa_alg_idle0` mirrored x0.6. **Popup** `game:3` once ever. **Dev**: "Incontro 1/2/3", "Forza incontro" (one-shot, simulated encounter number cycles 1,2,3+); dev/test/SIM never touch `S.p.fa` or queue popups; dev/SIM runs never roll on their own |
-| 2026-09-25 | 0.3_35 (owner phone test) | Result | **OK.** Claude's three 0.3_35 choices accepted: intermediate encounter floors show only "Avanti" (Esci from the pause menu = loss); the real Giochi card has a single "Gioca" button (practice from floor 1); the popup double-punctuation fix ("Ferma Algidone!.") |
-| 2026-09-25 | M8b (0.3_36) | Rewards, achievements, tile 10 (owner decisions) | **Amends proposal 4 ("formula x N")**: on an encounter WIN only, the encounter's final score (stock bonus included) is added to the maze run's score, and the normal end-of-run payout converts it (difficulty + limiter as usual); loss/Esci = nothing; practice, dev, test and SIM never pay. Achievements ("Fuori da Coccia!", "Algidone è a terra", "Senza un graffio", category Minigiochi, total 34), real encounters only, fire the moment the feat happens even if the encounter is lost later; if a toast would cover gameplay, show it on the next panel (built: they fire at the floor-clear animation, popup clear of the panel). Tile 10: unlock = first real floor-1 clear (`S.p.fa.f1`), no longer the girone count; behaves like a "?" tile ("Premio in arrivo", not claimable, no pulse, no popup), no hint text anywhere; face = `fa_salsiccia`, "Sblocca tutto" shows it unlocked. Balance is M9 |
-| 2026-09-25 | M8b (0.3_36) | Choices made while building (Claude) | Achievement rewards (sordi/exp): m2 150/90, m3 400/240, m4 250/150 (placeholders for M9). "Senza un graffio" = no life lost on that floor (`FA.floorLives`). Tile 10 face drawn at x1 (in game x0.5) because the tile is bigger. The encounter score is paid when the last floor's win panel appears (not at Continua), so quitting from that panel keeps it |
-| 2026-09-25 | 0.3_36 (owner phone test) | Result | **OK.** Claude's 0.3_36 choices accepted: the encounter score is paid at the last win panel, tile 10 face at x1, the three achievement sordi/exp values stay as M9 placeholders |
-| 2026-09-25 | M9 | Split | M9 is split into **M9a** (report only: `refs/ferma_algidone/M9_BALANCE.md`, no build, no VERSION bump) and **M9b** (build from the owner's picks). M9a delivered: Ferma does not read the difficulty; stock bonus ≈ 80 % of an encounter score; effective encounter rate 12.75 %; controls overlap nothing at 360×640 / 360×800 / 390×844, but the pause button (38) and Ferma panel/invite buttons (38) / Gioca (30) are under 44 px |
-| 2026-09-25 | M9b (owner picks from M9_BALANCE.md section 3) | Picks | **1 YES** difficulty scaling for Ferma (item speed x0.88 / x1 / x1.12, throw pauses x1.25 / x1 / x0.85, stock drain x0.85 / x1 / x1.15; Media = today's behaviour; encounters use the run's difficulty, practice / Giochi card / dev use the menu's); **2 keep 90 s**; **3 no** (no N=3 payout bonus); **4 YES** "Algidone è a terra" 400 -> 600 sordi (exp 240 -> 360); **5 no** (pad stays 66 px); **6 keep** the 0.7 s belt warning. Encounter rate unchanged (effective 12.75 %, forced at girone 10). Every other value in the report: keep. Tap targets (Ferma only, global `.btn` untouched): Ferma panel buttons, invite buttons and Giochi "Gioca" >= 44 px tall, Ferma pause 44x44 |
-| 2026-09-25 | M9a report | Limits of the numbers | The maze clear time (32-76 s) is a nearest-neighbour lower bound (the pellet-eating bot stalled, no measured human play), and the maze girone score (~1,500-2,500) and encounter score ranges (N=1 500-900, N=2 1,000-1,700, N=3 1,500-2,600) are estimates; only the instant-win maximums (880 / 1,770 / 2,660) were measured. Revisit after real play |
-| 2026-09-25 | M9b (0.3_37) | Choice made while building (Claude) | The achievement difficulty multiplier for a real encounter now uses the run's difficulty (`G.diff`), like the encounter itself, instead of the menu's. Belts are not scaled by the difficulty (the pick listed only item speed, throw pauses and stock drain); flames count as items and are scaled |
-| 2026-09-25 | 0.3_37 (owner phone test) | Result | **OK.** Claude's 0.3_37 choices accepted: belts are not scaled by the difficulty; the achievement multiplier of a real encounter uses the run's difficulty (`G.diff`). **M9 done. No further 0.4 chunks** |
-| 2026-09-25 | REL | Release 0.4 | `const VERSION="0.4"`, root `VERSION` file "0.4", tag `v0.4`. Release smoke test 23/23 (dev off, old 0.3 save, desktop + mobile). `index.html` 5,625,868 bytes vs 4,311,167 for 0.3 (+1,314,701). Rocciamon smoke: the professor battle ends either at the menu (win) or at the splash (throw-out after a loss), both clean. Post-0.4: audio submissions A1…An and the 0.5 backlog (§8) |
-| 2026-09-24 | 0.3_34 (owner phone test) | Bug: no audio in dev runs of Ferma Algidone! | Everything else fine. Root cause: the mini-game had **no audio at all yet** (M7 unbuilt); nothing was gated by dev/test/SIM. Rule confirmed: sound plays in dev runs, `SIM()` and "Sblocca tutto" exactly as in a real run (dev only blocks saving, never audio). Built as M7 in 0.3_34 |
-| 2026-09-24 | 0.3_34 (M7) | Audio slots and export targets (**list for DEVELOPERS.md at REL**) | Bucket `SND.fa`, IDB `snd_fa_<slot>`, target **`sound.fa.<slot>`** (shared) for: `jump`, `land`, `climb`, `throw`, `hit`, `ping`, `win`, `low`, `bolt`, `belt`, `flame`, `collapse` (labels in `FA_SLOTS`). File name convention like the others: `sound_fa_jump.mp3`. No music. `low` = one beep per 2 s under 25 percent stock; `belt` fires with the red chevron blink; `win` is used for a floor exit and the final victory; `collapse` is the ~1.6 s rumble of the final collapse |
-| 2026-09-24 | 0.3_33 (owner phone test of 0.3_31/0.3_32) | Accepted | Gameplay good. Flames climbing to the second girder accepted. Headbutt kick-out removal in 0.3_32 accepted (recoverable from 0.3_28, noted in §8). Future Giocatore cards read "In arrivo" under Sblocca tutto |
-| 2026-09-24 | 0.3_33 | **Random encounters (for M8, not built yet)** | An encounter asks for N floors to complete: **1 the first time, 2 the second, 3 from the third on**. **No Riprova inside encounters**; game over = encounter lost, no reward, the maze run continues (M0 round 3 rule unchanged). Covers the §8 "first encounter ends at floor 1, harder later" idea |
-| 2026-09-24 | 0.3_33 | Building scale | Buildings match Coccia's on-screen width (~176 px): Macelleria x0.826, Fabbrica x0.629 (both centred x=270); Algidone stays x0.6 on every floor. The x0.6 Macelleria looked crammed next to him |
-| 2026-09-24 | 0.3_33 | **Amends 0.3_30 "Riprova = current floor"** | Game over on any floor: Riprova **always restarts from floor 1** (3 lives, score reset). Rigioca also from floor 1 |
-| 2026-09-24 | 0.3_32 (M6b) | Floor 3 mechanic and values (proposed, tunable in M9) | **Bolts** (closes M0 Q4): 8 (2 on each of rows 1-4), +50 each; picked by walking over them on the ground; a 26 px hole opens 0.5 s later (standing still there = you fall); items fall through holes; holes persist across deaths; last bolt = win, no goal zone. **Grill** ON the bottom girder at its low end, x1.2, obstacle for the player; every item reaching it spawns a flame (max 3, speed 60, life 6 s, patrol x 150..grill, may climb the ladder x=210 to row 1 only, 35 percent per pass). Meat hop unchanged (34 px, ~5 px clearance). Weights 3/1/2, throw pause 1.4-2.6 s |
-| 2026-09-24 | 0.3_32 (M6b) | Final win | Last bolt -> 3.7 s collapse (shake 1 s, girders fall top-first except the bottom one and the player's, Algidone falls with `kick1` to the bottom girder x=190, `kick2` sitting dazed, climber hops) -> panel "Algidone è a terra!" / "Coccia, Macelleria e Fabbrica sono di nuovo al sicuro." + total score and stock bonus; Rigioca (from floor 1) / Esci. **Supersedes the M5 headbutt kick-out** (removed). Rewards/achievements stay M8. Floor-3 intro line: "Algidone ha rilevato la Fabbrica di salsicce! Svita tutti i bulloni: senza, la sua fabbrica crolla." |
-| 2026-09-24 | 0.3_32 (M6b) | Engine fixes | Falling items land on the first supporting girder below at their x (skip shorter girders/holes); belt-riding items never go backwards (minimum 12 px/s toward the exit end; porchetta 34 against a reversing 45 px/s belt used to drift back off the left end). Amends the 0.3_30 belt rule "own speed + belt" |
-| 2026-09-24 | 0.3_31 (owner phone test of 0.3_29/0.3_30) | Accepted | All OK. Riprova = current floor (confirmed) |
-| 2026-09-24 | 0.3_31 | Row 2 left end | Player-only invisible stop at the girder's left end (`lv.stopLeft`), items still drop off; jumping there stays normal |
-| 2026-09-24 | 0.3_31 | Floor 3 decisions (for M6b) | **Grill** sits ON the bottom girder at its low end (like DK's oil drum), x1.2 (about 54x40), no world growth (supersedes the "grill under the bottom girder" open point). **Mechanic (closes M0 Q4): rivets/bolts, not elevators**: removing all of them collapses the structure -> Algidone falls -> final kick-out |
-| 2026-09-24 | 0.3_31 | Costume BK availability | Not a bug: `S.p.gam.won` counts hands won only in the REAL El Gamblador encounter (girone 5+); the Giochi card, dev and sim never count. Path verified end to end. Fixed the misleading locked-tile toast for tiles 3/5 |
-| 2026-09-24 | 0.3_31 | **Amends §10.0 "dev never unlocks"** | The dev action "Sblocca tutto" is an overlay (never writes the real save, never queues popups) and must unlock EVERYTHING while active: skins, roadmap tiles, Giochi cards incl. Rocciamon and Ferma Algidone! (with floor buttons), assets/ghosts, characters. This one explicit dev action only; dev runs and other SIM behaviour still never write progress |
-| 2026-09-24 | 0.3_31 | Reward previews | Every skin reward preview (gift pop-out, milestone popup) draws the character wearing that skin (BK on Algidone, GEKA on Uomo roccia) |
-| 2026-09-24 | 0.3_30 (M6a) | Floor progression | Floor win panel: **Avanti** (next floor exists) or Rigioca (last floor). Score and lives carry; stock 90 s per floor. Riprova = current floor from entry (3 lives, score as on entry); Rigioca = from floor 1. Floor-2 intro line: "Algidone ha rilevato la Macelleria! I nastri cambiano verso quando meno te lo aspetti: tieni il passo!" |
-| 2026-09-24 | 0.3_30 (M6a) | Conveyor design (proposed values, tunable in M9) | Rows 2 and 4 of floor 2 are flat belts; belt 45 px/s; row 2 reverses every 5 s with a 0.7 s chevron-blink warning, row 4 constant toward the exit end. Belt carries player (clamped 6 px from the ends) and items (own speed + belt, never stalls). Sloped rows as floor 1. Floor-2 meat: no hop, slides/rides belts (bounce returns on floor 3); throw weights 3/1/2, pause 1.4-2.6 s |
-| 2026-09-24 | 0.3_29 (owner phone test of 0.3_27/0.3_28) | Accepted as-is | Through-girder fix, stock no-refill + 10 s death bite + empty = game over, intro card, 0.3_28 timings |
-| 2026-09-24 | 0.3_29 | Eating | Owner wants the real `fa_alg_eat0-2` animation back even though eat1/eat2 look different (beardless). Improving it is a future patch (§8). Art issue 2 stays open; the death bite uses the full animation |
-| 2026-09-24 | 0.3_29 | Cooked sausage | Owner replaced `fa_salsiccia` (77x29, horizontal, cut from the `fa_bld_fabbrica` sign, approved). Drawn x0.5, no rotation, hitbox unchanged. Standing-jump window re-measured 0.229 s. **Art issue 1 resolved** |
-| 2026-09-24 | 0.3_29 | Ladder grab | Tighter: centre within +-8 px (`FA_PHYS.snap` 28 -> 8), then snap. Amends the M2 "ladder snap 28 px" |
-| 2026-09-24 | 0.3_29 | Desktop keys | Up/W = climb inside a ladder's grab zone, otherwise jump (key press only). Space still jumps. Mobile unchanged |
-| 2026-09-24 | 0.3_29 | Extra bottom row | Empty space below the level (floor 1, no grill) 115 px on 390x844 / 107 px on 360x800 vs a gap of 85 (87 / 81 px): added without growing the world. Slopes alternate: new bottom down-right, old bottom down-left starting at x=110 (items drop at x=110, never on the spawn), new ladder x=210. Second girder's left part is now a fatal chasm. **Floor 3's grill does not fit under the new bottom in 610: decide in M6b** |
-| 2026-09-24 | 0.3_29 | **Amends M0 Q9 (floor win)** | Floors 1-2: Algidone **climbs away** up a ladder to the next level (code-only, `fa_alg_throw1`, ~2.5 s), no kick-out. The kick-out is the final win on floor 3 only (`lv.last`); dev preview "Test cacciata finale". Future (§8): the first-ever encounter might end after floor 1 with the kick-out, later encounters progressively harder |
-| 2026-09-24 | 0.3_28 (M5) | Intro card + kick-out choices | Card = maze-style panel (`fa_bld_coccia` x1, "Piano 1 — Coccia", blurb), 2.5 s auto-close, tap/Enter skips, shown at start/Riprova/Rigioca not on respawn. Kick-out 3.1 s: headbutt lunge -> `kick0` -> `kick1` arc to the right (peak 35 px, lands x=320 so it stays in frame) -> `kick2` dazed -> celebrate hops; stock frozen, items cleared, no hits. Stock bonus counts up on the panel. Dev button "Test uscita Algidone" |
+### 10.4 Decisions log
+| Date | Chunk | Decision |
+|---|---|---|
+| 2026-09-25 | all | Release 0.4.5 = DEV tools. Builds 0.4_NN, release "0.4.5", tag v0.4.5, then 0.4.5_N on the dev branch. Player-facing items go to 0.5 |
+| 2026-09-25 | I2 | Branches: `main` = stable (site root), `dev` = Claude Code's pushes (site /dev/). Release = merge dev → main |
+| 2026-09-25 | F6 | Bug reports only for logged-in devs in 0.4.5. Player reporting is built but flag off; enabled in 0.5 with public login. No anonymous sign-in |
+| 2026-09-25 | F6 | Triage file = bugs/BUGS.md with sections NEW / TO REVIEW (suspected duplicates of known bugs still go to TO REVIEW, with a pointer to the backlog item) / FIXED. Not in CLAUDE.md |
+| 2026-09-25 | F3 | Sprites and audio keep the GitHub PR upload; bug reports go through Firestore; how text edits travel is decided in the F3 spec |
+| 2026-09-25 | F5 | Text is identified by screen id + current text + position, not by moving every string into a table. Canvas text (battle, dialogues, Ferma HUD) via hooks in the dialogue/draw functions. Pen icons are removed when F5 ships; their colour/scale fields move into the long-press popup |
+| 2026-09-25 | F4 | The sheet export also includes procedural frames rendered as reference images. An uploaded skin gets a live local preview in dev mode (never saved to progress) |
+| 2026-09-25 | REQ | Tile-10 reward skin is for Uomo roccia (the Ferma Algidone! climber). Name and art from the owner |
+| 2026-09-25 | I3 | Screens library = Playwright PNGs in the repo (not Figma), regenerated at each release |
+| 2026-09-25 | F1 | Usernames map to <username>@mangiasassi.invalid. Old hardcoded local credentials are retired (they are readable in the public source); the owner set new passwords in the console |
+| 2026-09-25 | F1 | No offline backup login: if Firebase is unreachable dev mode is unavailable (a session already logged in stays valid offline) |
 
 **Built-in audio slots** (filled by A-chunks):
 
 | Slot key | Source submission | Build |
 |---|---|---|
 | | | |
+
+v0.4 plan + decisions log: docs/releases/0.4.md
