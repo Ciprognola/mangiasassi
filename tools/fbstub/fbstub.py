@@ -7,8 +7,9 @@ USERS = {"master": {"pw": "pw-master", "role": "master"}, "dev3": {"pw": "pw-dev
          "norole": {"pw": "pw-norole", "role": None}}  # fake passwords, test only
 
 
-def install(ctx, users=None, offline=False, mode="stub", session=None, app="mgs"):
+def install(ctx, users=None, offline=False, mode="stub", session=None, app="mgs", **flags):
     cfg = {"users": users or USERS, "offline": offline}
+    cfg.update(flags)  # e.g. denyBugs=True, hangBugs=True (F6a)
     init = "window.__fbs=%s;" % json.dumps(cfg)
     if session:  # an already signed-in user for the given Firebase app name
         init += "localStorage.setItem('__fbstub_user_%s',%s);" % (app, json.dumps(session))

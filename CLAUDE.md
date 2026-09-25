@@ -192,6 +192,9 @@ Tap **"Build locale" five times** in Options to open the login modal (username +
 The SDK (`fbLoad`, v12.19.0 from gstatic) is loaded with `import()` only when the login modal opens or when the dev cache says a session exists: the game never waits for it (8 s timeout = offline). Two separate Firebase sessions per site (app name `mgs` / `mgs_dev`). Cache `mgs_dev` (`mgs_dev_dev` on /dev/) = `{role,acct,fb:true,devOn}`: restored at load, verified in the background (`fbVerify`: no user / role removed → dev off + SIM off; unreachable → the session stays valid). A cache without `fb:true` (old local login) is cleared. `file://` builds cannot log in.
 Developer options must be **completely invisible** when the dev toggle is off; Sblocca tutto ends with dev mode. Dev jump/map runs, `PR.test` battles and Ferma tests save no progress and never set real unlock flags (`seen`, achievements). Headless tests: `tools/fbstub/` (stub SDK + `test_f1.py`; never real credentials).
 
+### Segnala un bug (F6a) and `screenId()`
+`canReport()` (`!!role || (BUG_PLAYERS && bugPlayerSession())`, `BUG_PLAYERS=false` until 0.5, `bugPlayerSession()` is the F2 hook) → `bugBtn(cls)` puts the icon `#bugb` in every top bar (menu `.brand`, `.top` screens, maze/BJ/Ferma HUD, professor `.prs`, over screen); one capture-phase click listener opens `bugOpen()`. `bugFreeze()` freezes the running game like its pause but without the pause menu (maze `G.state="pause"`, BJ `bjPauseT`, Ferma `FA.paused`, professor `timeFreeze()` = frozen `performance.now` + pausable `prSleep` records in `PR.sp`) and returns the resume function; while the popup is open a capture-phase key handler stops every key. Send: `bugSubmit` → `bugPost` (Firestore `bugs`, fields exactly as `firestore.rules`) or the local queue `mgs_bugq` (`_dev` on the dev site, max 20, `meta.qts` = original time), `bugFlush` on verify/login, `online` event and after each send; permission errors keep the report queued and stop flushing (`BUG_NOFLUSH`). `screenId()` maps the current state to a canonical id of `refs/screens/SCREENS.md` (table `SCREEN_IDS`; base id when the variant has none, `unknown:<screen>` otherwise); F5 reuses it. Tests: `tools/fbstub/test_f6.py`.
+
 ### Ferma Algidone! (screen fa)
 
 **Ferma Algidone! code map** (`index.html`, `grep -n 'FA_\|fa[A-Z]'`): data `FA_LEVELS[0..2]` (fields: `title/blurb/introArt`, `girders` with optional `flow`/`conveyor:{v,rev,dir}`, `ladders`, `bolts`, `grill:{x1}`, `stopLeft`, `items` incl. `meatHop`/`grill`/`flameClimb`, `last`, `goal` (floors 1-2 only));
@@ -471,7 +474,7 @@ Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 | E1a | Dev-mode audit report (refs/dev/DEV_AUDIT.md), no build | — | Sonnet · medium | done (report) |
 | E1b | Dev-mode cleanup from the owner's picks | E1a picks | Sonnet · medium | done (0.4_2) |
 | F1 | Firebase dev login, roles, Cambia password, old local login removed | — | Sonnet · high | done (0.4_3) |
-| F6a | Bug report button + popup, devs only, player path flag off | F1, I3 | Sonnet · medium | todo |
+| F6a | Bug report button + popup, devs only, player path flag off | F1, I3 | Sonnet · medium | done (0.4_4) |
 | F6b | Bug pipeline: GitHub Action → bugs/inbox/, triage into bugs/BUGS.md | F6a, service account (owner) | Sonnet · medium | todo |
 | F3 | Submission format v2 + export code + validator + DEVELOPERS.md | I3, spec from Claude chat | Sonnet · high | todo |
 | F5 | Text edit by 3 s long-press, pens removed | F3, E1b | Sonnet · high | todo |
@@ -500,6 +503,7 @@ Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 | 2026-09-25 | E1b | Owner picks from DEV_AUDIT.md: yes to all 16. Built 3–10, 12, 14–16; 1–2 go with F1, 11 with F3, 13 after F4b. Sblocca tutto ends with dev mode (fixes Trello #12) |
 | 2026-09-25 | E1b | Unrequested extras accepted: 2 extra test maps, all maps start at girone 4, accordion renamed Anteprime. Standing rule: no extras outside the brief, propose them in the report |
 | 2026-09-25 | F1 | Separate Firebase sessions per site (app name mgs / mgs_dev); dev1–dev5 behave as the old dev1; file:// builds can't log in, devs work from /dev/; old local login and S.creds removed |
+| 2026-09-25 | F6a | Icon in every top bar, devs only (BUG_PLAYERS=false until 0.5); auto info = screen id, version, character, girone, difficulty, device, time, account; no screenshot; offline queue (max 20) sent later |
 | 2026-09-25 | F1 | No offline backup login: if Firebase is unreachable dev mode is unavailable (a session already logged in stays valid offline) |
 
 **Built-in audio slots** (filled by A-chunks):

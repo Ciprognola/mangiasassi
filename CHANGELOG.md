@@ -1777,3 +1777,13 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Tests: `tools/fbstub/` (stub SDK, `test_f1.py`, 34 checks); `capture.py` seeds a stub session for dev screens (re-captured `opt-login-modal`, `dev-tab`, `dev-acc-account`).
 - DEVELOPERS.md: how to log in and change the password.
 - Size: index.html 5,629,738 bytes (+5,255 vs 0.4_2, LF-normalised).
+
+## 0.4_4 — 2026-09-25
+
+- F6a "Segnala un bug": bug icon (code-drawn, 44+ px tap area) in the top bar of every screen for logged-in devs (menu, Lista desideri, Opzioni, Percorso, Obiettivi, Personalizza, maze HUD, El Gamblador, Ferma Algidone!, professor scenes/battle, Partita finita); hidden when logged out; player path behind `BUG_PLAYERS=false` (0.5, hook `bugPlayerSession()` for F2).
+- Tapping it freezes the game like its pause without the pause menu (maze, El Gamblador, Ferma; professor via a frozen clock and pausable sleeps); popup "Hai un insetto?" (1000 chars + counter, Indietro / Invia, Esc = Indietro, keys blocked from the game).
+- Send to Firestore `bugs` (uid, text, screen, version, char, ts, ua, meta{acct,site,girone,diff,viewport}); offline / failed sends go to the local queue `mgs_bugq` (max 20, `meta.qts` keeps the original time), flushed on load (after verification), `online`, and after each send; permission errors keep the report queued without a retry loop.
+- `screenId()`: state → canonical screen id (one table, `SCREEN_IDS`); reused by F5.
+- Tests: `tools/fbstub/test_f6.py` (46 checks; stub extended with `addDoc`/`collection`/`serverTimestamp`, deny/hang flags). Screens: new `bug-popup`; library re-captured (icon now visible in the dev screens).
+- CSS: `.btn.ok` (green), `.btn:disabled`.
+- Size: index.html 5,641,827 bytes (+12,089 vs 0.4_3, LF-normalised).

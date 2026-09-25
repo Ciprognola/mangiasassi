@@ -217,6 +217,20 @@ html{-webkit-text-size-adjust:100%}
 .btn:active{transform:translateY(2px)}
 .btn.ghost{background:var(--paper);color:var(--ink)}
 .btn.red{background:var(--alarm);color:#fff}
+.btn.ok{background:#3fae5f;color:#04210f}
+.btn:disabled{opacity:.45}
+/* segnala un bug (F6a): icona nelle barre in alto, area di tocco 44+ px grazie al ::after */
+.bugb{position:relative;display:grid;place-items:center;flex:none;width:38px;height:38px;border-radius:10px;background:var(--paper);color:#ffb3a8;box-shadow:0 3px 0 rgba(0,0,0,.35)}
+.bugb::after{content:"";position:absolute;top:-4px;right:-4px;bottom:-4px;left:-4px}
+.brand .bugb{position:absolute;top:9px;right:11px;width:36px;height:36px;border-radius:50%;z-index:3}
+.brand .bugb.rr{right:51px}
+.top .bugb{width:44px;height:44px}
+#fahud .bugb{width:44px;height:44px}
+.bugb.fixr{position:absolute;top:8px;right:8px;z-index:6}
+.prs .bugb{position:absolute;top:8px;right:8px;z-index:6;width:40px;height:40px}
+.prs .bugb.prt{right:150px}
+.bugbox textarea{min-height:120px;resize:none;font-size:.95rem}
+.bugbox .cnt{display:block;text-align:right;color:var(--mute);margin-top:4px}
 .btn[disabled]{opacity:.4;pointer-events:none}
 .btn.sm{padding:7px 11px;font-size:.75rem}
 .tabs{display:flex;gap:6px;margin-bottom:12px}
@@ -547,11 +561,164 @@ async function fbVerify(){ // controllo in background della sessione in cache: n
     const fb=await fbLoad();await fb.auth.authStateReady();
     const u=fb.auth.currentUser;if(!u)return fbDrop();
     const r=await fbRoleOf(fb,u);if(!r)return fbDrop();
+    bugFlush();
     const nr=r==="master"?"master":"dev1";
     if(nr!==role||r!==acct){if(role==="master"&&nr!=="master")simOff();role=nr;acct=r;persistDev();if(["opt"].includes(screen))render()}
   }catch(e){}
 }
 if(role)setTimeout(fbVerify,0);
+
+/* ============ SEGNALA UN BUG (F6a) ============
+   Icona nella barra in alto di ogni schermata (solo sviluppatori con la sessione Firebase; i giocatori quando BUG_PLAYERS sara' true, 0.5).
+   Tocco = il gioco si ferma come nella sua pausa ma senza il menu di pausa, popup con il testo, "Indietro" riprende esattamente da dove era.
+   Invio: Firestore `bugs` (campi ammessi da firestore.rules); senza rete la segnalazione va in una coda locale (max 20) e parte appena si e' online. */
+const BUG_PLAYERS=false; // 0.5: si attiva insieme al login dei giocatori (F2)
+const bugPlayerSession=()=>null; // aggancio per F2: sessione Firebase di un giocatore (oggi non esiste)
+const canReport=()=>!!role||(BUG_PLAYERS&&!!bugPlayerSession());
+const BUG_SVG='<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><ellipse cx="12" cy="14" rx="4" ry="5.5" stroke="none"/><circle cx="12" cy="7" r="2.2" stroke="none"/><path fill="none" d="M9.5 5 8 3M14.5 5 16 3M8 11 4.5 9.5M8 14.5H4M8.5 18 5 20M16 11l3.5-1.5M16 14.5h4M15.5 18l3.5 2"/></svg>';
+const bugBtn=cls=>canReport()?`<button class="bugb ${cls||""}" id="bugb" aria-label="Segnala un bug">${BUG_SVG}</button>`:"";
+const BUGQ_KEY=IS_DEVSITE?"mgs_bugq_dev":"mgs_bugq",BUG_MAX=1000,BUG_QMAX=20;
+let BUG=null,BUG_NOFLUSH=false,bugFlushing=false;
+
+/* screenId(): id canonico della schermata (refs/screens/SCREENS.md). Una sola tabella leggibile; quando la variante esatta non ha un id
+   proprio si usa l'id base; stato sconosciuto -> "unknown:<screen>". Riusabile da F5. */
+function screenId(){
+  const ck=charKey(),has=id=>SCREEN_IDS.has(id);
+  const md=modalEl(),mh=md&&md.querySelector("h3"),mt=mh?mh.textContent:"";
+  if(md&&md.firstChild){
+    if(mt==="Accesso sviluppatori")return"opt-login-modal";
+    if(mt==="Esporta modifiche")return"export-dialog";
+    if(md.querySelector("#popg"))return"popup-milestone";
+    if(mt==="Hai un insetto?")return"bug-popup";
+    if(md.querySelector("#giftbox,#giftreveal"))return md.querySelector("#giftreveal:not([hidden])")?"gift-opened":"gift-closed";
+    if(md.querySelector("#fai-yes"))return"fa-invite";
+  }
+  switch(screen){
+    case"splash":return"splash-question";
+    case"menu":return"menu-home-"+ck;
+    case"wish":{
+      if(tab==="planes")return"wish-enemies-"+ck;
+      if(tab==="rocks")return"wish-items-"+ck;
+      if(tab==="games")return SIM()?"wish-giochi-unlocked":"wish-giochi-locked";
+      return SIM()?"wish-giocatore-unlocked":"wish-giocatore-locked"}
+    case"opt":{
+      if(optTab==="dev")return optOpen.dev&&has("dev-acc-"+optOpen.dev)?"dev-acc-"+optOpen.dev:"dev-tab";
+      return optOpen.gen&&has("opt-generali-"+optOpen.gen)?"opt-generali-"+optOpen.gen:"opt-generali"}
+    case"ach":return has("ach-"+achTab)?"ach-"+achTab:"ach-gen";
+    case"road":return"road-top-current";
+    case"cust":return"cust-"+(typeof custChar!=="undefined"&&custChar?custChar:ck);
+    case"over":return"maze-over";
+    case"game":{
+      if(!G)return"unknown:game";
+      if(typeof faInvShow!=="undefined"&&faInvShow)return"fa-invite";
+      if(G.st&&G.st.on)return ck==="algidone"?"maze-cinghiale-algidone":"maze-acciaio-roccia";
+      if(G.state==="ready")return"maze-intro-roccia";
+      const k=(THEMES[G.mapi||0]||{}).k,id="maze-"+k+"-"+(G.char||ck);
+      return has(id)?id:"maze-play-roccia"}
+    case"bj":{
+      if(!B)return"bj-invite";
+      const pr=document.getElementById("bpres");if(pr&&!pr.hidden)return"bj-invite";
+      const m=B.menu?B.menu.map(i=>i.id).join(","):"";
+      if(m.startsWith("hit"))return"bj-table-hand";
+      if(m.startsWith("minus"))return"bj-raise-stake";
+      if(m.startsWith("deal"))return"bj-menu-again";
+      if(B.banner)return"bj-result";
+      return"bj-dealer-line"}
+    case"pr":{
+      if(!PR)return"unknown:pr";
+      if(PR.pb){
+        const a=PR.pb.ask&&PR.pb.ask.kind;
+        if(a==="mv")return"pb-move-panel";if(a==="yn")return"pb-win-question";
+        if(PR.pb.B&&PR.pb.B.over&&PR.pb.B.over.winner==="own")return"pb-win-ending";
+        return"pb-command"}
+      if(PR.menu)return"pr-choice-menu";
+      if(PR.scene===prSceneProf)return"pr-dialogue-yes";
+      if(PR.scene)return"pr-throwout-street";
+      return"pr-dialogue-question"}
+    case"fa":{
+      if(!FA)return"unknown:fa";
+      const n=FA.level+1;
+      if(FA.state==="intro")return"fa-intro-floor"+n;
+      if(FA.state==="over")return"fa-game-over";
+      if(FA.state==="win")return FA.lv&&FA.lv.last?"fa-final-panel":"fa-floor-win-panel";
+      if(FA.paused)return"fa-pause";
+      return"fa-floor"+n+"-play"}
+  }
+  return"unknown:"+screen;
+}
+const SCREEN_IDS=new Set(["splash-question","menu-home-roccia","menu-home-algidone","career-modal-roccia","career-modal-algidone","opt-generali","opt-generali-audio","opt-generali-screen","opt-generali-game","opt-generali-data","opt-login-modal","dev-tab","dev-acc-account","dev-acc-test","dev-acc-audio","dev-acc-obj","dev-acc-exp","export-dialog","wish-enemies-roccia","wish-enemies-algidone","wish-items-roccia","wish-items-algidone","wish-giocatore-locked","wish-giocatore-unlocked","wish-giochi-locked","wish-giochi-unlocked","ach-gen","ach-roc","ach-alg","ach-gio","ach-min","road-top-current","gift-closed","gift-opened","popup-milestone","cust-roccia","cust-algidone","maze-intro-roccia","maze-play-roccia","maze-steel-roccia","maze-water-roccia","maze-fire-roccia","maze-ice-roccia","maze-forest-roccia","maze-fire-algidone","maze-acciaio-roccia","maze-cinghiale-algidone","maze-over","bj-invite","bj-dealer-line","bj-table-hand","bj-result","bj-menu-again","bj-raise-stake","pr-choice-menu","pr-dialogue-question","pr-dialogue-yes","pr-throwout-street","pb-command","pb-move-panel","pb-win-ending","pb-win-question","fa-invite","fa-intro-floor1","fa-intro-floor2","fa-intro-floor3","fa-floor1-play","fa-floor2-play","fa-floor3-play","fa-pause","fa-game-over","fa-floor-win-panel","fa-final-panel","bug-popup"]);
+
+/* congelamento del gioco mentre il popup e' aperto: come la pausa di ciascun gioco, senza il suo menu. Restituisce la funzione che riprende. */
+let _pnBase=null,_pnOff=0,_pnFz=null;
+function timeFreeze(){if(!_pnBase){_pnBase=performance.now.bind(performance);performance.now=()=>(_pnFz!==null?_pnFz:_pnBase())-_pnOff}if(_pnFz===null)_pnFz=_pnBase()}
+function timeThaw(){if(_pnFz!==null){_pnOff+=_pnBase()-_pnFz;_pnFz=null}}
+function bugFreeze(){
+  if(screen==="game"&&G&&G.state!=="over"&&G.state!=="pause"){const prev=G.state;G.prevState=prev;G.state="pause";return()=>{if(G&&G.state==="pause"){G.state=prev;G.last=performance.now()}}}
+  if(screen==="bj"&&B&&!B.dead&&!bjPauseT){bjPauseT=performance.now()/1000;bjGate=new Promise(r=>{bjGateRes=r});return()=>{if(B&&!B.dead)bjResume()}}
+  if(screen==="fa"&&FA&&!FA.dead&&!FA.paused){FA.paused=true;faKeysClear();return()=>{if(FA&&!FA.dead){FA.paused=false;faKeysClear()}}}
+  if(screen==="pr"&&PR&&!PR.dead){
+    const P=PR,now=performance.now();
+    for(const r of P.sp){clearTimeout(r.id);P.sl.delete(r.id);r.left=Math.max(0,r.left-(now-r.t0))} // le attese restano quanto mancava
+    timeFreeze();
+    return()=>{timeThaw();if(PR!==P||P.dead)return;for(const r of P.sp)r.arm()}}
+  return null;
+}
+function bugInfo(){
+  return{screen:screenId(),version:VERSION,char:charKey(),ua:(navigator.userAgent||"").slice(0,300),
+    meta:{acct:acct||null,site:IS_DEVSITE?"dev":"stable",girone:(G&&G.stage)||null,diff:(G&&G.diff)||S.opts.diff||"medium",viewport:innerWidth+"x"+innerHeight}};
+}
+function bugOpen(){
+  if(!canReport())return;
+  if(BUG&&document.getElementById("bgt"))return;
+  BUG=null;
+  const info=bugInfo(),resume=bugFreeze();
+  const m=openModal(`<div class="bugbox"><h3>Hai un insetto?</h3><textarea id="bgt" maxlength="${BUG_MAX}" placeholder="Cosa è successo?"></textarea><small class="cnt" id="bgc">0/${BUG_MAX}</small>
+    <div class="acts"><button class="btn red" id="bgx">Indietro</button><button class="btn ok" id="bgk" disabled>Invia</button></div></div>`);
+  const ta=m.querySelector("#bgt"),ok=m.querySelector("#bgk");let sending=false;
+  const close=()=>{closeModal();const b=BUG;BUG=null;if(b&&b.resume)b.resume()};
+  BUG={resume,close};
+  const upd=()=>{m.querySelector("#bgc").textContent=ta.value.length+"/"+BUG_MAX;ok.disabled=sending||!ta.value.trim()};
+  ta.addEventListener("input",upd);
+  m.querySelector("#bgx").onclick=close;
+  ok.onclick=async()=>{
+    const text=ta.value.trim().slice(0,BUG_MAX);if(!text||sending)return;
+    sending=true;upd();ok.textContent="Invio…";
+    const r=await bugSubmit(Object.assign({text},info));
+    toast(r==="sent"?"Grazie! Segnalazione inviata.":r==="queued"?"Segnalazione salvata, verrà inviata appena sei online":"Invio non riuscito");
+    if(BUG&&BUG.close===close)close();
+  };
+  setTimeout(()=>ta.focus(),50);
+}
+const bugQ=()=>store.get(BUGQ_KEY)||[];
+function bugQueue(rep){
+  const q=bugQ();rep=Object.assign({},rep,{meta:Object.assign({},rep.meta,{qts:Date.now()})});q.push(rep);
+  while(q.length>BUG_QMAX)q.shift();store.set(BUGQ_KEY,q);
+}
+const bugDenied=e=>/permission-denied|unauthenticated|nouser/.test((e&&e.code)||"");
+const bugTimeout=ms=>new Promise((_,rej)=>setTimeout(()=>rej({code:"timeout"}),ms));
+async function bugPost(rep){
+  const fb=await fbLoad();await fb.auth.authStateReady();
+  const u=fb.auth.currentUser;if(!u)throw{code:"nouser"};
+  await fb.Fs.addDoc(fb.Fs.collection(fb.db,"bugs"),{uid:u.uid,text:rep.text,screen:rep.screen,version:rep.version,char:rep.char,ts:fb.Fs.serverTimestamp(),ua:rep.ua,meta:rep.meta});
+}
+async function bugSubmit(rep){ // "sent" | "queued" | "denied"
+  if(navigator.onLine===false){bugQueue(rep);return"queued"}
+  try{await Promise.race([bugPost(rep),bugTimeout(12000)]);bugFlush();return"sent"}
+  catch(e){bugQueue(rep);if(bugDenied(e)){BUG_NOFLUSH=true;return"denied"}return"queued"}
+}
+async function bugFlush(){ // svuota la coda: alla verifica della sessione, quando si torna online, dopo ogni invio riuscito
+  if(bugFlushing||BUG_NOFLUSH||!canReport()||navigator.onLine===false)return;
+  bugFlushing=true;
+  try{for(;;){
+    const q=bugQ();if(!q.length)break;
+    try{await Promise.race([bugPost(q[0]),bugTimeout(12000)])}catch(e){if(bugDenied(e))BUG_NOFLUSH=true;break}
+    const q2=bugQ();q2.shift();store.set(BUGQ_KEY,q2);
+  }}finally{bugFlushing=false}
+}
+addEventListener("online",()=>bugFlush());
+document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("#bugb");if(b){e.stopPropagation();e.preventDefault();bugOpen()}},true);
+addEventListener("keydown",e=>{if(!BUG)return;e.stopImmediatePropagation();if(e.key==="Escape"){e.preventDefault();BUG.close()}},true); // popup aperto: nessun tasto arriva al gioco
+addEventListener("keyup",e=>{if(BUG)e.stopImmediatePropagation()},true);
 let screen="menu", tab="planes";
 const root=document.getElementById("root");
 const modalEl=()=>document.getElementById("modal");
@@ -575,7 +742,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4_3";
+const VERSION="0.4_4";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -1463,7 +1630,7 @@ function renderMenu(){
       ${devUI()&&t.custom?`<span class="minus" data-del="${t.id}">−</span>`:""}</button>`}).join("");
   shell(`<div class="screen"><div class="brand"><button class="trop" id="trop" aria-label="Obiettivi"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M7 3h10v2h3v3c0 2.2-1.8 4-4 4h-.3A5 5 0 0 1 13 14.9V17h3v2H8v-2h3v-2.1A5 5 0 0 1 8.3 12H8C5.8 12 4 10.2 4 8V5h3V3zM6 7v1c0 1.1.9 2 2 2V7H6zm12 0h-2v3c1.1 0 2-.9 2-2V7z"/></svg></button>
     <button class="trop road" id="road" aria-label="Percorso"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M4 20l6-16h2l-2 6h4l-2-6h2l6 16h-2l-1.7-4.5h-9.6L5 20H4zm4.6-6.5h6.8L12 6.4l-3.4 7.1z"/></svg></button>
-    <div><h1>Mangiasassi</h1><small>Versione ${VERSION}</small></div>${role?`<button class="devt ${devOn?"on":""} ${S.sim?"sim":""}" id="devt" aria-label="Modalità sviluppatore">✎</button>`:""}</div>
+    ${bugBtn(role?"rr":"")}<div><h1>Mangiasassi</h1><small>Versione ${VERSION}</small></div>${role?`<button class="devt ${devOn?"on":""} ${S.sim?"sim":""}" id="devt" aria-label="Modalità sviluppatore">✎</button>`:""}</div>
     <canvas class="mstage" id="mstage"></canvas>
     <button class="career" id="career"><div class="row"><span><b>Liv. ${cc.lvl}</b> · ${esc((S.ov["char_"+charKey()]||{}).label||CH().name)}</span><span class="disp" style="font-size:.85rem">${p.sordi} sordi</span></div>
     <div class="bar"><i style="width:${pct}%"></i></div></button>
@@ -1560,7 +1727,7 @@ function renderWish(){
     ${SIM()||(S.p.gam&&S.p.gam.seen)?`<div class="card locked"><canvas data-draw="gamb:0:100"></canvas><div class="nm">${esc((S.ov["game_1"]||{}).label||"El Gamblador")}</div><div class="st" style="font-weight:700">Liv. ???</div><div class="bar" style="width:80%;margin:0"><i style="width:0%"></i></div><button class="btn sm" disabled style="opacity:.5">${SIM()?"In arrivo":"Bloccato"}</button></div>`:""}
     ${SIM()||(S.p.pr&&S.p.pr.seen)?`<div class="card locked"><canvas data-draw="prof:0:100"></canvas><div class="nm">Il Professore</div><div class="st" style="font-weight:700">Liv. ???</div><div class="bar" style="width:80%;margin:0"><i style="width:0%"></i></div><button class="btn sm" disabled style="opacity:.5">${SIM()?"In arrivo":"Bloccato"}</button></div>`:""}
     <div class="card locked"><div class="nm">Altri personaggi</div><span class="st">In arrivo</span></div></div>`;
-  shell(`<div class="screen"><div class="top"><button class="btn ghost sm" id="back">‹</button><h2>Lista desideri</h2><span class="wallet">${p.sordi} sordi</span></div>
+  shell(`<div class="screen"><div class="top"><button class="btn ghost sm" id="back">‹</button><h2>Lista desideri</h2><span class="wallet">${p.sordi} sordi</span>${bugBtn()}</div>
    <div class="tabs"><button data-tab="planes" class="${tab==="planes"?"on":""}">${CH().tabs[0]}</button><button data-tab="rocks" class="${tab==="rocks"?"on":""}">${CH().tabs[1]}</button><button data-tab="player" class="${tab==="player"?"on":""}">Giocatore</button><button data-tab="games" class="${tab==="games"?"on":""}">Giochi</button></div>
    <div class="scroll" style="flex:1;min-height:0">${body}</div></div>`);
   paintCanvases();
@@ -1630,7 +1797,7 @@ function renderCust(){
   const skinBtns=`<button class="btn ${cc.skin?"ghost":""} sm" data-skinsel="">Nessuno</button>`+
     cc.skins.map(id=>`<button class="btn ${cc.skin===id?"":"ghost"} sm" data-skinsel="${id}">${esc(skinName(id))}</button>`).join("");
   const dirBtn=(d,label)=>`<button class="${custDir===d?"on":""}" data-custdir="${d}">${label}</button>`;
-  shell(`<div class="screen"><div class="top"><button class="btn ghost sm" id="back">‹</button><h2>Personalizza · ${esc(name)}</h2></div>
+  shell(`<div class="screen"><div class="top"><button class="btn ghost sm" id="back">‹</button><h2>Personalizza · ${esc(name)}</h2>${bugBtn()}</div>
    <div class="scroll" style="flex:1;min-height:0">
     <div class="opt" style="flex-direction:column;align-items:center">
       <canvas id="custcv" width="220" height="220" style="width:220px;height:220px;max-width:100%;image-rendering:pixelated"></canvas>
@@ -1689,7 +1856,7 @@ function renderOpt(){
   const pData=`<div class="opt"><div>Cancella dati locali<small>Progressi, sordi, acquisti, modifiche dev e musica caricata</small></div><button class="btn red sm" id="wipe">Cancella</button></div>`;
   const ver=`<div class="opt"><div id="ver">Build locale<small>Versione ${VERSION}</small></div></div>`;
   const body=optTab==="dev"&&devUI()?devRows():optAcc("audio","Audio",pAudio)+optAcc("screen","Schermo",pScreen)+optAcc("game","Gioco",pGame)+optAcc("data","Dati",pData,"danger")+ver;
-  shell(`<div class="screen"><div class="top"><button class="btn ghost sm" id="back">‹</button><h2>Opzioni</h2></div><div class="scroll" style="flex:1;min-height:0">${tabs}${body}</div></div>`);
+  shell(`<div class="screen"><div class="top"><button class="btn ghost sm" id="back">‹</button><h2>Opzioni</h2>${bugBtn()}</div><div class="scroll" style="flex:1;min-height:0">${tabs}${body}</div></div>`);
 }
 function bindOpt(){
   const optClick=e=>{
@@ -1739,7 +1906,7 @@ function loginModal(){
     k.disabled=true;er.textContent="Accesso in corso…";
     try{
       const r=await fbLogin(u,p);
-      role=r==="master"?"master":"dev1";acct=r;devOn=true;persistDev();closeModal();toast("Dev mode attiva");go("menu");
+      role=r==="master"?"master":"dev1";acct=r;devOn=true;persistDev();closeModal();toast("Dev mode attiva");go("menu");bugFlush();
     }catch(e){er.textContent=e.message||"Accesso non riuscito.";k.disabled=false}
   };
   m.querySelector("#lk").onclick=go_;
@@ -2171,7 +2338,7 @@ function renderAch(){
     const req=a.min?` · ${a.min==="hard"?"Solo Difficile":"Da Media in su"}`:"";
     return `<div class="ach ${dd?"done":""}"><div class="ai">${dd?"★":"☆"}</div><div class="at"><b>${esc(a.n)}</b><small>${esc(a.d)}${req}</small><div class="bar" style="margin:6px 0 3px"><i style="width:${pct}%"></i></div><small>${dd?"Completato":achFmt(a,Math.min(p,a.goal))+" / "+achFmt(a,a.goal)}</small></div><div class="ar">+${a.r[0]}<small>sordi</small>+${a.r[1]}<small>exp</small></div></div>`}).join("");
   const phs=Array.from({length:ph},()=>`<div class="ach ph"><div class="ai">?</div><div class="at"><b>???</b><small>Obiettivo bloccato</small></div></div>`).join("");
-  shell(`<div class="screen"><div class="top"><button class="btn ghost sm" id="back">‹</button><h2>Obiettivi</h2><span class="wallet">${done}/${total}</span></div>
+  shell(`<div class="screen"><div class="top"><button class="btn ghost sm" id="back">‹</button><h2>Obiettivi</h2><span class="wallet">${done}/${total}</span>${bugBtn()}</div>
    <div class="tabs">${cats.map(c=>`<button data-atab="${c[0]}" class="${achTab===c[0]?"on":""}">${c[1]}</button>`).join("")}</div>
    <p style="margin:0 0 10px;text-align:center;color:var(--mute);font-size:.85rem">${dn}/${items.length} sbloccati · ${cat[2]} posti in questa categoria</p>
    <div class="scroll" style="flex:1;min-height:0">${rows}${phs}</div></div>`);
@@ -2240,7 +2407,7 @@ function renderRoad(){
     const nextFirst=(r+1)*ROAD_COLS+1,linksDown=r<rows-1;
     return `<div class="roadrow">${tiles}</div>${linksDown?`<div class="roadlink" style="justify-content:${r%2?"flex-start":"flex-end"}">↓</div>`:""}`;
   }).join("");
-  shell(`<div class="screen"><div class="top"><button class="btn ghost sm" id="back">‹</button><h2>Percorso</h2><span class="disp" style="font-size:.85rem">Girone ${roadGir()}</span></div>
+  shell(`<div class="screen"><div class="top"><button class="btn ghost sm" id="back">‹</button><h2>Percorso</h2><span class="disp" style="font-size:.85rem">Girone ${roadGir()}</span>${bugBtn()}</div>
    <div class="roadwrap" id="roadwrap">${body}</div></div>`);
   paintCanvases();
   const cv=$('[data-road="'+(hl==null?cur:hl)+'"]'),wrap=$("#roadwrap");
@@ -2554,7 +2721,7 @@ function updateAbil(){
   for(const k of["steel","boar","cool","ready"])b.classList.toggle(k,k===st);
 }
 function buildGameDOM(){
-  shell(`<div class="hud"><span>PUNTI <b id="sc">0</b></span><span class="lives" id="lv"></span><span id="wv"></span><button class="pause" id="ps">❚❚</button></div>
+  shell(`<div class="hud"><span>PUNTI <b id="sc">0</b></span><span class="lives" id="lv"></span><span id="wv"></span>${bugBtn()}<button class="pause" id="ps">❚❚</button></div>
    <div id="stage"><canvas id="cv"></canvas></div>
    <div class="dpad"><button class="ctl" id="pz">Pausa</button><button data-d="0">▲</button><button class="ctl" id="stl">Fermo</button><button data-d="3">◀</button><button data-d="2">▼</button><button data-d="1">▶</button></div>`);
   cv=$("#cv");cx=cv.getContext("2d");sizeCanvas();
@@ -2983,7 +3150,7 @@ function finishRun(o){
   const hardRun=!!G.hard;S.quick=null;persist();G=null;
   if(o&&o.quiet){go("menu");toast("Partita abbandonata · +"+gain+" sordi");if(cc.lvl>oldL)celebrate(oldL,cc.lvl,showAchQ);else showAchQ();return}
   screen="over";syncMusic();
-  shell(`<div class="screen"><div class="center" style="width:100%"><h2 style="font-size:1.6rem;color:var(--alarm);margin:0 0 4px">Partita finita</h2>
+  shell(`<div class="screen">${bugBtn("fixr")}<div class="center" style="width:100%"><h2 style="font-size:1.6rem;color:var(--alarm);margin:0 0 4px">Partita finita</h2>
    <p class="disp" style="margin:0 0 10px">Girone ${stage}</p>
    <p style="margin:0 0 16px;padding:0 8px;font-style:italic;line-height:1.35">“${esc(quoteFor(ck))}”<small style="display:block;margin-top:4px;font-style:normal;color:var(--mute)">— ${esc((S.ov["char_"+ck]||{}).label||CHARS[ck].name)}</small></p>
    <div class="opt"><span>Difficoltà</span><b class="disp">${D.n}</b></div>
@@ -3582,7 +3749,7 @@ function bjExit(){
   syncMusic();
 }
 function buildBJDOM(){
-  shell(`<div class="hud"><span>PUNTI <b id="bsc">0</b></span><span id="bbet"></span><span>Gamblador</span><button class="pause" id="bps">❚❚</button></div>
+  shell(`<div class="hud"><span>PUNTI <b id="bsc">0</b></span><span id="bbet"></span><span>Gamblador</span>${bugBtn()}<button class="pause" id="bps">❚❚</button></div>
    <div id="bstage"><canvas id="bjc"></canvas><div class="bmenu" id="bmenu" hidden></div>
    <div class="bdlg" id="bdlg"><canvas id="bpor" width="72" height="72"></canvas><div class="btx"><span id="btxt"></span></div><i id="bnext">▼</i></div><div class="bpres" id="bpres" hidden></div></div>
    <div class="dpad"><button class="ctl" id="pz">Pausa</button><button data-d="0">▲</button><button class="ctl" id="stl">Scegli</button><button data-d="3">◀</button><button data-d="2">▼</button><button data-d="1">▶</button></div>`);
@@ -3742,7 +3909,7 @@ async function startFerma(o){
 const FA_DIFF={easy:{spd:.88,pause:1.25,drain:.85},medium:{spd:1,pause:1,drain:1},hard:{spd:1.12,pause:.85,drain:1.15}};
 const faCfg=()=>Object.assign({},FA.lv.items,FA.extra?{meat:2,meatHop:true,grill:true}:{});
 function buildFaDOM(){
-  shell(`<div class="hud" id="fahud"><span class="fasc" id="fasc">0</span><span class="fabolt" id="fabolt" hidden><i></i><b id="fabn">0</b></span><img id="fasp" alt="" src="${FA_IMG_SRC.scorte0}"><div class="fastock"><div id="fastbar"></div></div><span class="lives" id="fali"><canvas width="48" height="44"></canvas><canvas width="48" height="44"></canvas><canvas width="48" height="44"></canvas></span><button class="pause" id="fap" aria-label="Pausa">❚❚</button></div><div id="fastage"><canvas id="fac"></canvas><div id="fapanel"></div></div>
+  shell(`<div class="hud" id="fahud"><span class="fasc" id="fasc">0</span><span class="fabolt" id="fabolt" hidden><i></i><b id="fabn">0</b></span><img id="fasp" alt="" src="${FA_IMG_SRC.scorte0}"><div class="fastock"><div id="fastbar"></div></div><span class="lives" id="fali"><canvas width="48" height="44"></canvas><canvas width="48" height="44"></canvas><canvas width="48" height="44"></canvas></span>${bugBtn()}<button class="pause" id="fap" aria-label="Pausa">❚❚</button></div><div id="fastage"><canvas id="fac"></canvas><div id="fapanel"></div></div>
    <div id="fapad"><div class="pad"><span></span><button data-fk="u">▲</button><span></span><button data-fk="l">◀</button><button data-fk="d">▼</button><button data-fk="r">▶</button></div><button class="fj" data-fk="j">SALTA</button></div>`);
   FA.hud={};
   root.onclick=e=>{if(FA&&FA.state==="intro"&&!FA.paused&&e.target.closest("#fapanel"))return faIntroEnd();const b=e.target.closest("[data-fa]");if(b)return faAct(b.dataset.fa);if(e.target.closest("#fap"))faPause(!FA.paused)};
@@ -4428,15 +4595,16 @@ const PR_SPK={prof:{pitch:190,draw:prDrawProf}};
 let PR=null;
 class PRDead extends Error{}
 const prChk=()=>{if(!PR||PR.dead)throw new PRDead("dead")};
-function prSleep(ms){const P=PR;return new Promise((res,rej)=>{if(!P||P.dead)return rej(new PRDead("dead"));const id=setTimeout(()=>{P.sl.delete(id);res()},ms);P.sl.set(id,rej)}).then(prChk)}
+function prSleep(ms){const P=PR;return new Promise((res,rej)=>{if(!P||P.dead)return rej(new PRDead("dead"));const r={left:ms,t0:0,id:0,rej};r.arm=()=>{r.t0=performance.now();r.id=setTimeout(()=>{P.sl.delete(r.id);P.sp.delete(r);res()},r.left);P.sl.set(r.id,rej)};P.sp.add(r);r.arm()}).then(prChk)} // attese sospendibili (segnala un bug)
 function prStart(entry,o){
   prCleanup();
-  PR={dead:false,entry,say:null,expr:"neutral",spk:"prof",vars:{},alpha:1,atw:null,scene:null,test:!!(o&&o.test),wait:null,menu:null,raf:0,started:false,sl:new Map()};
+  PR={sp:new Set(),dead:false,entry,say:null,expr:"neutral",spk:"prof",vars:{},alpha:1,atw:null,scene:null,test:!!(o&&o.test),wait:null,menu:null,raf:0,started:false,sl:new Map()};
   screen="pr";render();
 }
 function prCleanup(){
   if(!PR)return;const p=PR;PR=null;p.dead=true;cancelAnimationFrame(p.raf);
   for(const [id,rej] of p.sl){clearTimeout(id);rej(new PRDead("dead"))}
+  for(const r of p.sp)r.rej(new PRDead("dead"));
   if(p.wait)p.wait.rej(new PRDead("dead"));if(p.menu)p.menu.rej(new PRDead("dead"));
   if(p.pb)for(const k of["w","ask"])if(p.pb[k])p.pb[k].rej(new PRDead("dead"));
   prMusicStop(300);
@@ -4445,7 +4613,7 @@ function prCleanup(){
 function prSize(){const s=$("#prs"),c=$("#prc");if(s&&c){c.width=s.clientWidth;c.height=s.clientHeight}}
 function prRender(){
   if(!PR)return go("menu");
-  shell(`<div class="prs" id="prs"><canvas id="prc"></canvas><div class="prfade" id="prfade"></div>${PR.test?'<button class="prx" id="prx">✕ Esci dalla prova</button>':""}<div class="pmenu" id="pmenu" hidden></div><div class="pdlg" id="pdlg" hidden><canvas id="ppor" width="88" height="100"></canvas><div class="ptx"><span id="ptxt"></span></div><i id="pnext">▼</i></div></div>`);
+  shell(`<div class="prs" id="prs"><canvas id="prc"></canvas><div class="prfade" id="prfade"></div>${bugBtn(PR.test?"prt":"")}${PR.test?'<button class="prx" id="prx">✕ Esci dalla prova</button>':""}<div class="pmenu" id="pmenu" hidden></div><div class="pdlg" id="pdlg" hidden><canvas id="ppor" width="88" height="100"></canvas><div class="ptx"><span id="ptxt"></span></div><i id="pnext">▼</i></div></div>`);
   root.onclick=prClick;prSize();
   const P=PR;P.raf=requestAnimationFrame(prLoop);
   if(P.started)return;P.started=true;

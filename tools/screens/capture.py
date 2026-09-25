@@ -516,7 +516,17 @@ def sc_fa(b, only):
     c.close()
 
 
-SCENARIOS = [sc_splash_menu, sc_career, sc_options, sc_options_dev, sc_wish, sc_achievements, sc_road, sc_popups, sc_cust, sc_export, sc_maze, sc_bj, sc_pr, sc_prkick, sc_fa]
+def sc_bug(b, only):
+    """Segnala un bug (F6a): the popup from the home menu (dev session seeded with the Firebase stub)."""
+    c = new_cap(b, only, dev=True)
+    enter_menu(c)
+    c.click("#bugb", 400)
+    c.p.fill("#bgt", "Il pulsante non risponde dopo la pausa.")
+    c.shot("bug-popup", 200)
+    c.close()
+
+
+SCENARIOS = [sc_splash_menu, sc_career, sc_options, sc_options_dev, sc_wish, sc_achievements, sc_road, sc_popups, sc_cust, sc_export, sc_maze, sc_bj, sc_pr, sc_prkick, sc_fa, sc_bug]
 
 
 def optimize():
