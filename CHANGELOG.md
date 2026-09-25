@@ -1752,3 +1752,7 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 
 - validate-submission workflow added (`.github/workflows/validate-submission.yml`, job "validate", PRs to dev/main touching submissions/**; runs the existing `scripts/validate_submission.py`, which finds the changed packages itself via git diff — it takes no folder argument).
 - Screens library `refs/screens/` (93 screens, 1.9 MB) + `SCREENS.md`; scripts `tools/screens/capture.py` and `make_index.py`. Ids are canonical. No build.
+
+## docs — 2026-09-25 (E1a)
+
+- Dev-mode audit report `refs/dev/DEV_AUDIT.md` (E1a); screens not-captured list (`tools/screens/not_captured.txt`, SCREENS.md regenerated). No build.

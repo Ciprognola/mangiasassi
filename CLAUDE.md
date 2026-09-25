@@ -469,7 +469,7 @@ Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 | D1 | Docs: archive 0.4 plan, this plan, firestore.rules, bugs/BUGS.md | — | Sonnet · low | done (docs) |
 | I2 | dev branch + Pages deploying main at / and dev at /dev/, §1 git rules updated | — | Sonnet · medium | done (0.4_1) |
 | I3 | Screens library: Playwright script in tools/screens/, PNGs in refs/screens/, SCREENS.md | — | Sonnet · medium | done (docs) |
-| E1a | Dev-mode audit report (refs/dev/DEV_AUDIT.md), no build | — | Sonnet · medium | todo |
+| E1a | Dev-mode audit report (refs/dev/DEV_AUDIT.md), no build | — | Sonnet · medium | done (report) |
 | E1b | Dev-mode cleanup from the owner's picks | E1a picks | Sonnet · medium | todo |
 | F1 | Firebase dev login, roles, Cambia password, old local login removed | — | Sonnet · high | todo |
 | F6a | Bug report button + popup, devs only, player path flag off | F1, I3 | Sonnet · medium | todo |

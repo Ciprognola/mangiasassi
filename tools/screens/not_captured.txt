@@ -1,0 +1,2 @@
+- Professor lose ending (the professor's insult lines): cannot be forced without changing the game; the throw-out scene and the pond are captured (`pr-throwout-club`, `pr-throwout-street`, `pr-pond`).
+- El Gamblador result variants other than one win (loss, push, blackjack, bust, surrender): the hands are random; only one `bj-result` (win) is captured.
