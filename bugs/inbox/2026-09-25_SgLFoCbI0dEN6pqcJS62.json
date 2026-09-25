@@ -1,0 +1,17 @@
+{
+  "char": "roccia",
+  "id": "SgLFoCbI0dEN6pqcJS62",
+  "meta": {
+    "acct": "master",
+    "diff": "medium",
+    "girone": null,
+    "site": "dev",
+    "viewport": "376x715"
+  },
+  "screen": "fa-floor2-play",
+  "text": "test",
+  "ts": "2026-09-25T18:52:33.651000Z",
+  "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+  "uid": "Vm1eLpWxWVWwarACqLkK8eczeQ62",
+  "version": "0.4_4"
+}
