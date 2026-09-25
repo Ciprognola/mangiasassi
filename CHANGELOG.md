@@ -1793,3 +1793,8 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Bug icon also on the splash ("Roccia sì o roccia no?"), the "sad" countdown and the "bye" screens (logged-in devs only, same rules as F6a; no overlap at 360×640 / 390×844). The splash question is a modal: after Indietro it is redrawn; the sad countdown is frozen while the popup is open (`sadArm`). New ids `sad-countdown`, `bye-goodbye` in `SCREEN_IDS` / SCREENS.md (`sad` has no UI path today; `bye` is the Android quit).
 - Tests: `test_f6.py` 63 checks.
 - Size: index.html 5,642,247 bytes (+420 vs 0.4_4, LF-normalised).
+
+## infra — 2026-09-25 (F6b)
+
+- Bug export workflow `.github/workflows/bugs-export.yml` (daily 06:00 UTC + manual run, checks out `dev`, secret FIREBASE_SA) with `tools/bugs/export_bugs.py` (Firestore `bugs` where not exported → `bugs/inbox/<date>_<id>.json`, doc marked `exported`/`exportedAt`; mocked test `tools/bugs/test_export_bugs.py`); commits "bugs: export N report(s)" as github-actions[bot] to `dev`.
+- Triage procedure CLAUDE.md §1c; `bugs/BUGS.md` sections explained; `bugs/inbox/`, `bugs/triaged/` created. 0.5 privacy note added (§8, §10.4). No build.

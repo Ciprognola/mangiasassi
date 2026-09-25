@@ -60,6 +60,9 @@ Any `manifest.json` whose folder is **not** listed in `submissions/PROCESSED.md`
 least one pending package, it goes **before any other task of the session**, following §5 "Submission-first
 procedure". Tell the owner at the start of the session: "N submission(s) pending: …".
 
+### 1c. THIRD COMMAND — triage the bug reports (after pending submissions, before any chunk)
+If `bugs/inbox/` has files (ignore `.gitkeep`): before any chunk (after pending submissions), triage them. Read each report; compare with the known bugs in §8, `bugs/BUGS.md` (NEW / TO REVIEW / FIXED) and the recent CHANGELOG. New → add to `## NEW`. Looks like a known bug → `## TO REVIEW` with a pointer to the item it seems to match. Identical reports (same `meta.acct` + same text) are merged into one entry listing all dates. Entry format: `- <date> · <screen> · <version> · <acct> — <text, first 200 chars> ([report](triaged/<file>))`. Move each processed file to `bugs/triaged/`. **Classify only: never fix anything during triage.** Commit "bugs: triage N report(s)", push `dev`, and tell the owner how many landed in NEW / TO REVIEW. (Reports arrive from the daily export workflow `.github/workflows/bugs-export.yml`, §10.2/§10.4.)
+
 ---
 
 ## 2. What the game is
@@ -221,7 +224,8 @@ CODEOWNERS                     → Ciprognola
 LICENSE                        MIT
 CLAUDE.md                      this file
 docs/releases/                 archived release plans (0.4.md, …)
-bugs/                          bug triage (BUGS.md)
+bugs/                          bug triage (BUGS.md); bugs/inbox/ = exported reports waiting for triage, bugs/triaged/ = processed ones
+tools/bugs/                    export_bugs.py (Firestore → bugs/inbox/, run by the workflow) + mocked test
 firestore.rules                copy of the Firestore rules published in the console
 tools/                         helper scripts
 tools/screens/                 screens library scripts (capture.py, make_index.py)
@@ -420,6 +424,9 @@ Moved to 0.4.5 as B1: maze hitboxes around assets.
 One build per approved audio submission (Uomo roccia sounds, Algidone sounds, Blackjack voiceover, Professore voiceover, professor intro music, and the new `sound.fa.<slot>` set for Ferma Algidone!). They will arrive eventually and
 are processed **after the 0.4 release** via the §5 procedure and the A0 built-in layer (keep the running slot table in §10.9; music: half-length + crossfade loop per §6 rule 7). Not a dependency of REL.
 
+### 0.5 note — player bug reports and privacy
+Before player bug reports go live (0.5, `BUG_PLAYERS=true`): the repo is public — player reports must not store uid/ua/account in `bugs/` (strip them in the export or keep those reports private).
+
 ### Later phases
 - Firebase: set up (§10.2); login and cloud save are chunks F1/F2.
 
@@ -475,7 +482,7 @@ Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 | E1b | Dev-mode cleanup from the owner's picks | E1a picks | Sonnet · medium | done (0.4_2) |
 | F1 | Firebase dev login, roles, Cambia password, old local login removed | — | Sonnet · high | done (0.4_3) |
 | F6a | Bug report button + popup, devs only, player path flag off | F1, I3 | Sonnet · medium | done (0.4_4) |
-| F6b | Bug pipeline: GitHub Action → bugs/inbox/, triage into bugs/BUGS.md | F6a, service account (owner) | Sonnet · medium | todo |
+| F6b | Bug pipeline: GitHub Action → bugs/inbox/, triage into bugs/BUGS.md | F6a, service account (owner) | Sonnet · medium | done (infra) |
 | F3 | Submission format v2 + export code + validator + DEVELOPERS.md | I3, spec from Claude chat | Sonnet · high | todo |
 | F5 | Text edit by 3 s long-press, pens removed | F3, E1b | Sonnet · high | todo |
 | F4a | Skin tool part 1: export full character sheet + map | F3 | Sonnet · high | todo |
@@ -504,6 +511,8 @@ Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 | 2026-09-25 | E1b | Unrequested extras accepted: 2 extra test maps, all maps start at girone 4, accordion renamed Anteprime. Standing rule: no extras outside the brief, propose them in the report |
 | 2026-09-25 | F1 | Separate Firebase sessions per site (app name mgs / mgs_dev); dev1–dev5 behave as the old dev1; file:// builds can't log in, devs work from /dev/; old local login and S.creds removed |
 | 2026-09-25 | F6a | Icon in every top bar, devs only (BUG_PLAYERS=false until 0.5); auto info = screen id, version, character, girone, difficulty, device, time, account; no screenshot; offline queue (max 20) sent later |
+| 2026-09-25 | F6b | Daily export + manual run; docs marked exported (kept in Firestore); triage by Claude Code at session start (§1c), classify only, duplicates merged |
+| 2026-09-25 | 0.5 note | Before player bug reports go live: the repo is public — player reports must not store uid/ua/account in bugs/ (strip or keep them private) |
 | 2026-09-25 | F1 | No offline backup login: if Firebase is unreachable dev mode is unavailable (a session already logged in stays valid offline) |
 
 **Built-in audio slots** (filled by A-chunks):
