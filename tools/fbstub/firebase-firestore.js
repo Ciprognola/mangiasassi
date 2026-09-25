@@ -14,6 +14,13 @@ export async function addDoc(col, data) {
   if (S.denyBugs) throw { code: "permission-denied" };
   if (S.hangBugs) return new Promise(() => {});
   if (S.offline) throw { code: "unavailable" };
+  if (col.name === "edits") {  // F3b: same checks as the `edits` rules
+    const okKeys = ["uid", "acct", "kind", "char", "screen", "target", "locator", "before", "value", "note", "base", "ts", "meta"];
+    if (Object.keys(data).some((k) => !okKeys.includes(k)) || !["text", "colour", "scale"].includes(data.kind) || typeof data.value !== "string" || data.value.length > 500 ||
+        ("note" in data && (typeof data.note !== "string" || data.note.length > 300))) throw { code: "permission-denied" };
+    (S.edits = S.edits || []).push(JSON.parse(JSON.stringify(data)));
+    return { id: "e" + S.edits.length };
+  }
   const allowed = ["uid", "text", "screen", "version", "char", "ts", "ua", "meta"];
   const keys = Object.keys(data);
   if (col.name !== "bugs" || keys.some((k) => !allowed.includes(k)) || typeof data.text !== "string" || !data.text.length || data.text.length > 1000) throw { code: "permission-denied" };

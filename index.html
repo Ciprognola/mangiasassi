@@ -562,7 +562,7 @@ async function fbVerify(){ // controllo in background della sessione in cache: n
     const fb=await fbLoad();await fb.auth.authStateReady();
     const u=fb.auth.currentUser;if(!u)return fbDrop();
     const r=await fbRoleOf(fb,u);if(!r)return fbDrop();
-    bugFlush();
+    bugFlush();editFlush();
     const nr=r==="master"?"master":"dev1";
     if(nr!==role||r!==acct){if(role==="master"&&nr!=="master")simOff();role=nr;acct=r;persistDev();if(["opt"].includes(screen))render()}
   }catch(e){}
@@ -746,7 +746,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4_5";
+const VERSION="0.4_6";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -1885,6 +1885,7 @@ function bindOpt(){
 async function wipeData(){
   try{localStorage.removeItem(SAVE_KEY)}catch(e){}
   try{localStorage.removeItem(DEV_KEY)}catch(e){}
+  try{localStorage.removeItem(EDITQ_KEY);localStorage.removeItem(EDITSENT_KEY)}catch(e){}
   for(const k in mem)delete mem[k];
   try{await IDB.del("menuMusic")}catch(e){}
   for(const c of Object.keys(CHARS))for(const s of SLOTS){try{await IDB.del("snd_"+c+"_"+s)}catch(e){}}
@@ -1910,7 +1911,7 @@ function loginModal(){
     k.disabled=true;er.textContent="Accesso in corso…";
     try{
       const r=await fbLogin(u,p);
-      role=r==="master"?"master":"dev1";acct=r;devOn=true;persistDev();closeModal();toast("Dev mode attiva");go("menu");bugFlush();
+      role=r==="master"?"master":"dev1";acct=r;devOn=true;persistDev();closeModal();toast("Dev mode attiva");go("menu");bugFlush();editFlush();
     }catch(e){er.textContent=e.message||"Accesso non riuscito.";k.disabled=false}
   };
   m.querySelector("#lk").onclick=go_;
@@ -1946,7 +1947,8 @@ function expZip(entries,when){
 }
 const expToday=()=>{const d=new Date(),p=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())};
 const expExtList=k=>k==="roccia"?S.extra:(S.extra&&S.extra.algidone)||{};
-/* modifiche di testo: confronto con i valori predefiniti, solo cio' che cambia */
+/* modifiche di testo: confronto con i valori predefiniti, solo cio' che cambia.
+   before = il valore incorporato in questa build (senza l'override locale), null se la cosa non esisteva (schede/sezioni nuove) */
 function expTextChanges(){
   const out=[],warn=[];
   const push=(character,target,value,x)=>out.push(Object.assign({type:"text",character,target,value:String(value)},x||{}));
@@ -1954,20 +1956,20 @@ function expTextChanges(){
     const d=DEF_TILES.find(x=>x.id===t.id);
     for(const f of["label","color","scale"]){
       const v=t[f];if(v==null||v==="")continue;
-      if(!d)push("shared","tile."+t.id+"."+f,v,{isNew:true});
-      else if(String(d[f]).toLowerCase()!==String(v).toLowerCase())push("shared","tile."+t.id+"."+f,v,{was:String(d[f])});
+      if(!d)push("shared","tile."+t.id+"."+f,v,{isNew:true,before:null});
+      else if(String(d[f]).toLowerCase()!==String(v).toLowerCase())push("shared","tile."+t.id+"."+f,v,{was:String(d[f]),before:String(d[f])});
     }
   }
   for(const d of DEF_TILES)if(!S.tiles.some(t=>t.id===d.id))warn.push("Sezione eliminata: "+d.label+" (l'eliminazione non si può esportare)");
   // schede aggiunte
   for(const k of Object.keys(CHARS))for(const kind of["plane","rock"]){
     const base=CHARS[k].base[kind].length,pre=CHARS[k].pre;
-    ((expExtList(k)[kind])||[]).forEach((x,j)=>{const i=base+j,o=S.ov[pre+kind+"_"+i]||{};push(EXP_CH[k],"item."+kind+"."+i+".label",o.label||x.name,{isNew:true})});
+    ((expExtList(k)[kind])||[]).forEach((x,j)=>{const i=base+j,o=S.ov[pre+kind+"_"+i]||{};push(EXP_CH[k],"item."+kind+"."+i+".label",o.label||x.name,{isNew:true,before:null})});
   }
   const dc=(o,key,def,tp,ch,skipLabel)=>{
-    if(!skipLabel&&o.label&&o.label!==def.label)push(ch,tp+".label",o.label,{was:def.label});
-    if(o.color&&String(o.color).toLowerCase()!==EXP_DEFCOL)push(ch,tp+".color",o.color);
-    if(o.scale!=null&&+o.scale!==1)push(ch,tp+".scale",+o.scale);
+    if(!skipLabel&&o.label&&o.label!==def.label)push(ch,tp+".label",o.label,{was:def.label,before:def.label});
+    if(o.color&&String(o.color).toLowerCase()!==EXP_DEFCOL)push(ch,tp+".color",o.color,{before:EXP_DEFCOL});
+    if(o.scale!=null&&+o.scale!==1)push(ch,tp+".scale",+o.scale,{before:"1"});
   };
   for(const key of Object.keys(S.ov||{})){
     const o=S.ov[key]||{};let m;
@@ -1980,11 +1982,10 @@ function expTextChanges(){
   }
   for(const id of Object.keys(S.gtext||{})){
     const v=S.gtext[id];if(v==null||v==="")continue;
-    if(BJ_LINES[id]){if(v!==BJ_LINES[id][0])push("shared","dialogue.gam."+id,v);continue}
-    if(PR_LINES[id]){if(v!==PR_LINES[id][0])push("shared","dialogue.pr."+id,v);continue}
-    if(id.slice(0,3)==="pb_"&&PB_ALL[id.slice(3)]){if(v!==PB_ALL[id.slice(3)][0])push("shared","dialogue.pb."+id.slice(3),v);continue}
-    {warn.push("Battuta sconosciuta ignorata: "+id);continue}
-    if(v!==BJ_LINES[id][0])push("shared","dialogue.gam."+id,v);
+    if(BJ_LINES[id]){if(v!==BJ_LINES[id][0])push("shared","dialogue.gam."+id,v,{before:BJ_LINES[id][0]});continue}
+    if(PR_LINES[id]){if(v!==PR_LINES[id][0])push("shared","dialogue.pr."+id,v,{before:PR_LINES[id][0]});continue}
+    if(id.slice(0,3)==="pb_"&&PB_ALL[id.slice(3)]){if(v!==PB_ALL[id.slice(3)][0])push("shared","dialogue.pb."+id.slice(3),v,{before:PB_ALL[id.slice(3)][0]});continue}
+    warn.push("Battuta sconosciuta ignorata: "+id);
   }
   return{out,warn};
 }
@@ -2007,58 +2008,144 @@ function expExt(b){
   if(/wav|wave/.test(t)||/\.wav$/.test(n))return"wav";
   return null;
 }
-const expNoteFor=c=>(c.isNew?"[nuovo] ":"")+"@NOTE@"+(c.was!=null?" [era: "+c.was+"]":"");
-/* costruisce l'export. o: {developer, date, note, notes:{target:nota}, preview} */
-async function exportBuild(o){
-  o=o||{};const errors=[],warnings=[];
-  const dev=String(o.developer||"").toLowerCase().replace(/[^a-z0-9_-]/g,"");
-  if(!dev)errors.push("Serve il nome sviluppatore (minuscolo, senza spazi).");
-  const date=o.date||expToday();
-  const tx=expTextChanges();warnings.push(...tx.warn);
-  const noteOf=c=>((o.notes&&o.notes[c.target])||o.note||"").trim();
-  const changes=[],files=[],flagged=[];let total=0;
-  for(const c of tx.out){
-    const v=String(c.value);
-    if(!v.trim())errors.push("Valore vuoto: "+c.target);
-    else if(v.length>EXP_LIM.text)errors.push("Testo troppo lungo ("+v.length+"/"+EXP_LIM.text+" caratteri): "+c.target);
-    changes.push({type:"text",character:c.character,target:c.target,value:v,_c:c});
+/* ============ ESPORTAZIONE v2 (docs/submissions-v2.md) ============
+   a) «Invia testi»: ogni modifica di testo/colore/scala -> un documento Firestore `edits` (campi esatti delle regole), coda locale offline
+   b) «Scarica pacchetto»: zip con solo audio e sprite + manifest schemaVersion 2 (before = sha256/bytes/misure dell'asset incorporato in questa build) */
+const EXP_CHV2={uomoRoccia:"roccia",algidone:"algidone",shared:"shared"};
+const EXP_MIME={mp3:"audio/mpeg",ogg:"audio/ogg",wav:"audio/wav"};
+const EDITQ_KEY=IS_DEVSITE?"mgs_editq_dev":"mgs_editq",EDITSENT_KEY=IS_DEVSITE?"mgs_editsent_dev":"mgs_editsent",EDIT_QMAX=200,EDIT_NOTE_MAX=300;
+let EDIT_NOFLUSH=false,editFlushing=false;
+const expCanSend=()=>!!role&&!!acct;
+const expSha256=async u8=>[...new Uint8Array(await crypto.subtle.digest("SHA-256",u8))].map(b=>b.toString(16).padStart(2,"0")).join("");
+const expB64ToU8=b64=>{const s=atob(b64),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u};
+async function expAudioMs(u8){try{const b=await getAC().decodeAudioData(u8.buffer.slice(u8.byteOffset,u8.byteOffset+u8.byteLength));return Math.round(b.duration*1000)}catch(e){return null}}
+async function expImgSize(blob){try{const b=await createImageBitmap(blob);const r=[b.width,b.height];if(b.close)b.close();return r}catch(e){return null}}
+/* audio incorporato in questa build per un target (submission approvate o tracce musicali originali), null se non c'e' (suono sintetico/silenzio) */
+function expBuiltinB64(target){
+  if(BUILTIN_AUD[target])return BUILTIN_AUD[target];
+  if(target==="music.menu")return MUSIC_B64;
+  if(target==="music.gam")return GAM_MUSIC_B64;
+  const m=/^music\.pr\.(\w+)$/.exec(target);
+  return m&&PR_MUSDEF[m[1]]?PR_MUSDEF[m[1]].b64:null;
+}
+/* aggancio per F4 (strumento skin/sprite): gli sprite modificati. Oggi la dev mode non ne produce. Ogni elemento:
+   {character:"roccia|algidone|shared", target, blob (png/webp nuovo), built (Blob dell'asset incorporato, o null), frameKey, anchor, ox, oy, base_w, base_h, screen?} */
+async function expSpriteItems(){return[]}
+function expTextEdits(){
+  const tx=expTextChanges();
+  return{list:tx.out.map(c=>({target:c.target,kind:/\.color$/.test(c.target)?"colour":/\.scale$/.test(c.target)?"scale":"text",char:EXP_CHV2[c.character]||"shared",
+    value:String(c.value),before:c.before==null?null:String(c.before),isNew:!!c.isNew})),warn:tx.warn};
+}
+/* schermata in cui si vede il testo (id canonico di SCREENS.md), solo se lo conosco */
+function expScreenOf(e){
+  const ck=e.char==="algidone"?"algidone":"roccia";let id=null,m;
+  if(/^tile\./.test(e.target))id="menu-home-"+ck;
+  else if((m=/^item\.(plane|rock)\./.exec(e.target)))id=(m[1]==="plane"?"wish-enemies-":"wish-items-")+ck;
+  else if(/^char\./.test(e.target))id="wish-giocatore-locked";
+  else if(/^game\./.test(e.target))id="wish-giochi-locked";
+  else if(/^dialogue\.gam\./.test(e.target))id="bj-dealer-line";
+  else if(/^dialogue\.pr\./.test(e.target))id="pr-dialogue-yes";
+  else if(/^dialogue\.pb\./.test(e.target))id="pb-command";
+  return id&&SCREEN_IDS.has(id)?id:null;
+}
+const editSent=()=>store.get(EDITSENT_KEY)||{};
+const editQ=()=>store.get(EDITQ_KEY)||[];
+function expSentState(e){
+  if(editSent()[e.target]!==e.value)return"new";
+  return editQ().some(q=>q.target===e.target&&q.value===e.value)?"queued":"sent";
+}
+function expEditPayload(e,note){
+  const p={acct,kind:e.kind,char:e.char,target:e.target,before:e.before,value:e.value,base:VERSION,meta:{site:IS_DEVSITE?"dev":"stable",viewport:innerWidth+"x"+innerHeight}};
+  const sc=expScreenOf(e);if(sc)p.screen=sc;
+  if(note)p.note=note;
+  return p;
+}
+async function editPost(p){
+  const fb=await fbLoad();await fb.auth.authStateReady();
+  const u=fb.auth.currentUser;if(!u)throw{code:"nouser"};
+  const d=Object.assign({},p,{uid:u.uid,acct:acct||p.acct,ts:fb.Fs.serverTimestamp()});
+  await fb.Fs.addDoc(fb.Fs.collection(fb.db,"edits"),d);
+}
+function editQueue(p){
+  const q=editQ();p=Object.assign({},p,{meta:Object.assign({},p.meta,{qts:Date.now()})});q.push(p);
+  while(q.length>EDIT_QMAX)q.shift();store.set(EDITQ_KEY,q);
+}
+async function editSubmit(p){ // "sent" | "queued" | "denied"
+  if(navigator.onLine===false){editQueue(p);return"queued"}
+  try{await Promise.race([editPost(p),bugTimeout(12000)]);return"sent"}
+  catch(e){editQueue(p);if(bugDenied(e)){EDIT_NOFLUSH=true;return"denied"}return"queued"}
+}
+async function editFlush(){ // stessa logica della coda dei bug: alla verifica della sessione, al login, con l'evento online, dopo un invio riuscito
+  if(editFlushing||EDIT_NOFLUSH||!canReport()||navigator.onLine===false)return;
+  editFlushing=true;
+  try{for(;;){
+    const q=editQ();if(!q.length)break;
+    try{await Promise.race([editPost(q[0]),bugTimeout(12000)])}catch(e){if(bugDenied(e))EDIT_NOFLUSH=true;break}
+    const q2=editQ();q2.shift();store.set(EDITQ_KEY,q2);
+  }}finally{editFlushing=false}
+}
+addEventListener("online",()=>editFlush());
+async function expSendTexts(list,notes){
+  const sent=editSent(),c={sent:0,queued:0,denied:0};
+  for(const e of list){
+    const r=await editSubmit(expEditPayload(e,(notes&&notes[e.target])||""));
+    sent[e.target]=e.value;store.set(EDITSENT_KEY,sent); // resta applicata in locale; non si rimanda se non viene modificata di nuovo
+    c[r==="sent"?"sent":r==="queued"?"queued":"denied"]++;
   }
+  if(c.sent)editFlush();
+  return c;
+}
+/* pacchetto v2: solo audio e sprite. o: {note, notes:{target:nota}, preview} */
+async function expBuildPackage(o){
+  o=o||{};const errors=[],warnings=[];
+  if(!expCanSend())errors.push("Accedi per scaricare il pacchetto.");
+  const date=expToday(),note=String(o.note||"").trim(),items=[];let total=0;
   for(const a of await expAudioItems()){
-    const ext=expExt(a.blob),size=a.blob.size,kb=Math.round(size/1024);
-    let reason=null;
-    if(!ext)reason="formato non supportato (servono mp3, ogg o wav)";
-    else if(size>EXP_LIM.audio)reason="oltre il limite di 300 KB ("+kb+" KB)";
-    const base=a.target.replace(/\./g,"_");
-    if(reason){flagged.push({type:"audio",character:a.character,target:a.target,file:base+"."+(ext||((a.blob.type||"").split("/")[1]||"bin").replace(/^x-/,"").replace(/[^a-z0-9]/g,"")||"bin"),mime:a.blob.type||"",sizeBytes:size,reason,_a:a});continue}
-    const file=base+"."+ext;total+=size;
-    files.push({file,blob:a.blob});
-    changes.push({type:"audio",character:a.character,target:a.target,file,_c:{}});
+    const ext=expExt(a.blob),size=a.blob.size;
+    if(!ext){warnings.push("Audio ignorato (formato non supportato, servono mp3, ogg o wav): "+a.target);continue}
+    const flagged=size>EXP_LIM.audio,name=a.target.replace(/\./g,"_")+"."+ext;total+=size;
+    items.push({type:"audio",character:EXP_CHV2[a.character]||"shared",target:a.target,blob:a.blob,ext,file:(flagged?"flagged/":"")+name,flagged,size});
+    if(flagged)warnings.push("Oltre 300 KB ("+Math.round(size/1024)+" KB): va in flagged/ e lo converte Claude — "+a.target);
+  }
+  for(const s of await expSpriteItems()){
+    const ext=(s.blob.type||"").indexOf("webp")>=0?"webp":"png",size=s.blob.size;
+    if(size>EXP_LIM.sprite){errors.push("Sprite oltre 200 KB ("+Math.round(size/1024)+" KB): "+s.target);continue}
+    total+=size;items.push({type:"sprite",character:s.character,target:s.target,blob:s.blob,ext,file:s.target.replace(/\./g,"_")+"."+ext,size,spr:s});
   }
   if(total>EXP_LIM.total)errors.push("Gli asset superano 2 MB in totale ("+(total/1048576).toFixed(2)+" MB).");
-  if(!changes.length&&!flagged.length)errors.push("Nessuna modifica da esportare.");
-  if(!o.preview)for(const c of changes.concat(flagged))if(!noteOf(c))errors.push("Manca la nota: "+c.target);
-  const man={schemaVersion:1,developer:dev,date,baseVersion:"V"+VERSION,changes:changes.map(c=>{
-    const r={type:c.type,character:c.character,target:c.target};
-    if(c.type==="text")r.value=c.value;else r.file=c.file;
-    r.note=expNoteFor(c._c).replace("@NOTE@",noteOf(c));return r})};
-  const res={ok:!errors.length,errors,warnings,manifest:man,files:files.map(f=>({file:f.file,bytes:f.blob.size})),
-    flagged:flagged.map(f=>({type:f.type,character:f.character,target:f.target,file:f.file,mime:f.mime,sizeBytes:f.sizeBytes,reason:f.reason})),
-    totalBytes:total,changeCount:changes.length,zipName:"mangiasassi_"+dev+"_"+date+".zip",zip:null};
-  if(!res.ok||o.preview)return res;
-  const enc=new TextEncoder(),ents=[],sub="submissions/"+dev+"/"+date+"/",fl="flagged/"+dev+"/"+date+"/";
-  if(changes.length){
-    ents.push({name:sub+"manifest.json",data:enc.encode(JSON.stringify(man,null,2))});
-    for(const f of files)ents.push({name:sub+f.file,data:new Uint8Array(await f.blob.arrayBuffer())});
+  const res={ok:false,errors,warnings,count:items.length,totalBytes:total,zip:null,zipName:"mangiasassi_"+(acct||"x")+"_"+date+".zip",items:items.map(x=>({type:x.type,target:x.target,file:x.file,size:x.size,flagged:!!x.flagged}))};
+  if(!items.length)res.empty=true;
+  const noteOf=t=>String((o.notes&&o.notes[t])||note).trim();
+  if(!o.preview){
+    if(!items.length)errors.push("Nessun audio o sprite da esportare.");
+    if(!note)errors.push("Scrivi una nota generale: serve a spiegare perché hai fatto le modifiche.");
+    for(const x of items)if(noteOf(x.target).length>EDIT_NOTE_MAX)errors.push("Nota troppo lunga (max "+EDIT_NOTE_MAX+" caratteri): "+x.target);
+    if(note.length>EDIT_NOTE_MAX)errors.push("La nota generale è troppo lunga (max "+EDIT_NOTE_MAX+" caratteri).");
+    if(typeof crypto==="undefined"||!crypto.subtle)errors.push("Serve una connessione sicura (https) per calcolare le impronte dei file.");
   }
-  if(flagged.length){
-    const fj={schemaVersion:1,developer:dev,date,baseVersion:man.baseVersion,istruzioni:"File audio fuori dai limiti del validatore: da convertire (mp3/ogg/wav, max 300 KB) prima di aggiungerli alla build.",items:[]};
-    for(const f of flagged){
-      fj.items.push({type:f.type,character:f.character,target:f.target,file:f.file,mime:f.mime,sizeBytes:f.sizeBytes,reason:f.reason,note:noteOf(f)});
-      ents.push({name:fl+f.file,data:new Uint8Array(await f._a.blob.arrayBuffer())});
+  res.ok=!errors.length&&!!items.length;
+  if(o.preview||errors.length)return res;
+  const enc=new TextEncoder(),changes=[],ents=[],sub="submissions/"+acct+"/"+date+"/";
+  let n=0;
+  for(const x of items){
+    const u8=new Uint8Array(await x.blob.arrayBuffer()),c={id:"c"+(++n),type:x.type,character:x.character,target:x.target};
+    if(x.type==="audio"){
+      let dur=await expAudioMs(u8);if(dur==null){dur=0;warnings.push("Durata non misurata: "+x.target)}
+      const b64=expBuiltinB64(x.target);let before=null;
+      if(b64){const bu=expB64ToU8(b64);before={sha256:await expSha256(bu),bytes:bu.length};const bd=await expAudioMs(bu);if(bd!=null)before.durationMs=bd}
+      c.before=before;c.file=x.file;c.meta={bytes:u8.length,mime:EXP_MIME[x.ext],durationMs:dur};
+    }else{
+      const s=x.spr,sz=await expImgSize(x.blob)||[0,0];let before=null;
+      if(s.built){const bu=new Uint8Array(await s.built.arrayBuffer()),bs=await expImgSize(s.built);before={sha256:await expSha256(bu),bytes:bu.length};if(bs){before.w=bs[0];before.h=bs[1]}}
+      if(s.screen)c.screen=s.screen;
+      c.before=before;c.file=x.file;c.meta={frameKey:s.frameKey,w:sz[0],h:sz[1],anchor:s.anchor,ox:s.ox,oy:s.oy,base_w:s.base_w,base_h:s.base_h};
     }
-    ents.push({name:fl+"flagged.json",data:enc.encode(JSON.stringify(fj,null,2))});
+    c.note=noteOf(x.target);changes.push(c);
+    ents.push({name:sub+x.file,data:u8});
   }
-  res.zip=expZip(ents);res.entries=ents.map(e=>e.name);
+  const man={schemaVersion:2,developer:acct,baseVersion:VERSION,site:IS_DEVSITE?"dev":"stable",exportedAt:new Date().toISOString(),note,changes};
+  ents.unshift({name:sub+"manifest.json",data:enc.encode(JSON.stringify(man,null,2))});
+  res.zip=expZip(ents);res.entries=ents.map(e=>e.name);res.manifest=man;
   return res;
 }
 /* elenco dei target validi, generato dalle chiavi reali del gioco (per DEVELOPERS.md / TARGETS.md) */
@@ -2090,47 +2177,51 @@ function exportTargetsMd(){
   L.push("## File fuori limite","","Gli audio oltre 300 KB o in altri formati non entrano in `submissions/`. Finiscono in `flagged/<sviluppatore>/<data>/` con un `flagged.json` che li descrive: Claude li converte prima di aggiungerli alla build.","","## Sprite","","Il tipo `sprite` è previsto dal manifest ma la dev mode non permette ancora di modificare sprite.","");
   return L.join("\n");
 }
-window.mgExport={build:exportBuild,targets:exportTargetsMd};
 
 /* --- finestra di esportazione --- */
-const EXP_NAMEKEY="mgs_devname";
-const expGetName=()=>{try{return localStorage.getItem(EXP_NAMEKEY)||acct||""}catch(e){return acct||""}};
-const expSetName=v=>{try{localStorage.setItem(EXP_NAMEKEY,v)}catch(e){}};
-const expClean=v=>String(v||"").toLowerCase().replace(/[^a-z0-9_-]/g,"");
 function expDownload(name,u8){
   const b=new Blob([u8],{type:"application/zip"}),url=URL.createObjectURL(b),a=document.createElement("a");
   a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(url)},4000);
 }
 const expShort=(v,n)=>{v=String(v);return v.length>n?v.slice(0,n-1)+"…":v};
 async function exportDialog(){
-  let pv;try{pv=await exportBuild({developer:expGetName()||"x",preview:true})}catch(e){return toast("Anteprima non riuscita")}
-  const ch=pv.manifest.changes,nm=expGetName(),kb=Math.round(pv.totalBytes/1024);
-  const rows=ch.map(c=>`<div style="margin:0 0 8px"><div style="font-size:.85rem;word-break:break-all"><b>${esc(c.target)}</b> · ${c.type==="text"?esc(expShort(c.value,40)):esc(c.file)}</div><input type="text" data-en="${esc(c.target)}" placeholder="nota per questa modifica (facoltativa)" style="margin-top:3px"></div>`).join("");
-  const fl=pv.flagged.length?`<div style="margin:10px 0"><b style="font-size:.9rem">Da convertire (${pv.flagged.length})</b><small style="display:block;color:var(--mute)">Non entrano nei limiti: vanno in una cartella a parte e li converte Claude.</small>${pv.flagged.map(f=>`<div style="font-size:.8rem;margin-top:4px;word-break:break-all">${esc(f.target)} · ${esc(f.reason)}</div>`).join("")}</div>`:"";
-  const er=pv.errors.length?`<div class="err" style="text-align:left">${pv.errors.map(esc).join("<br>")}</div>`:"";
-  const wr=pv.warnings.length?`<small style="display:block;color:var(--mute);margin-top:8px;text-align:left">${pv.warnings.map(esc).join("<br>")}</small>`:"";
-  const blocked=pv.errors.length>0;
+  const can=expCanSend(),tx=expTextEdits(),ed=tx.list,fresh=ed.filter(e=>expSentState(e)==="new"),terr=[];
+  for(const e of ed)if(expSentState(e)==="new"){if(!e.value.trim())terr.push("Valore vuoto: "+e.target);else if(e.value.length>EXP_LIM.text)terr.push("Testo troppo lungo ("+e.value.length+"/"+EXP_LIM.text+" caratteri): "+e.target)}
+  let pv;try{pv=await expBuildPackage({preview:true})}catch(e){return toast("Anteprima non riuscita")}
+  const badge=e=>{const s=expSentState(e);return s==="sent"?`<span style="color:#7bd88f">inviato</span>`:s==="queued"?`<span style="color:var(--runway)">in coda</span>`:`<span style="color:var(--mute)">da inviare</span>`};
+  const rows=ed.map(e=>`<div style="margin:0 0 8px"><div style="font-size:.85rem;word-break:break-all"><b>${esc(e.target)}</b> · ${esc(expShort(e.value,40))} · ${badge(e)}</div>${expSentState(e)==="new"?`<input type="text" data-en="${esc(e.target)}" maxlength="${EDIT_NOTE_MAX}" placeholder="nota per questa modifica (facoltativa)" style="margin-top:3px">`:""}</div>`).join("");
+  const hint=can?"":`<small style="display:block;color:var(--alarm);margin-top:6px">Accedi per inviare</small>`;
+  const sendOff=!can||!fresh.length||terr.length>0,pkgOff=!can||pv.empty;
   const m=openModal(`<h3>Esporta modifiche</h3><div style="text-align:left">
-    <label class="f">Nome sviluppatore</label><input type="text" id="xdn" value="${esc(nm)}" autocapitalize="off" autocomplete="off" placeholder="es. mario">
-    <small style="display:block;color:var(--mute);margin-top:4px">Minuscolo, senza spazi. Resta salvato su questo dispositivo.</small>
-    <p style="margin:12px 0 6px"><b>${ch.length} modifiche</b>${pv.files.length?` · ${pv.files.length} audio (${kb} KB su 2048 KB)`:""}</p>${er}${wr}
-    ${ch.length?`<label class="f">Nota generale (obbligatoria)</label><textarea id="xn" rows="2" placeholder="Perché queste modifiche?"></textarea>
-    <details style="margin-top:8px"><summary style="cursor:pointer">Note per singola modifica (${ch.length})</summary><div style="margin-top:8px">${rows}</div></details>`:`<label class="f">Nota generale (obbligatoria)</label><textarea id="xn" rows="2" placeholder="Perché queste modifiche?"></textarea>`}
-    ${fl}</div>
-    <div class="acts"><button class="btn ghost" id="xx">Chiudi</button><button class="btn" id="xk" ${blocked?"disabled":""}>Scarica zip</button></div>
+    <p style="margin:0 0 6px"><b>Testi, colori e dimensioni</b> · ${ed.length} modifiche${fresh.length!==ed.length?` (${fresh.length} da inviare)`:""}</p>
+    <small style="display:block;color:var(--mute);margin-bottom:6px">Vanno direttamente al maintainer con «Invia testi» (arrivano nel repo il giorno dopo). Restano applicate anche qui. La nota generale del pacchetto non viaggia con i testi: qui vale solo la nota di ogni modifica.</small>
+    ${terr.length?`<div class="err" style="text-align:left">${terr.map(esc).join("<br>")}</div>`:""}
+    ${ed.length?`<details style="margin-top:4px"><summary style="cursor:pointer">Elenco (${ed.length})</summary><div style="margin-top:8px">${rows}</div></details>`:""}
+    ${tx.warn.length?`<small style="display:block;color:var(--mute);margin-top:8px">${tx.warn.map(esc).join("<br>")}</small>`:""}
+    <div class="acts" style="margin-top:10px"><button class="btn" id="xs" ${sendOff?"disabled":""}>Invia testi</button></div>${hint}
+    <hr style="border:0;border-top:1px solid var(--steel);margin:14px 0">
+    <p style="margin:0 0 6px"><b>Audio e sprite</b> · ${pv.count} file${pv.count?` (${Math.round(pv.totalBytes/1024)} KB su 2048 KB)`:""}</p>
+    ${pv.empty?`<small style="display:block;color:var(--mute)">Nessun audio o sprite da esportare.</small>`:""}
+    ${pv.warnings.length?`<small style="display:block;color:var(--mute);margin-top:6px">${pv.warnings.map(esc).join("<br>")}</small>`:""}
+    <label class="f">Nota generale (obbligatoria)</label><textarea id="xn" rows="2" maxlength="${EDIT_NOTE_MAX}" placeholder="Perché queste modifiche?"></textarea>
+    <div class="acts" style="margin-top:10px"><button class="btn" id="xk" ${pkgOff?"disabled":""}>Scarica pacchetto</button></div>${hint}</div>
+    <div class="acts"><button class="btn ghost" id="xx">Chiudi</button></div>
     <div id="xe" style="margin-top:8px;text-align:left"></div>`);
   const out=m.querySelector("#xe");
   m.querySelector("#xx").onclick=closeModal;
+  m.querySelector("#xs").onclick=async()=>{
+    const notes={};m.querySelectorAll("[data-en]").forEach(i=>{const v=i.value.trim();if(v)notes[i.dataset.en]=v});
+    const b=m.querySelector("#xs");b.disabled=true;b.textContent="Invio…";
+    const c=await expSendTexts(fresh,notes);
+    toast(c.denied?"Invio non riuscito":c.queued?"Salvati "+c.queued+" testi, verranno inviati appena sei online":"Testi inviati ("+c.sent+")");
+    closeModal();exportDialog();
+  };
   m.querySelector("#xk").onclick=async()=>{
-    const dev=expClean(m.querySelector("#xdn").value),note=m.querySelector("#xn").value.trim(),notes={};
-    m.querySelectorAll("[data-en]").forEach(i=>{const v=i.value.trim();if(v)notes[i.dataset.en]=v});
-    if(!dev){out.innerHTML=`<div class="err">Scrivi il tuo nome sviluppatore (minuscolo, senza spazi).</div>`;return}
-    if(!note){out.innerHTML=`<div class="err">Scrivi una nota generale: serve a spiegare perché hai fatto le modifiche.</div>`;return}
-    let r;try{r=await exportBuild({developer:dev,note,notes})}catch(e){out.innerHTML=`<div class="err">Esportazione non riuscita.</div>`;return}
+    const notes={};
+    let r;try{r=await expBuildPackage({note:m.querySelector("#xn").value})}catch(e){out.innerHTML=`<div class="err">Esportazione non riuscita.</div>`;return}
     if(!r.ok){out.innerHTML=`<div class="err">${r.errors.map(esc).join("<br>")}</div>`;return}
-    expSetName(dev);expDownload(r.zipName,r.zip);
-    const parts=r.entries.some(n=>n.startsWith("flagged/"))?"<b>submissions</b> e <b>flagged</b>":"<b>submissions</b>";
-    out.innerHTML=`<div style="color:var(--runway);font-size:.9rem;line-height:1.4"><b>${esc(r.zipName)}</b> creato (${r.changeCount} modifiche).<br>Estrai lo zip e trascina ${parts} nella pagina di upload di GitHub. Se il download non parte, apri il gioco dal link di GitHub Pages o da file locale.</div>`;
+    expDownload(r.zipName,r.zip);
+    out.innerHTML=`<div style="color:var(--runway);font-size:.9rem;line-height:1.4"><b>${esc(r.zipName)}</b> creato (${r.count} file).<br>Estrai lo zip e carica la cartella <b>submissions</b> su GitHub (ramo <b>dev</b>) con Add file → Upload files, poi Create pull request.</div>`;
   };
 }
 

@@ -1807,3 +1807,12 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 
 - Submission format v2 (F3a): spec `docs/submissions-v2.md`, DEVELOPERS.md rewritten (login, Invia testi, Scarica pacchetto, PR to `dev`, before/base version, bug icon); `scripts/validate_submission.py` v2 (schemaVersion 1 and 2, folder mode `validate_submission.py <folder>`, `-testi` folders, tests `scripts/test_validate_submission.py` + fixtures `submissions/_fixtures/`); `firestore.rules`: `edits` collection (owner publishes it in the console); text-edit export in `tools/bugs/export_bugs.py` (two-phase: export → commit/push → mark; packages validated, failing ones committed and listed in the commit message; tests extended). CLAUDE.md §5 (conflict check, review columns), §10.3 (F3a done, F3b), §10.4. Workflow copied to `main`. No build.
 - Triage: 3 bug reports (pipeline tests) moved from `bugs/inbox/` to `bugs/triaged/` (2 entries in NEW).
+
+## 0.4_6 — 2026-09-25
+
+- F3b submission format v2 in the game: the export dialog now has two actions, both needing a Firebase dev session (otherwise disabled, "Accedi per inviare"):
+  - **Invia testi**: each text/colour/scale change → one Firestore `edits` doc (fields exactly as the rules: uid, acct, kind, char, screen when known, target, before = built-in value without the local override, value, note ≤ 300, base = VERSION, ts, meta); the change stays applied locally and is marked "inviato"/"in coda", not re-sent unless edited again; offline / network failure → local queue `mgs_editq` (max 200, `meta.qts`), flushed on load, `online` and after each send; permission error keeps it queued without a retry loop.
+  - **Scarica pacchetto**: ZIP with only audio and sprite changes and a schemaVersion 2 manifest (developer = account, baseVersion, site, exportedAt, note, `before` {sha256, bytes, w/h or durationMs} of the built-in asset via crypto.subtle, `file`, `meta` measured by the tool); audio > 300 KB goes under `flagged/` inside the package; nothing to export → disabled with a hint. `expSpriteItems()` is the hook for the skin/sprite tool (F4): today the dev mode produces no sprites.
+- `window.mgExport` removed (DEV_AUDIT pick 11). Root `VERSION` file synced (it had stayed at 0.4_1) — from now on bump `const VERSION` and the root file together (§6).
+- Tests: `tools/fbstub/test_f3b.py` (34 checks incl. the downloaded ZIP passing `scripts/validate_submission.py`); F1/F6a tests still pass. `export-dialog` re-captured.
+- Size: index.html 5,648,571 bytes (+6,324 vs 0.4_5, LF-normalised).

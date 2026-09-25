@@ -87,7 +87,7 @@ Home menu: only the ✎ toggle. Pens, "+", "−" go with F5. The "Debug" achieve
 8. Merge "Popup di prova" (#32) into the unlock-popup previews (#33) — **yes**. `capture.py` calls `popPreview`/`achPopup` directly: unaffected. **[owner: yes · DONE — built 0.4_2]**
 9. Make the Ferma debug overlay (#23) a toggle, default OFF — **yes**; the `fa-*` screens would be regenerated cleaner. **[owner: yes · DONE — built 0.4_2]**
 10. Delete "Testo grezzo" (#34) — **yes**, replaced by F3. **[owner: yes · DONE — built 0.4_2]**
-11. Hide `window.mgExport` unless logged in (#35) — **yes** (or delete with F3). **[owner: yes · LATER — yes — with F3]**
+11. Hide `window.mgExport` unless logged in (#35) — **yes** (or delete with F3). **[owner: yes · DONE — built 0.4_6 (F3b)]**
 12. Delete the debug achievements and the "Debug" tab (#31; they write +5 sordi/exp) — **yes**. `capture.py` injects a style hiding their toast (`capstyle`); the Debug tab is not in `SCREENS.md`, so nothing else breaks. **[owner: yes · DONE — built 0.4_2]**
 13. Delete `DEV_SKIN_TEST` (#17) after F4b — **yes** (later, no action now). **[owner: yes · LATER — yes — after F4b]**
 14. Replace the `bindOpt` whitelist (#36) with a `data-dev` attribute so new dev buttons need no code edit — **yes**. The ids stay, so scripts are unaffected. **[owner: yes · DONE — built 0.4_2]**

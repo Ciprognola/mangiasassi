@@ -188,7 +188,7 @@ in-universe — never use developer words like "asset" or "fantasma" in player-f
 - **Battle**: `PB_LIB/pbLib` (moves), `pbMon, pbBattle, pbDamage, pbTurn, pbAI, pbAct`, anim `pbAnimMove, pbFxDraw`,
   UI `pbPanel, pbBox, pbCommand, pbFight, pbEnding`, sim `pbSim`. Each fighter currently has 4 fixed moves.
 - **Achievements**: `ach, unlockAch, renderAch, bindAch`.
-- **Export**: `exportDialog, exportBuild, expZip, expCrc32, expTextChanges, expAudioItems, exportTargetsMd`.
+- **Export (F3b, format v2, docs/submissions-v2.md)**: `exportDialog` (two actions; both need a Firebase dev session, otherwise disabled with "Accedi per inviare"); texts/colours/scales: `expTextChanges` (with the built-in `before`) → `expTextEdits` → `expSendTexts` → `editSubmit`/`editPost` (Firestore `edits`, fields exactly as the rules) with the local queue `mgs_editq` (`editQueue`/`editFlush`, flushed like the bug queue) and the sent marks `mgs_editsent` (`expSentState`: new / queued / sent, both keys `_dev` on the dev site); audio + sprites: `expBuildPackage` (`expAudioItems`, `expSpriteItems` = hook for F4, `expBuiltinB64`, `expSha256`, `expZip`) → ZIP `submissions/<acct>/<date>/`. `exportTargetsMd` (v1 target list) is kept but no longer exposed; `window.mgExport` is gone. Tests: `tools/fbstub/test_f3b.py`.
 
 ### Dev mode
 Tap **"Build locale" five times** in Options to open the login modal (username + password, **Firebase Auth**; the game appends `@mangiasassi.invalid`, §10.2). The role comes from Firestore `devs/{uid}.role` (`master`, `dev1`…`dev5`): internally `role` is `'master'` or `'dev1'` (every dev1…dev5 behaves as `dev1`, master-only = Sblocca tutto + menu/GAM music uploads), `acct` keeps the account name (shown in the Account accordion, default developer name of the export). `isMaster()` is the helper.
@@ -312,7 +312,7 @@ into `submissions/<acct>/<YYYY-MM-DD>/` through a PR to `dev`. Once the `validat
   `\u00e8`-style escapes. Never print base64; embed art in the chunk that first draws it. Measure size deltas against `git show HEAD:index.html` with CRLF normalised.
 - **Git Bash heredocs with quotes break on this machine** — write longer scripts with the Write tool (avoid `\n` inside one-line `python -` patches: it becomes a real newline). Console output of non-ASCII needs `PYTHONIOENCODING=utf-8`.
 - **Docs are committed together with the code.** Build doc text with `.replace` (no `%` formatting), and check `git diff --stat` shows CHANGELOG/CLAUDE.md before committing.
-- Each chunk: bump `VERSION` to `0.4_NN` (`0.4.5_N` after the 0.4.5 release), CHANGELOG entry with size delta, update the §10.3 row, commit, push (to `dev` once I2 is done).
+- Each chunk: bump `const VERSION` **and the root `VERSION` file together** to `0.4_NN` (`0.4.5_N` after the 0.4.5 release), CHANGELOG entry with size delta, update the §10.3 row, commit, push (to `dev` once I2 is done).
 - Owner commits often land via the GitHub web UI (art uploads land at odd paths) — always `git pull --ff-only` first (§1). Briefs arrive pasted from Claude web, one build per message: if one looks cut off, say so first (§6 rule 10).
 
 ---
@@ -484,7 +484,7 @@ Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 | F6a | Bug report button + popup, devs only, player path flag off | F1, I3 | Sonnet · medium | done (0.4_4) |
 | F6b | Bug pipeline: GitHub Action → bugs/inbox/, triage into bugs/BUGS.md | F6a, service account (owner) | Sonnet · medium | done (infra) |
 | F3a | Submission format v2: spec (docs/submissions-v2.md), DEVELOPERS.md, validator v2 + tests, Firestore `edits` rules, text-edit export in the bot | I3, F6b | Sonnet · high | done (docs/infra) |
-| F3b | Game side (build 0.4_6): export dialog split into «Invia testi» → Firestore edits and «Scarica pacchetto» → ZIP v2 with before/hash/meta; delete `window.mgExport` (audit pick 11); sync the root `VERSION` file | F3a, owner publishes the rules | Sonnet · high | todo |
+| F3b | Game side (build 0.4_6): export dialog split into «Invia testi» → Firestore edits and «Scarica pacchetto» → ZIP v2 with before/hash/meta; delete `window.mgExport` (audit pick 11); sync the root `VERSION` file | F3a, owner publishes the rules | Sonnet · high | done (0.4_6) |
 | F5 | Text edit by 3 s long-press, pens removed | F3, E1b | Sonnet · high | todo |
 | F4a | Skin tool part 1: export full character sheet + map | F3 | Sonnet · high | todo |
 | F4b | Skin tool part 2: import sheet, local preview, export as submission | F4a | Sonnet · high | todo |
@@ -515,6 +515,8 @@ Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 | 2026-09-25 | F6b | Daily export + manual run; docs marked exported (kept in Firestore); triage by Claude Code at session start (§1c), classify only, duplicates merged |
 | 2026-09-25 | 0.5 note | Before player bug reports go live: the repo is public — player reports must not store uid/ua/account in bugs/ (strip or keep them private) |
 | 2026-09-25 | F3 | Text, colour and scale edits travel from the game straight to Firestore `edits` (no ZIP, no folder), exported by the daily workflow into normal packages `submissions/<acct>/<date>-testi/`; sprites, audio and (later) skins stay a ZIP uploaded by PR to `dev`. The base version and the «before» value of every change are recorded automatically; sprite measurements are filled in by the tool. Conflict check (before vs the current build) added to the review (§5). The export workflow now marks Firestore docs exported only after the push succeeded (two-phase). Spec: docs/submissions-v2.md |
+| 2026-09-25 | F3a | Two-phase export accepted (push first, then mark docs exported) |
+| 2026-09-25 | F3b | Export dialog split: Invia testi → Firestore edits (queued offline), Scarica pacchetto → ZIP v2; sent texts stay applied locally, marked inviato; window.mgExport removed |
 | 2026-09-25 | F1 | No offline backup login: if Firebase is unreachable dev mode is unavailable (a session already logged in stays valid offline) |
 
 **Built-in audio slots** (filled by A-chunks):
