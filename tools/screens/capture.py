@@ -524,6 +524,11 @@ def sc_bug(b, only):
     c.p.fill("#bgt", "Il pulsante non risponde dopo la pausa.")
     c.shot("bug-popup", 200)
     c.p.keyboard.press("Escape"); time.sleep(0.3)
+    if c.wants("dev-textedit-popup"):  # F5: long-press (3 s) on a menu tile label
+        r = c.ev("(()=>{const r=document.querySelector('[data-tile=wish] span').getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]})()")
+        c.p.mouse.move(r[0], r[1]); c.p.mouse.down(); time.sleep(3.4); c.p.mouse.up()
+        c.shot("dev-textedit-popup", 300)
+        c.p.keyboard.press("Escape"); time.sleep(0.3)
     c.ev("go('bye')"); c.shot("bye-goodbye", 300)
     c.ev("go('sad')"); c.shot("sad-countdown", 200)  # legacy screen, not reachable from the UI: shown through go()
     c.close()

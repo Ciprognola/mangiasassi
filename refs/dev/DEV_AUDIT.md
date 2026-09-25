@@ -95,3 +95,5 @@ Home menu: only the ✎ toggle. Pens, "+", "−" go with F5. The "Debug" achieve
 16. Correct the I3 note about the El Gamblador click (2b) and the Enter-workaround comment in `capture.py` — **yes** (doc-only, next docs chunk). **[owner: yes · DONE — done (docs, 0.4_2)]**
 
 **Decided 2026-09-25 (owner: yes to all 16).** Role split (pick 15): master-only = Sblocca tutto + menu/GAM music uploads (+ credentials until F1); dev1 = everything else. Checked in 0.4_2: `devRows` gates exactly these with `role==="master"`; no inconsistency found.
+
+**F5 (0.4_7):** the pen icons and their edit dialog (rows 6, 10) are gone, replaced by the 3 s long-press text edit (§4 of CLAUDE.md, DEVELOPERS.md). The `S.ov` override store stays as the live-preview store; the «+» / «−» buttons for custom tiles/cards were not pens and stay.

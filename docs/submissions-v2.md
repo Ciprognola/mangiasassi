@@ -42,9 +42,9 @@ Spec for developer submissions from build 0.4_6 on (chunk F3a defines it, F3b bu
 | `id` | all | unique string inside the package (for edits: the Firestore doc id) |
 | `type` | all | `text`, `colour`, `scale`, `audio`, `sprite` (`skin` is reserved for F4) |
 | `character` | all | `roccia`, `algidone` or `shared` (v1 used `uomoRoccia`; v2 uses `roccia`) — `shared` needs an explanation in `note` (warning) |
-| `target` | all | the same target keys as v1 (`sound.algidone.eat`, `dialogue.win`, `tile.new.color`, …; see DEVELOPERS.md) |
+| `target` | all; **optional for text changes that carry a `locator`** | the same target keys as v1 (`sound.algidone.eat`, `dialogue.win`, `tile.new.color`, …; see DEVELOPERS.md). Long-press edits (F5) of texts with no known key have no `target`: they are proposals identified by `locator` |
 | `screen` | optional | canonical screen id from `refs/screens/SCREENS.md` (lowercase kebab, or `unknown:<screen>`) when the change is visible on a screen; produced by `screenId()` |
-| `locator` | text/colour/scale, optional | `{text: <current text>, pos: <short position hint>}` for text with no `target` key yet (F5 fills it) |
+| `locator` | text/colour/scale, optional | `{text: <current text>, pos: <short position hint>}` for text with no `target` key: `pos` = screen id + DOM path (`menu-home-roccia .brand[0]>h1[1]`) or `canvas #<id> x,y,w,h`. Filled by the long-press text edit (F5); the reviewer finds the string in the code from `text` + `screen` |
 | `before` | all, required key | text/colour/scale: the value at `baseVersion` as a string (`null` if it did not exist). audio/sprite: `{sha256 (64 hex), bytes, w?, h?, durationMs?}` of the asset at `baseVersion`, or `null` |
 | `value` | text/colour/scale | new value, string, ≤ 500 chars. colour = `#rrggbb`; scale = a number between 0.5 and 2 written as text (`"1.2"`) |
 | `file` | audio/sprite | simple relative path inside the package (`..`, absolute paths and `\` are rejected). Audio > 300 KB goes under `flagged/` (only a warning; Claude converts it) |

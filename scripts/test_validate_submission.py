@@ -67,6 +67,14 @@ for name, fn, want in MUT:
         json.dump(m, open(os.path.join(dst, "manifest.json"), "w", encoding="utf-8"), ensure_ascii=False)
         rc, out = run(dst)
         check(f"broken v2: {name}", rc == 1 and want in out, out.strip()[-160:] if want not in out else "")
+with tempfile.TemporaryDirectory() as d:  # F5: a text proposal has a locator and no target
+    dst = os.path.join(d, "dev3", "2026-09-26-testi"); os.makedirs(dst)
+    m = {"schemaVersion": 2, "developer": "dev3", "baseVersion": "0.4_7", "site": "dev", "exportedAt": "2026-09-26T08:00:00Z", "note": "proposte",
+         "changes": [{"id": "p1", "type": "text", "character": "shared", "screen": "menu-home-roccia", "locator": {"text": "Lista desideri", "pos": "menu-home-roccia .tile[2]"}, "before": "Lista desideri", "value": "Desideri"}]}
+    json.dump(m, open(os.path.join(dst, "manifest.json"), "w", encoding="utf-8"), ensure_ascii=False)
+    rc, out = run(dst); check("v2: text proposal with a locator and no target is valid", rc == 0, out.strip()[-160:])
+    del m["changes"][0]["locator"]; json.dump(m, open(os.path.join(dst, "manifest.json"), "w", encoding="utf-8"), ensure_ascii=False)
+    rc, out = run(dst); check("broken v2: no target and no locator", rc == 1 and "'target' is required" in out)
 # oversize sprite / audio, flagged audio only warns, wrong folder name
 with tempfile.TemporaryDirectory() as d:
     dst = os.path.join(d, "dev3", "2026-09-26"); shutil.copytree(src, dst)

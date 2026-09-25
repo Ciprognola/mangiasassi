@@ -35,6 +35,7 @@ META = {
     "cust-": ("Lista desideri → Giocatore → Personalizza", "`cust`", "`renderCust`, `bindCust`", "`-skin-on` = costume selected"),
     "sad-countdown": ("Legacy screen with a 3-2-1 countdown back to the splash; no UI path reaches it today (`go(\"sad\")`)", "`sad`", "`renderSad`, `sadArm`", "Bug icon shown for logged-in devs"),
     "bye-goodbye": ("Quitta → Sì, esco in the Android app (`MGApp`, screen `bye`)", "`bye`", "`render` (bye branch)", "Bug icon shown for logged-in devs"),
+    "dev-textedit-popup": ("Logged-in dev, dev mode on: hold a text 3 s (F5)", "modal", "`lpOpen`, `lpKnown`, `lpDomTarget`, `lpCanvasHit`", "Live preview for known keys; other texts are proposals with a locator"),
     "bug-popup": ("Logged-in dev: tap the bug icon in any top bar (F6a)", "modal", "`bugOpen`, `bugFreeze`, `bugSubmit`, `screenId`", "Freezes the game like its pause (no pause menu); Indietro resumes"),
     "export-dialog": ("Opzioni → Sviluppatore → Oggetti/Esporta accordion → Esporta modifiche", "modal", "`exportDialog`, `exportBuild`", ""),
     "maze-intro": ("Home → Nuovo gioco", "`game`, `G.state=\"ready\"`", "`startGame`, `buildGameDOM`, `draw`", "Girone intro card (\"Pronti?\")"),

@@ -201,9 +201,7 @@ html{-webkit-text-size-adjust:100%}
   font-family:'Bungee',sans-serif;white-space:nowrap;overflow:hidden;text-align:center;box-shadow:0 5px 0 rgba(0,0,0,.35);transition:transform .08s}
 .tile:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.35)}
 .tile .stripe{position:absolute;right:0;top:0;bottom:0;width:22px;background:repeating-linear-gradient(135deg,rgba(0,0,0,.22) 0 6px,transparent 6px 12px)}
-.tile .pen,.tile .minus,.card .pen{position:absolute;top:6px;width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:14px;line-height:1;z-index:2;font-family:system-ui}
-.tile .pen,.card .pen{right:28px;background:#fff;color:#111}
-.card .pen{right:6px;top:6px}
+.tile .minus{position:absolute;top:6px;width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:14px;line-height:1;z-index:2;font-family:system-ui}
 .tile .minus{left:6px;background:var(--alarm);color:#fff;font-weight:700;top:50%;margin-top:-13px}
 .tsplit{flex:1 1 0;min-height:calc(2.7rem*var(--fs));max-height:calc(5.4rem*var(--fs));display:flex;gap:9px}
 .tsplit .tile{min-height:0;max-height:none;padding:0 26px 0 6px}
@@ -538,7 +536,7 @@ async function fbLogin(user,pass){
   if(!r){try{await fb.Au.signOut(fb.auth)}catch(x){}throw new Error("Account senza ruolo.")}
   return r;
 }
-function fbDrop(){simOff();role=null;acct=null;devOn=false;DEV_SKIN_TEST=null;persistDev();if(["menu","opt","wish","ach","road"].includes(screen))render()}
+function fbDrop(){simOff();role=null;acct=null;devOn=false;DEV_SKIN_TEST=null;persistDev();lpSync();if(["menu","opt","wish","ach","road"].includes(screen))render()}
 async function fbChangePw(){
   const er=$("#cpe"),o=$("#cpo").value,n=$("#cpn").value,r=$("#cpr").value;
   if(!o||!n||!r){er.textContent="Compila tutti i campi.";return}
@@ -569,6 +567,209 @@ async function fbVerify(){ // controllo in background della sessione in cache: n
 }
 if(role)setTimeout(fbVerify,0);
 
+/* ============ MODIFICA TESTI CON PRESSIONE LUNGA (F5) ============
+   Solo con dev mode attiva + sessione Firebase (lpEnabled): tenere premuto 3 s su un testo (DOM o testo disegnato nel canvas) apre il popup di modifica
+   (il gioco si ferma come per «Segnala un bug»). Chiave nota (S.ov / S.tiles / S.gtext) -> anteprima dal vivo; altrimenti proposta con locator.
+   Il testo del canvas si registra avvolgendo fillText/strokeText SOLO mentre lpEnabled (nessun wrapper con dev mode spenta). */
+const LP_MS=3000,LP_SHOW=300,LP_MOVE=10;
+const EDITPROP_KEY=IS_DEVSITE?"mgs_editprops_dev":"mgs_editprops",EDITNOTE_KEY=IS_DEVSITE?"mgs_editnotes_dev":"mgs_editnotes";
+const lpEnabled=()=>!!role&&devOn&&!!acct; // = sessione Firebase di uno sviluppatore con dev mode attiva (expCanSend + devOn)
+const lpProps=()=>store.get(EDITPROP_KEY)||[];
+const lpHash=s=>{let x=5381;for(let i=0;i<s.length;i++)x=((x<<5)+x+s.charCodeAt(i))|0;return(x>>>0).toString(36)};
+const LP={down:null,t1:0,t2:0,out:null,swallow:false,swT:0,frame:0,inst:false,raf:0,ft:null,st:null};
+function lpFrame(){LP.frame++;LP.raf=requestAnimationFrame(lpFrame)}
+function lpRec(ctx,text,x,y){
+  const s=String(text);if(!s.trim())return;
+  const c=ctx.canvas;if(!c||!c.getBoundingClientRect)return;
+  let reg=c.__lp;if(!reg)reg=c.__lp={frame:-1,list:[]};
+  if(reg.frame!==LP.frame){reg.frame=LP.frame;reg.list.length=0}
+  if(reg.list.length>400)return;
+  const m=ctx.measureText(s),w=m.width,fpx=parseFloat((/(\d+(?:\.\d+)?)px/.exec(ctx.font)||[0,12])[1]);
+  const asc=m.actualBoundingBoxAscent||fpx*.8,desc=m.actualBoundingBoxDescent||fpx*.2,hh=asc+desc;
+  const al=ctx.textAlign;let x0=al==="center"?x-w/2:(al==="right"||al==="end")?x-w:x;
+  const bl=ctx.textBaseline;let top=bl==="top"||bl==="hanging"?y:bl==="middle"?y-hh/2:bl==="bottom"||bl==="ideographic"?y-hh:y-asc;
+  const T=ctx.getTransform(),a=T.transformPoint(new DOMPoint(x0,top)),b=T.transformPoint(new DOMPoint(x0+w,top+hh));
+  const r={text:s,x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y)};
+  if(reg.list.some(q=>q.text===s&&Math.abs(q.x-r.x)<2&&Math.abs(q.y-r.y)<2))return; // fillText + strokeText dello stesso testo
+  reg.list.push(r);
+}
+function lpInstall(){
+  if(LP.inst)return;LP.inst=true;
+  const P=CanvasRenderingContext2D.prototype;LP.ft=P.fillText;LP.st=P.strokeText;
+  P.fillText=function(t,x,y){try{lpRec(this,t,x,y)}catch(e){}return LP.ft.apply(this,arguments)};
+  P.strokeText=function(t,x,y){try{lpRec(this,t,x,y)}catch(e){}return LP.st.apply(this,arguments)};
+  LP.raf=requestAnimationFrame(lpFrame);
+}
+function lpUninstall(){
+  if(!LP.inst)return;LP.inst=false;
+  const P=CanvasRenderingContext2D.prototype;P.fillText=LP.ft;P.strokeText=LP.st;cancelAnimationFrame(LP.raf);
+  document.querySelectorAll("canvas").forEach(c=>{delete c.__lp});
+}
+function lpSync(){const on=lpEnabled();if(on)lpInstall();else{lpUninstall();lpCancel();document.documentElement.classList.remove("lpdev")}}
+/* il testo del canvas si puo' modificare solo con il gioco fermo (pausa) o mentre un dialogo aspetta un tocco */
+function lpCanvasOk(){
+  switch(screen){
+    case"game":return!!G&&G.state==="pause";
+    case"fa":return!!FA&&(FA.paused||FA.state==="over"||FA.state==="win");
+    case"bj":return!!B&&(bjPauseT>0||!!B.menu||!!B.presRes||!!B.confirmRes);
+    case"pr":return!!PR&&(!!PR.menu||!!(PR.wait&&PR.wait.tap)||!!(PR.pb&&(PR.pb.ask||(PR.pb.w&&PR.pb.w.hold==null))));
+  }
+  return true;
+}
+function lpCanvasHit(x,y){
+  let best=null;
+  for(const c of document.querySelectorAll("canvas")){
+    const reg=c.__lp;if(!reg||reg.frame<LP.frame-3)continue;
+    const r=c.getBoundingClientRect();if(x<r.left||x>r.right||y<r.top||y>r.bottom)continue;
+    const kx=r.width/c.width,ky=r.height/c.height;
+    for(const q of reg.list){
+      const sx=r.left+q.x*kx,sy=r.top+q.y*ky,sw=q.w*kx,sh=q.h*ky;
+      if(x>=sx-4&&x<=sx+sw+4&&y>=sy-4&&y<=sy+sh+4&&(!best||sw*sh<best.area))best={area:sw*sh,text:q.text,rect:{left:sx,top:sy,width:sw,height:sh},pos:"canvas #"+(c.id||"?")+" "+[q.x,q.y,q.w,q.h].map(Math.round).join(",")};
+    }
+  }
+  return best;
+}
+function lpPath(el){
+  const parts=[];let n=el;
+  for(let i=0;n&&n!==document.body&&i<3;i++,n=n.parentElement){
+    const p=n.parentElement,idx=p?[...p.children].indexOf(n):0;
+    parts.unshift((n.id?"#"+n.id:n.classList&&n.classList[0]?"."+n.classList[0]:n.tagName.toLowerCase())+"["+idx+"]");
+  }
+  return parts.join(">");
+}
+/* testo DOM sotto il dito: l'elemento vicino con testo proprio; per i dialoghi a macchina da scrivere il testo COMPLETO della battuta */
+const lpOwn=n=>n.nodeType===1?[...n.childNodes].filter(x=>x.nodeType===3).map(x=>x.nodeValue).join("").trim():"";
+function lpDomTarget(t){
+  let el=t;
+  for(let i=0;el&&el!==document.body&&i<4;i++,el=el.parentElement){
+    if(el.nodeType!==1)continue;
+    let full=null,dlg=null;
+    if(el.id==="btxt"&&typeof B!=="undefined"&&B&&B.say){full=B.say.text;dlg={kind:"gam",id:B.say.id}}
+    else if(el.id==="ptxt"&&PR&&PR.say){full=PR.say.text;dlg={kind:"pr",id:PR.say.id}}
+    else if(el.id==="pbtx"&&PR&&PR.pb&&PR.pb.txt){full=PR.pb.txt.text}
+    const own=[...el.childNodes].filter(n=>n.nodeType===3).map(n=>n.nodeValue).join("").trim();
+    const text=full!=null?full:own;
+    if(text)return{el,text,dlg,rect:el.getBoundingClientRect(),pos:screenId()+" "+lpPath(el)};
+  }
+  return null;
+}
+/* chiave nota (override esistente) di un testo: sezioni del menu, nomi delle schede, battute del Gamblador / professore */
+function lpKnown(c){
+  const el=c.el;if(!el)return null;
+  if(c.dlg&&c.dlg.id){
+    const id=c.dlg.id;
+    if(c.dlg.kind==="gam"&&BJ_LINES[id])return{kind:"dlg",id,target:"dialogue.gam."+id,char:"shared",raw:TXT(id),live:"gtext",group:"dlg"};
+    if(c.dlg.kind==="pr"&&PR_LINES[id])return{kind:"dlg",id,target:"dialogue.pr."+id,char:"shared",raw:TXT(id),live:"gtext",group:"dlg"};
+    return null;
+  }
+  const tl=el.closest("[data-tile]");
+  if(tl){const t=S.tiles.find(x=>x.id===tl.dataset.tile);if(t&&t.label===c.text)return{kind:"tile",id:t.id,target:"tile."+t.id+".label",char:"shared",fields:true,group:"tile",cur:{color:t.color,scale:t.scale}}}
+  const cd=el.closest(".card");
+  if(cd&&el.classList.contains("nm")&&c.text!=="???"){
+    const dr=cd.querySelector("canvas[data-draw]"),m=dr&&/^(plane|rock|game|hero):(\w+)/.exec(dr.dataset.draw);
+    if(m){
+      let key,target,ch=charKey();
+      if(m[1]==="game"){key="game_"+m[2];target="game."+m[2]+".label";ch="shared"}
+      else if(m[1]==="hero"){key="char_"+m[2];target="char."+m[2]+".label";ch=m[2]}
+      else{key=ovk(m[1],+m[2]);target="item."+m[1]+"."+m[2]+".label"}
+      const o=S.ov[key]||{};
+      return{kind:"card",key,target,char:ch==="shared"?"shared":ch,fields:true,group:"card",cur:{color:o.color||EXP_DEFCOL,scale:o.scale||1}};
+    }
+  }
+  return null;
+}
+function lpOutline(rect){
+  lpClearOutline();
+  const s=document.createElementNS("http://www.w3.org/2000/svg","svg"),w=Math.max(8,rect.width+6),hh=Math.max(8,rect.height+6);
+  s.setAttribute("style","position:fixed;left:"+(rect.left-3)+"px;top:"+(rect.top-3)+"px;width:"+w+"px;height:"+hh+"px;pointer-events:none;z-index:9998;overflow:visible");
+  s.innerHTML='<rect x="1.5" y="1.5" width="'+(w-3)+'" height="'+(hh-3)+'" rx="6" fill="none" stroke="#ffd23f" stroke-width="3" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" style="transition:stroke-dashoffset '+((LP_MS-LP_SHOW)/1000)+'s linear"/>';
+  document.body.appendChild(s);LP.out=s;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{const r=s.firstChild;if(r)r.setAttribute("stroke-dashoffset","0")}));
+}
+function lpClearOutline(){if(LP.out){LP.out.remove();LP.out=null}}
+function lpCancel(){clearTimeout(LP.t1);clearTimeout(LP.t2);LP.t1=LP.t2=0;LP.down=null;lpClearOutline()}
+function lpNolp(m){const b=m.querySelector(".box");if(b)b.setAttribute("data-nolp","")}
+document.addEventListener("pointerdown",e=>{
+  lpCancel();
+  if(!lpEnabled()||BUG)return;
+  if(e.pointerType==="mouse"&&e.button!==0)return;
+  const t=e.target;if(!t||!t.closest||t.closest("input,textarea,select,[data-nolp]"))return;
+  document.documentElement.classList.add("lpdev");
+  let cand=null;
+  const canvasCand=()=>{ // testo disegnato nel canvas (anche sotto un velo di pausa / pannello), solo con il gioco fermo
+    if(!lpCanvasOk())return null;
+    const hit=lpCanvasHit(e.clientX,e.clientY);
+    return hit?{text:hit.text,rect:hit.rect,pos:screenId()+" "+hit.pos,el:null}:null};
+  const overlay=t.classList&&(t.classList.contains("ov")||t.id==="fapanel");
+  const stack=[...document.elementsFromPoint(e.clientX,e.clientY)];
+  const DLG={btxt:"btxt",bdlg:"btxt",ptxt:"ptxt",pdlg:"ptxt",pbtx:"pbtx"}; // battute a macchina da scrivere: testo completo, anche se il bersaglio del tocco e' il contenitore (o la riga e' vuota tra due battute)
+  const dn=stack.find(n=>DLG[n.id]),dl=dn&&document.getElementById(DLG[dn.id]);
+  if(dl)cand=lpDomTarget(dl);
+  if(!cand&&(t.tagName==="CANVAS"||overlay))cand=canvasCand();
+  else if(!cand){
+    cand=lpDomTarget(t);
+    if(!cand){ // il bersaglio e' un contenitore (riga di un menu, scheda): cerco il testo figlio sotto il dito, o l'unico testo che contiene
+      const x=e.clientX,y=e.clientY,kids=[...t.querySelectorAll("*")].filter(n=>lpOwn(n));
+      const dist=n=>{const r=n.getBoundingClientRect(),dx=Math.max(r.left-x,0,x-r.right),dy=Math.max(r.top-y,0,y-r.bottom);return Math.hypot(dx,dy)};
+      const at=kids.filter(n=>lpOwn(n).length>1).sort((m,n)=>dist(m)-dist(n))[0]||kids[0]; // il testo piu' vicino al dito (salto i marcatori di un carattere, es. ▶)
+      if(at)cand=lpDomTarget(at);
+    }
+    for(let k=0;!cand&&k<6&&k<stack.length;k++){if(stack[k].tagName==="CANVAS")break;cand=lpDomTarget(stack[k])}
+  }
+  if(!cand)cand=canvasCand();
+  if(!cand)return;
+  LP.down={x:e.clientX,y:e.clientY,id:e.pointerId};
+  LP.t1=setTimeout(()=>{if(LP.down)lpOutline(cand.rect)},LP_SHOW);
+  LP.t2=setTimeout(()=>{LP.down=null;lpClearOutline();LP.swallow=true;clearTimeout(LP.swT);LP.swT=setTimeout(()=>{LP.swallow=false},2500);lpOpen(cand)},LP_MS);
+},true);
+document.addEventListener("pointermove",e=>{if(LP.down&&Math.hypot(e.clientX-LP.down.x,e.clientY-LP.down.y)>LP_MOVE)lpCancel()},true);
+document.addEventListener("pointerup",lpCancel,true);
+document.addEventListener("pointercancel",lpCancel,true);
+document.addEventListener("click",e=>{if(LP.swallow){LP.swallow=false;e.stopPropagation();e.preventDefault()}},true); // il tocco che segue una pressione lunga non preme nulla
+document.addEventListener("contextmenu",e=>{if(lpEnabled()&&(LP.down||LP.swallow))e.preventDefault()},true);
+function lpOpen(cand){
+  if(!lpEnabled()||BUG)return;
+  const sid=screenId(),known=lpKnown(cand),resume=bugFreeze();
+  const cur=cand.text,pre=known&&known.raw!=null?known.raw:cur;
+  const notes=store.get(EDITNOTE_KEY)||{},key=known?known.target:"loc:"+lpHash(sid+"|"+cand.pos+"|"+cur);
+  const prop=known?null:lpProps().find(q=>q.id===key.slice(4));
+  const o0=known&&known.group==="card"?S.ov[known.key]||{}:{};
+  const fields=known&&known.fields?`<label class="f">Colore</label><input type="color" id="lpcol" value="${esc(known.cur.color||EXP_DEFCOL)}"><label class="f" id="lpsl">Dimensione (${Math.round((+known.cur.scale||1)*100)}%)</label><input type="range" id="lpsc" min="60" max="140" value="${Math.round((+known.cur.scale||1)*100)}">`:"";
+  const m=openModal(`<div class="bugbox" data-nolp><h3>Modifica testo</h3>
+    <small style="display:block;color:var(--mute)">Schermata: <b>${esc(sid)}</b>${known?` · chiave <b>${esc(known.target)}</b> (anteprima dal vivo)`:" · anteprima non disponibile (verrà inviata come proposta)"}</small>
+    <label class="f">Testo attuale</label><textarea id="lpcur" readonly rows="2" style="min-height:0"></textarea>
+    <label class="f">Proposta</label><textarea id="lpv" maxlength="500" rows="3" style="min-height:0"></textarea><small class="cnt" id="lpn">0/500</small>
+    ${fields}<label class="f">Nota (facoltativa)</label><input type="text" id="lpnote" maxlength="${EDIT_NOTE_MAX}" placeholder="perché?">
+    <div class="acts"><button class="btn ghost" id="lpx">Annulla</button><button class="btn" id="lpk">Salva</button></div></div>`);
+  const cu=m.querySelector("#lpcur"),ta=m.querySelector("#lpv"),nt=m.querySelector("#lpnote");
+  cu.value=cur;ta.value=prop?prop.value:pre;nt.value=(prop&&prop.note)||notes[key]||"";
+  const cnt=()=>{m.querySelector("#lpn").textContent=ta.value.length+"/500"};cnt();ta.addEventListener("input",cnt);
+  const sc=m.querySelector("#lpsc");if(sc)sc.oninput=()=>{m.querySelector("#lpsl").textContent="Dimensione ("+sc.value+"%)"};
+  const close=()=>{closeModal();const b=BUG;BUG=null;if(b&&b.resume)b.resume();if(screen==="splash")render()};
+  BUG={resume,close}; // stessa guardia del popup bug: un solo popup alla volta, Esc = Annulla, nessun tasto arriva al gioco
+  m.querySelector("#lpx").onclick=close;
+  m.querySelector("#lpk").onclick=()=>{
+    const v=ta.value.slice(0,500),note=nt.value.trim();
+    if(!v.trim()){toast("Il testo non può essere vuoto");return}
+    const nts=store.get(EDITNOTE_KEY)||{};if(note)nts[key]=note;else delete nts[key];store.set(EDITNOTE_KEY,nts);
+    if(known){
+      if(known.kind==="tile"){const t=S.tiles.find(x=>x.id===known.id);if(t){t.label=v;if(m.querySelector("#lpcol"))t.color=m.querySelector("#lpcol").value;if(sc)t.scale=sc.value/100}}
+      else if(known.kind==="card"){const o=Object.assign({},S.ov[known.key]||{});o.label=v;if(m.querySelector("#lpcol")){const col=m.querySelector("#lpcol").value;if(col.toLowerCase()!==EXP_DEFCOL||o.color)o.color=col}if(sc)o.scale=sc.value/100;S.ov[known.key]=o}
+      else if(known.kind==="dlg"){if(v===known.raw&&!(S.gtext[known.id]!=null))delete S.gtext[known.id];else S.gtext[known.id]=v}
+      persist();
+    }else{
+      const ps=lpProps().filter(q=>q.id!==key.slice(4));
+      if(v!==cur)ps.push({id:key.slice(4),screen:sid,locator:{text:cur.slice(0,500),pos:cand.pos.slice(0,160)},before:cur.slice(0,500),value:v,note,char:"shared"});
+      store.set(EDITPROP_KEY,ps);
+    }
+    toast(known?"Salvato: modifica applicata qui, si invia con «Invia testi»":"Proposta salvata: si invia con «Invia testi»");
+    close();
+    if(known&&["menu","wish","opt","ach","road","cust"].includes(screen))render();
+  };
+  setTimeout(()=>ta.focus(),50);
+}
+lpSync();
+
 /* ============ SEGNALA UN BUG (F6a) ============
    Icona nella barra in alto di ogni schermata (solo sviluppatori con la sessione Firebase; i giocatori quando BUG_PLAYERS sara' true, 0.5).
    Tocco = il gioco si ferma come nella sua pausa ma senza il menu di pausa, popup con il testo, "Indietro" riprende esattamente da dove era.
@@ -591,6 +792,7 @@ function screenId(){
     if(mt==="Esporta modifiche")return"export-dialog";
     if(md.querySelector("#popg"))return"popup-milestone";
     if(mt==="Hai un insetto?")return"bug-popup";
+    if(mt==="Modifica testo")return"dev-textedit-popup";
     if(md.querySelector("#giftbox,#giftreveal"))return md.querySelector("#giftreveal:not([hidden])")?"gift-opened":"gift-closed";
     if(md.querySelector("#fai-yes"))return"fa-invite";
   }
@@ -649,7 +851,7 @@ function screenId(){
   }
   return"unknown:"+screen;
 }
-const SCREEN_IDS=new Set(["splash-question","sad-countdown","bye-goodbye","menu-home-roccia","menu-home-algidone","career-modal-roccia","career-modal-algidone","opt-generali","opt-generali-audio","opt-generali-screen","opt-generali-game","opt-generali-data","opt-login-modal","dev-tab","dev-acc-account","dev-acc-test","dev-acc-audio","dev-acc-obj","dev-acc-exp","export-dialog","wish-enemies-roccia","wish-enemies-algidone","wish-items-roccia","wish-items-algidone","wish-giocatore-locked","wish-giocatore-unlocked","wish-giochi-locked","wish-giochi-unlocked","ach-gen","ach-roc","ach-alg","ach-gio","ach-min","road-top-current","gift-closed","gift-opened","popup-milestone","cust-roccia","cust-algidone","maze-intro-roccia","maze-play-roccia","maze-steel-roccia","maze-water-roccia","maze-fire-roccia","maze-ice-roccia","maze-forest-roccia","maze-fire-algidone","maze-acciaio-roccia","maze-cinghiale-algidone","maze-over","bj-invite","bj-dealer-line","bj-table-hand","bj-result","bj-menu-again","bj-raise-stake","pr-choice-menu","pr-dialogue-question","pr-dialogue-yes","pr-throwout-street","pb-command","pb-move-panel","pb-win-ending","pb-win-question","fa-invite","fa-intro-floor1","fa-intro-floor2","fa-intro-floor3","fa-floor1-play","fa-floor2-play","fa-floor3-play","fa-pause","fa-game-over","fa-floor-win-panel","fa-final-panel","bug-popup"]);
+const SCREEN_IDS=new Set(["splash-question","sad-countdown","bye-goodbye","menu-home-roccia","menu-home-algidone","career-modal-roccia","career-modal-algidone","opt-generali","opt-generali-audio","opt-generali-screen","opt-generali-game","opt-generali-data","opt-login-modal","dev-tab","dev-acc-account","dev-acc-test","dev-acc-audio","dev-acc-obj","dev-acc-exp","export-dialog","wish-enemies-roccia","wish-enemies-algidone","wish-items-roccia","wish-items-algidone","wish-giocatore-locked","wish-giocatore-unlocked","wish-giochi-locked","wish-giochi-unlocked","ach-gen","ach-roc","ach-alg","ach-gio","ach-min","road-top-current","gift-closed","gift-opened","popup-milestone","cust-roccia","cust-algidone","maze-intro-roccia","maze-play-roccia","maze-steel-roccia","maze-water-roccia","maze-fire-roccia","maze-ice-roccia","maze-forest-roccia","maze-fire-algidone","maze-acciaio-roccia","maze-cinghiale-algidone","maze-over","bj-invite","bj-dealer-line","bj-table-hand","bj-result","bj-menu-again","bj-raise-stake","pr-choice-menu","pr-dialogue-question","pr-dialogue-yes","pr-throwout-street","pb-command","pb-move-panel","pb-win-ending","pb-win-question","fa-invite","fa-intro-floor1","fa-intro-floor2","fa-intro-floor3","fa-floor1-play","fa-floor2-play","fa-floor3-play","fa-pause","fa-game-over","fa-floor-win-panel","fa-final-panel","bug-popup","dev-textedit-popup"]);
 
 /* congelamento del gioco mentre il popup e' aperto: come la pausa di ciascun gioco, senza il suo menu. Restituisce la funzione che riprende. */
 let _pnBase=null,_pnOff=0,_pnFz=null;
@@ -676,7 +878,7 @@ function bugOpen(){
   if(BUG&&document.getElementById("bgt"))return;
   BUG=null;
   const info=bugInfo(),resume=bugFreeze();
-  const m=openModal(`<div class="bugbox"><h3>Hai un insetto?</h3><textarea id="bgt" maxlength="${BUG_MAX}" placeholder="Cosa è successo?"></textarea><small class="cnt" id="bgc">0/${BUG_MAX}</small>
+  const m=openModal(`<div class="bugbox" data-nolp><h3>Hai un insetto?</h3><textarea id="bgt" maxlength="${BUG_MAX}" placeholder="Cosa è successo?"></textarea><small class="cnt" id="bgc">0/${BUG_MAX}</small>
     <div class="acts"><button class="btn red" id="bgx">Indietro</button><button class="btn ok" id="bgk" disabled>Invia</button></div></div>`);
   const ta=m.querySelector("#bgt"),ok=m.querySelector("#bgk");let sending=false;
   const close=()=>{closeModal();const b=BUG;BUG=null;if(b&&b.resume)b.resume();if(screen==="splash")render()}; // la domanda del splash e' una modale: la ridisegno
@@ -746,7 +948,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4_6";
+const VERSION="0.4_7";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -1626,11 +1828,10 @@ function renderMenu(){
   const tiles=visibleTiles().map(t=>{
     const fs=(1.05*t.scale).toFixed(2);
     if(t.id==="new"&&S.p.g5){const f2=(.95*t.scale).toFixed(2);
-      return `<div class="tsplit" style="flex-grow:${t.scale}"><button class="tile" data-tile="new" style="background:${t.color};color:${contrast(t.color)};font-size:calc(${f2}rem*var(--fs))"><span>${esc(t.label)}</span><span class="stripe"></span>${devUI()?`<span class="pen" data-pen="${t.id}">✎</span>`:""}</button>
+      return `<div class="tsplit" style="flex-grow:${t.scale}"><button class="tile" data-tile="new" style="background:${t.color};color:${contrast(t.color)};font-size:calc(${f2}rem*var(--fs))"><span>${esc(t.label)}</span><span class="stripe"></span></button>
       <button class="tile" data-tile="hard" style="background:#b3202f;color:#fff;font-size:calc(${f2}rem*var(--fs))"><span>Hardcore</span><span class="stripe"></span></button></div>`}
     return `<button class="tile" data-tile="${t.id}" style="background:${t.color};color:${contrast(t.color)};flex-grow:${t.scale};font-size:calc(${fs}rem*var(--fs))">
       <span>${esc(t.label)}</span><span class="stripe"></span>
-      ${devUI()?`<span class="pen" data-pen="${t.id}">✎</span>`:""}
       ${devUI()&&t.custom?`<span class="minus" data-del="${t.id}">−</span>`:""}</button>`}).join("");
   shell(`<div class="screen"><div class="brand"><button class="trop" id="trop" aria-label="Obiettivi"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M7 3h10v2h3v3c0 2.2-1.8 4-4 4h-.3A5 5 0 0 1 13 14.9V17h3v2H8v-2h3v-2.1A5 5 0 0 1 8.3 12H8C5.8 12 4 10.2 4 8V5h3V3zM6 7v1c0 1.1.9 2 2 2V7H6zm12 0h-2v3c1.1 0 2-.9 2-2V7z"/></svg></button>
     <button class="trop road" id="road" aria-label="Percorso"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M4 20l6-16h2l-2 6h4l-2-6h2l6 16h-2l-1.7-4.5h-9.6L5 20H4zm4.6-6.5h6.8L12 6.4l-3.4 7.1z"/></svg></button>
@@ -1651,35 +1852,15 @@ function tileAction(id){
   else if(id==="quit")confirmBox("Quitta","Vuoi davvero uscire?","Sì, esco","Resta",()=>{if(window.MGApp&&MGApp.quit)MGApp.quit();else if(window.MGApp)go("bye");else go("splash")});
   else toast("Sezione vuota: assegnale un contenuto in dev mode");
 }
-function editDialog(kind,id){
-  const isTile=kind==="tile";
-  const obj=isTile?S.tiles.find(t=>t.id===id):Object.assign({label:id.name,color:"#23364c",scale:1},S.ov[id.key]||{});
-  const label=isTile?obj.label:(S.ov[id.key]&&S.ov[id.key].label)||id.name;
-  const color=(isTile?obj.color:(S.ov[id.key]||{}).color)||"#23364c";
-  const scale=Math.round((isTile?obj.scale:((S.ov[id.key]||{}).scale||1))*100);
-  const m=openModal(`<h3>Modifica asset</h3>
-    <label class="f">Nome</label><input type="text" id="en" value="${esc(label)}" maxlength="28">
-    <label class="f">Dimensione (${scale}%)</label><input type="range" id="es" min="60" max="140" value="${scale}">
-    <label class="f">Colore</label><input type="color" id="ec" value="${color}">
-    <div class="acts"><button class="btn ghost" id="ex">Annulla</button><button class="btn" id="ek">Salva locale</button></div>`);
-  m.querySelector("#es").oninput=e=>m.querySelector("label:nth-of-type(2)").textContent=`Dimensione (${e.target.value}%)`;
-  m.querySelector("#ex").onclick=closeModal;
-  m.querySelector("#ek").onclick=()=>{
-    const v={label:m.querySelector("#en").value.trim()||label,scale:m.querySelector("#es").value/100,color:m.querySelector("#ec").value};
-    if(isTile)Object.assign(obj,v);else S.ov[id.key]=v;
-    persist();closeModal();render();
-  };
-}
 function bindMenu(){
   root.onclick=e=>{
-    const pen=e.target.closest("[data-pen]"),del=e.target.closest("[data-del]"),tile=e.target.closest("[data-tile]");
+    const del=e.target.closest("[data-del]"),tile=e.target.closest("[data-tile]");
     if(e.target.closest("#trop"))return go("ach");
     if(e.target.closest("#road"))return go("road");
     if(e.target.closest("#devt")){devOn=!devOn;if(!devOn)simOff();persistDev();toast(devOn?"Dev mode attiva":"Dev mode disattivata");return render()}
     if(e.target.closest("#career"))return careerModal();
     if(e.target.closest("#addTile")){
       const id="t"+Date.now().toString(36);S.tiles.push({id,label:"Nuova sezione",color:"#9db4c9",scale:1,custom:true});persist();return render();}
-    if(pen)return editDialog("tile",pen.dataset.pen);
     if(del){const id=del.dataset.del;return confirmBox("Ma che sei gojo?","Vuoi DAVVERO eliminare questa sezione? Le modifiche locali andranno perse.","Sì, deo caro","Noneee",()=>{S.tiles=S.tiles.filter(t=>t.id!==id);persist();render()})}
     if(tile)tileAction(tile.dataset.tile);
   };
@@ -1706,16 +1887,15 @@ function cardHTML(kind,i){
   else act=`<button class="btn sm" data-buy="${kind}:${i}">${price} sordi</button>`;
   const bg=ov.color?`background:${ov.color};color:${contrast(ov.color)}`:"";
   return `<div class="card ${sel?"sel":""} ${lock&&!own?"locked":""}" style="${bg}"><span class="tag">${CH().tags[isP?0:1]+(i+1)}</span>
-    ${devUI()?`<span class="pen" data-cpen="${kind}:${i}">✎</span>`:""}
     <canvas data-draw="${kind}:${i}:${Math.round((ov.scale||1)*100)}"></canvas><div class="nm">${esc(nm)}</div>
     ${act}${devUI()&&isX?`<span class="minus" data-cdel="${kind}:${i}" style="position:absolute;left:6px;top:36px;width:26px;height:26px;border-radius:8px;background:var(--alarm);color:#fff;display:grid;place-items:center;font-weight:700">−</span>`:""}</div>`;
 }
 const addCard=k=>`<button class="card" data-cadd="${k}" style="background:transparent;border:2px dashed var(--steel-hi);color:var(--steel-hi);justify-content:center;font-size:2rem;min-height:150px">+</button>`;
 function gamesHTML(){
   const cards=Array.from({length:6},(_,i)=>{
-    if(i===3&&(SIM()||S.p.fa.seen)){const ov=S.ov["game_3"]||{},bg=ov.color?`background:${ov.color};color:${contrast(ov.color)}`:"";return `<div class="card sel" style="${bg}"><span class="tag">G4</span>${devUI()?`<span class="pen" data-cpen="game:3">\u270e</span>`:""}<canvas data-draw="game:3:${Math.round((ov.scale||1)*100)}"></canvas><div class="nm">${esc(ov.label||"Ferma Algidone!")}</div><div style="display:flex;gap:4px;justify-content:center">${SIM()?FA_LEVELS.map((_,f)=>`<button class="btn sm" data-fafloor="${f}">${f+1}</button>`).join(""):`<button class="btn sm" data-fagame="1">Gioca</button>`}</div></div>`}
+    if(i===3&&(SIM()||S.p.fa.seen)){const ov=S.ov["game_3"]||{},bg=ov.color?`background:${ov.color};color:${contrast(ov.color)}`:"";return `<div class="card sel" style="${bg}"><span class="tag">G4</span><canvas data-draw="game:3:${Math.round((ov.scale||1)*100)}"></canvas><div class="nm">${esc(ov.label||"Ferma Algidone!")}</div><div style="display:flex;gap:4px;justify-content:center">${SIM()?FA_LEVELS.map((_,f)=>`<button class="btn sm" data-fafloor="${f}">${f+1}</button>`).join(""):`<button class="btn sm" data-fagame="1">Gioca</button>`}</div></div>`}
     const ok=i===0||(i===1&&(SIM()||(S.p.gam&&S.p.gam.seen)))||(i===2&&(SIM()||(S.p.pr&&S.p.pr.seen))),ov=S.ov["game_"+i]||{},nm=ov.label||(i===0?"Mangiaroccia":i===1?(ok?"El Gamblador":"???"):i===2?(ok?"Rocciamon":"???"):"???"),bg=ov.color?`background:${ov.color};color:${contrast(ov.color)}`:"";
-    return `<div class="card ${ok?"sel":"locked"}" style="${bg}"><span class="tag">G${i+1}</span>${devUI()?`<span class="pen" data-cpen="game:${i}">✎</span>`:""}<canvas data-draw="game:${i}:${Math.round((ov.scale||1)*100)}"></canvas><div class="nm">${esc(nm)}</div><span class="st"${ok?' style="color:var(--runway);font-weight:700"':""}>${ok?"Disponibile":"In arrivo"}</span></div>`}).join("");
+    return `<div class="card ${ok?"sel":"locked"}" style="${bg}"><span class="tag">G${i+1}</span><canvas data-draw="game:${i}:${Math.round((ov.scale||1)*100)}"></canvas><div class="nm">${esc(nm)}</div><span class="st"${ok?' style="color:var(--runway);font-weight:700"':""}>${ok?"Disponibile":"In arrivo"}</span></div>`}).join("");
   return `<p style="margin:0 0 10px;text-align:center;color:var(--mute);font-size:.85rem">Altri giochi in arrivo</p><div class="grid">${cards}</div>`;
 }
 function renderWish(){
@@ -1727,7 +1907,7 @@ function renderWish(){
     const cc=S.p.ch[k],custOk=cc.skins.length>0||(devOn&&DEV_SKIN_TEST&&DEV_SKIN_TEST.char===k);
     const useBtn=sel?`<span class="st" style="color:var(--runway);font-weight:700">Selezionato</span>`:`<button class="btn sm" data-char="${k}">Usa</button>`;
     const custBtn=custOk?`<button class="btn ghost sm" data-cust="${k}">Personalizza</button>`:"";
-    return `<div class="card ${sel?"sel":""}" style="${bg}">${devUI()?`<span class="pen" data-cpen="char:${k}">✎</span>`:""}<canvas data-draw="hero:${k}:${Math.round((o.scale||1)*100)}"></canvas><div class="nm">${esc(o.label||CHARS[k].name)}</div><div class="st" style="font-weight:700;color:var(--runway)">Liv. ${cc.lvl}</div><div class="bar" style="width:80%;margin:0"><i style="width:${lvPct(k)}%"></i></div><div class="acts" style="margin-top:6px">${useBtn}${custBtn}</div></div>`}).join("")}
+    return `<div class="card ${sel?"sel":""}" style="${bg}"><canvas data-draw="hero:${k}:${Math.round((o.scale||1)*100)}"></canvas><div class="nm">${esc(o.label||CHARS[k].name)}</div><div class="st" style="font-weight:700;color:var(--runway)">Liv. ${cc.lvl}</div><div class="bar" style="width:80%;margin:0"><i style="width:${lvPct(k)}%"></i></div><div class="acts" style="margin-top:6px">${useBtn}${custBtn}</div></div>`}).join("")}
     ${SIM()||(S.p.gam&&S.p.gam.seen)?`<div class="card locked"><canvas data-draw="gamb:0:100"></canvas><div class="nm">${esc((S.ov["game_1"]||{}).label||"El Gamblador")}</div><div class="st" style="font-weight:700">Liv. ???</div><div class="bar" style="width:80%;margin:0"><i style="width:0%"></i></div><button class="btn sm" disabled style="opacity:.5">${SIM()?"In arrivo":"Bloccato"}</button></div>`:""}
     ${SIM()||(S.p.pr&&S.p.pr.seen)?`<div class="card locked"><canvas data-draw="prof:0:100"></canvas><div class="nm">Il Professore</div><div class="st" style="font-weight:700">Liv. ???</div><div class="bar" style="width:80%;margin:0"><i style="width:0%"></i></div><button class="btn sm" disabled style="opacity:.5">${SIM()?"In arrivo":"Bloccato"}</button></div>`:""}
     <div class="card locked"><div class="nm">Altri personaggi</div><span class="st">In arrivo</span></div></div>`;
@@ -1741,8 +1921,6 @@ function bindWish(){
     const t=e.target;
     if(t.closest("#back"))return go("menu");
     const tb=t.closest("[data-tab]");if(tb){tab=tb.dataset.tab;return render()}
-    const cp=t.closest("[data-cpen]");
-    if(cp){const [k,i]=cp.dataset.cpen.split(":");if(k==="game")return editDialog("card",{key:"game_"+i,name:+i===0?"Mangiaroccia":+i===1?"El Gamblador":+i===2?"Rocciamon":+i===3?"Ferma Algidone!":"???"});if(k==="char")return editDialog("card",{key:"char_"+i,name:CHARS[i].name});return editDialog("card",{key:ovk(k,i),name:names(k)[i]})}
     const chb=t.closest("[data-char]");if(chb){S.p.char=chb.dataset.char;tab="player";persist();toast("Personaggio: "+((S.ov["char_"+S.p.char]||{}).label||CHARS[S.p.char].name));return render()}
     if(t.closest("[data-fagame]"))return startFerma({test:true}); // allenamento dalla carta Giochi: 3 piani, Riprova, nessun premio
     const ff=t.closest("[data-fafloor]");if(ff)return startFerma({test:true,level:+ff.dataset.fafloor}); // solo con "Sblocca tutto": piano scelto, partita di prova (non salva nulla)
@@ -1902,6 +2080,7 @@ function loginModal(){
   const off=location.protocol==="file:";
   const m=openModal(`<h3>Accesso sviluppatori</h3>${off?`<p>Accesso disponibile solo dal sito.</p>`:`<label class="f">Utente</label><input type="text" id="lu" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"><label class="f">Password</label><input type="password" id="lp" autocomplete="off">`}<div class="err" id="le"></div>
     <div class="acts"><button class="btn ghost" id="lx">Annulla</button>${off?"":`<button class="btn" id="lk">Accedi</button>`}</div>`);
+  m.querySelector(".box").setAttribute("data-nolp","");
   m.querySelector("#lx").onclick=closeModal;
   if(off)return;
   const go_=async()=>{
@@ -2033,8 +2212,10 @@ function expBuiltinB64(target){
 async function expSpriteItems(){return[]}
 function expTextEdits(){
   const tx=expTextChanges();
-  return{list:tx.out.map(c=>({target:c.target,kind:/\.color$/.test(c.target)?"colour":/\.scale$/.test(c.target)?"scale":"text",char:EXP_CHV2[c.character]||"shared",
-    value:String(c.value),before:c.before==null?null:String(c.before),isNew:!!c.isNew})),warn:tx.warn};
+  const list=tx.out.map(c=>({key:c.target,target:c.target,kind:/\.color$/.test(c.target)?"colour":/\.scale$/.test(c.target)?"scale":"text",char:EXP_CHV2[c.character]||"shared",
+    value:String(c.value),before:c.before==null?null:String(c.before),isNew:!!c.isNew}));
+  for(const q of lpProps())list.push({key:"loc:"+q.id,target:null,kind:"text",char:q.char||"shared",value:q.value,before:q.before,isNew:false,locator:q.locator,screen:q.screen,proposal:true});
+  return{list,warn:tx.warn};
 }
 /* schermata in cui si vede il testo (id canonico di SCREENS.md), solo se lo conosco */
 function expScreenOf(e){
@@ -2051,12 +2232,14 @@ function expScreenOf(e){
 const editSent=()=>store.get(EDITSENT_KEY)||{};
 const editQ=()=>store.get(EDITQ_KEY)||[];
 function expSentState(e){
-  if(editSent()[e.target]!==e.value)return"new";
-  return editQ().some(q=>q.target===e.target&&q.value===e.value)?"queued":"sent";
+  if(editSent()[e.key]!==e.value)return"new";
+  return editQ().some(q=>(q.target||"")===(e.target||"")&&q.value===e.value&&(!e.locator||(q.locator&&q.locator.text===e.locator.text&&q.locator.pos===e.locator.pos)))?"queued":"sent";
 }
 function expEditPayload(e,note){
-  const p={acct,kind:e.kind,char:e.char,target:e.target,before:e.before,value:e.value,base:VERSION,meta:{site:IS_DEVSITE?"dev":"stable",viewport:innerWidth+"x"+innerHeight}};
-  const sc=expScreenOf(e);if(sc)p.screen=sc;
+  const p={acct,kind:e.kind,char:e.char,before:e.before,value:e.value,base:VERSION,meta:{site:IS_DEVSITE?"dev":"stable",viewport:innerWidth+"x"+innerHeight}};
+  if(e.target)p.target=e.target;
+  if(e.locator)p.locator=e.locator;
+  const sc=e.screen||expScreenOf(e);if(sc)p.screen=sc;
   if(note)p.note=note;
   return p;
 }
@@ -2088,8 +2271,8 @@ addEventListener("online",()=>editFlush());
 async function expSendTexts(list,notes){
   const sent=editSent(),c={sent:0,queued:0,denied:0};
   for(const e of list){
-    const r=await editSubmit(expEditPayload(e,(notes&&notes[e.target])||""));
-    sent[e.target]=e.value;store.set(EDITSENT_KEY,sent); // resta applicata in locale; non si rimanda se non viene modificata di nuovo
+    const r=await editSubmit(expEditPayload(e,(notes&&notes[e.key])||""));
+    sent[e.key]=e.value;store.set(EDITSENT_KEY,sent); // resta applicata in locale; non si rimanda se non viene modificata di nuovo
     c[r==="sent"?"sent":r==="queued"?"queued":"denied"]++;
   }
   if(c.sent)editFlush();
@@ -2148,36 +2331,6 @@ async function expBuildPackage(o){
   res.zip=expZip(ents);res.entries=ents.map(e=>e.name);res.manifest=man;
   return res;
 }
-/* elenco dei target validi, generato dalle chiavi reali del gioco (per DEVELOPERS.md / TARGETS.md) */
-function exportTargetsMd(){
-  const L=["# Target validi per l'esportazione (schemaVersion 1)","","Generato dal gioco, versione V"+VERSION+".","",
-  "Ogni modifica ha `type`, `character`, `target`, `note`. I testi hanno `value`, gli audio `file`.","",
-  "## Testo (`type: text`)","","| target | character | valore |","|---|---|---|",
-  "| `tile.<id>.label\\|color\\|scale` | shared | sezioni del menu: "+DEF_TILES.map(t=>"`"+t.id+"` ("+t.label+")").join(", ")+" (le sezioni nuove hanno id `t...`) |",
-  "| `char.<roccia\\|algidone>.<campo>` | uomoRoccia / algidone | nome, colore, dimensione della tessera personaggio |",
-  "| `game.<0\\|1>.<campo>` | shared | 0 = Mangiaroccia, 1 = El Gamblador |",
-  "| `item.<plane\\|rock>.<n>.<campo>` | uomoRoccia / algidone | scheda numero n (vedi elenchi sotto) |",
-  "| `dialogue.gam.<id>` | shared | battute del Gamblador, testo max 500 caratteri |","",
-  "Campi: `label` (testo, max 28 caratteri per le schede), `color` (`#rrggbb`), `scale` (numero, 1 = 100%). Colore e dimensione sono scritti come testo.",
-  "Le schede nuove hanno indice uguale o superiore alla lunghezza dell'elenco e la nota inizia con `[nuovo]`. Se il nome è cambiato la nota termina con `[era: ...]`.","",
-  "### Indici delle schede",""];
-  for(const k of Object.keys(CHARS))for(const kind of["plane","rock"]){
-    L.push("**"+CHARS[k].name+" · "+(kind==="plane"?CHARS[k].tabs[0]:CHARS[k].tabs[1])+"** (`item."+kind+".<n>`, character `"+EXP_CH[k]+"`)","");
-    L.push(CHARS[k].base[kind].map((n,i)=>i+" "+n).join(" · "),"");
-  }
-  L.push("### Battute (`dialogue.gam.<id>`)","",Object.keys(BJ_LINES).map(id=>"`"+id+"` "+BJ_LINES[id][2]).join(" · "),"");
-  L.push("### Battute del professore (`dialogue.pr.<id>`)","",Object.keys(PR_LINES).map(id=>"`"+id+"` "+PR_LINES[id][2]).join(" · "),"");
-  L.push("### Testi della battaglia (`dialogue.pb.<id>`)","",Object.keys(PB_ALL).map(id=>"`"+id+"` "+PB_ALL[id][1]).join(" · "),"");
-  L.push("## Audio (`type: audio`)","","Formati mp3, ogg, wav. Max 300 KB per file, 2 MB in totale. File nominato come il target con i punti sostituiti da `_` (es. `sound_algidone_eat.mp3`).","",
-  "| target | character | note |","|---|---|---|");
-  for(const k of Object.keys(CHARS))L.push("| `sound."+EXP_CH[k]+".<"+SLOTS.join("\\|")+">` | "+EXP_CH[k]+" | "+SLOTS.map(s=>s+": "+CHARS[k].slots[s]).join("; ")+" |");
-  L.push("| `sound.gam.<slot>` | shared | "+Object.keys(BJ_SLOTS).map(s=>s+": "+BJ_SLOTS[s]).join("; ")+" |");
-  L.push("| `sound.fa.<slot>` | shared | Ferma Algidone!: "+Object.keys(FA_SLOTS).map(s=>s+": "+FA_SLOTS[s]).join("; ")+" |");
-  L.push("| `sound.vo.<id>` | shared | voce registrata di una battuta del Gamblador o del professore (stessi id delle battute) |","| `sound.ach` | shared | jingle degli obiettivi |","| `music.menu` | shared | musica del menu |","| `music.gam` | shared | musica del tavolo di El Gamblador |","| `music.pr.<intro\\|battle\\|win\\|lose>` | shared | musica del minigioco del professore: introduzione, battaglia, vittoria, sconfitta |","");
-  L.push("## File fuori limite","","Gli audio oltre 300 KB o in altri formati non entrano in `submissions/`. Finiscono in `flagged/<sviluppatore>/<data>/` con un `flagged.json` che li descrive: Claude li converte prima di aggiungerli alla build.","","## Sprite","","Il tipo `sprite` è previsto dal manifest ma la dev mode non permette ancora di modificare sprite.","");
-  return L.join("\n");
-}
-
 /* --- finestra di esportazione --- */
 function expDownload(name,u8){
   const b=new Blob([u8],{type:"application/zip"}),url=URL.createObjectURL(b),a=document.createElement("a");
@@ -2186,10 +2339,11 @@ function expDownload(name,u8){
 const expShort=(v,n)=>{v=String(v);return v.length>n?v.slice(0,n-1)+"…":v};
 async function exportDialog(){
   const can=expCanSend(),tx=expTextEdits(),ed=tx.list,fresh=ed.filter(e=>expSentState(e)==="new"),terr=[];
-  for(const e of ed)if(expSentState(e)==="new"){if(!e.value.trim())terr.push("Valore vuoto: "+e.target);else if(e.value.length>EXP_LIM.text)terr.push("Testo troppo lungo ("+e.value.length+"/"+EXP_LIM.text+" caratteri): "+e.target)}
+  for(const e of ed)if(expSentState(e)==="new"){const nm=e.target||e.locator.text;if(!e.value.trim())terr.push("Valore vuoto: "+nm);else if(e.value.length>EXP_LIM.text)terr.push("Testo troppo lungo ("+e.value.length+"/"+EXP_LIM.text+" caratteri): "+nm)}
   let pv;try{pv=await expBuildPackage({preview:true})}catch(e){return toast("Anteprima non riuscita")}
   const badge=e=>{const s=expSentState(e);return s==="sent"?`<span style="color:#7bd88f">inviato</span>`:s==="queued"?`<span style="color:var(--runway)">in coda</span>`:`<span style="color:var(--mute)">da inviare</span>`};
-  const rows=ed.map(e=>`<div style="margin:0 0 8px"><div style="font-size:.85rem;word-break:break-all"><b>${esc(e.target)}</b> · ${esc(expShort(e.value,40))} · ${badge(e)}</div>${expSentState(e)==="new"?`<input type="text" data-en="${esc(e.target)}" maxlength="${EDIT_NOTE_MAX}" placeholder="nota per questa modifica (facoltativa)" style="margin-top:3px">`:""}</div>`).join("");
+  const notesSaved=store.get(EDITNOTE_KEY)||{};
+  const rows=ed.map(e=>`<div style="margin:0 0 8px"><div style="font-size:.85rem;word-break:break-all"><b>${esc(e.target||"«"+expShort(e.locator.text,30)+"»")}</b> · ${esc(expShort(e.value,40))} · ${badge(e)}${e.proposal?` · <span style="color:var(--mute)">anteprima non disponibile</span>`:""}</div>${expSentState(e)==="new"?`<input type="text" data-en="${esc(e.key)}" value="${esc(notesSaved[e.key]||"")}" maxlength="${EDIT_NOTE_MAX}" placeholder="nota per questa modifica (facoltativa)" style="margin-top:3px">`:""}</div>`).join("");
   const hint=can?"":`<small style="display:block;color:var(--alarm);margin-top:6px">Accedi per inviare</small>`;
   const sendOff=!can||!fresh.length||terr.length>0,pkgOff=!can||pv.empty;
   const m=openModal(`<h3>Esporta modifiche</h3><div style="text-align:left">
@@ -2818,7 +2972,7 @@ function updateAbil(){
 function buildGameDOM(){
   shell(`<div class="hud"><span>PUNTI <b id="sc">0</b></span><span class="lives" id="lv"></span><span id="wv"></span>${bugBtn()}<button class="pause" id="ps">❚❚</button></div>
    <div id="stage"><canvas id="cv"></canvas></div>
-   <div class="dpad"><button class="ctl" id="pz">Pausa</button><button data-d="0">▲</button><button class="ctl" id="stl">Fermo</button><button data-d="3">◀</button><button data-d="2">▼</button><button data-d="1">▶</button></div>`);
+   <div class="dpad" data-nolp><button class="ctl" id="pz">Pausa</button><button data-d="0">▲</button><button class="ctl" id="stl">Fermo</button><button data-d="3">◀</button><button data-d="2">▼</button><button data-d="1">▶</button></div>`);
   cv=$("#cv");cx=cv.getContext("2d");sizeCanvas();
   const stage=$("#stage");
   stage.addEventListener("touchstart",e=>{const t=e.touches[0];swipe=[t.clientX,t.clientY]},{passive:true});
@@ -3461,7 +3615,7 @@ async function bjSay(id,o){
   bjChk();o=o||{};
   const txt=TXT(id).replace(/\{(\w+)\}/g,(m,k)=>B.vars[k]!==undefined?B.vars[k]:m);
   B.expr=BJ_EXPR[o.expr||(BJ_LINES[id]&&BJ_LINES[id][1])||"neutral"];
-  B.say={text:txt,t0:bjNow()*1000,cps:o.cps||42};
+  B.say={id,text:txt,t0:bjNow()*1000,cps:o.cps||42};
   playSnd(id,"vo");
   if(o.wait&&!B.auto){await new Promise(res=>{B.confirmRes=res});bjChk();return}
   await bjWait(txt.length/B.say.cps*1000+(o.hold==null?700:o.hold));
@@ -3847,7 +4001,7 @@ function buildBJDOM(){
   shell(`<div class="hud"><span>PUNTI <b id="bsc">0</b></span><span id="bbet"></span><span>Gamblador</span>${bugBtn()}<button class="pause" id="bps">❚❚</button></div>
    <div id="bstage"><canvas id="bjc"></canvas><div class="bmenu" id="bmenu" hidden></div>
    <div class="bdlg" id="bdlg"><canvas id="bpor" width="72" height="72"></canvas><div class="btx"><span id="btxt"></span></div><i id="bnext">▼</i></div><div class="bpres" id="bpres" hidden></div></div>
-   <div class="dpad"><button class="ctl" id="pz">Pausa</button><button data-d="0">▲</button><button class="ctl" id="stl">Scegli</button><button data-d="3">◀</button><button data-d="2">▼</button><button data-d="1">▶</button></div>`);
+   <div class="dpad" data-nolp><button class="ctl" id="pz">Pausa</button><button data-d="0">▲</button><button class="ctl" id="stl">Scegli</button><button data-d="3">◀</button><button data-d="2">▼</button><button data-d="1">▶</button></div>`);
   root.onclick=e=>{
     const t=e.target;
     if(bjPauseT)return;
@@ -4005,7 +4159,7 @@ const FA_DIFF={easy:{spd:.88,pause:1.25,drain:.85},medium:{spd:1,pause:1,drain:1
 const faCfg=()=>Object.assign({},FA.lv.items,FA.extra?{meat:2,meatHop:true,grill:true}:{});
 function buildFaDOM(){
   shell(`<div class="hud" id="fahud"><span class="fasc" id="fasc">0</span><span class="fabolt" id="fabolt" hidden><i></i><b id="fabn">0</b></span><img id="fasp" alt="" src="${FA_IMG_SRC.scorte0}"><div class="fastock"><div id="fastbar"></div></div><span class="lives" id="fali"><canvas width="48" height="44"></canvas><canvas width="48" height="44"></canvas><canvas width="48" height="44"></canvas></span>${bugBtn()}<button class="pause" id="fap" aria-label="Pausa">❚❚</button></div><div id="fastage"><canvas id="fac"></canvas><div id="fapanel"></div></div>
-   <div id="fapad"><div class="pad"><span></span><button data-fk="u">▲</button><span></span><button data-fk="l">◀</button><button data-fk="d">▼</button><button data-fk="r">▶</button></div><button class="fj" data-fk="j">SALTA</button></div>`);
+   <div id="fapad" data-nolp><div class="pad"><span></span><button data-fk="u">▲</button><span></span><button data-fk="l">◀</button><button data-fk="d">▼</button><button data-fk="r">▶</button></div><button class="fj" data-fk="j">SALTA</button></div>`);
   FA.hud={};
   root.onclick=e=>{if(FA&&FA.state==="intro"&&!FA.paused&&e.target.closest("#fapanel"))return faIntroEnd();const b=e.target.closest("[data-fa]");if(b)return faAct(b.dataset.fa);if(e.target.closest("#fap"))faPause(!FA.paused)};
   root.oncontextmenu=e=>{if(e.target.closest("#fapad"))e.preventDefault()};
@@ -4741,7 +4895,7 @@ async function prSay(id,o){
   const raw=o.text!=null?o.text:TXT(id),txt=raw.replace(/\{(\w+)\}/g,(m,k)=>PR.vars[k]!==undefined?PR.vars[k]:m);
   PR.expr=o.expr||(PR_LINES[id]&&PR_LINES[id][1])||"neutral";PR.spk=o.spk||"prof";
   const voice=!!(SND.vo[id]&&S.opts.sound);
-  PR.say={text:txt,t0:performance.now(),cps:o.cps||34,shown:-1,done:false,voice};
+  PR.say={id,text:txt,t0:performance.now(),cps:o.cps||34,shown:-1,done:false,voice};
   $("#ptxt").textContent="";
   if(voice)playSnd(id,"vo");
   if(o.wait===false){await prSleep(txt.length/PR.say.cps*1000+(o.hold==null?700:o.hold));return}
@@ -6165,6 +6319,7 @@ async function prBattleStart(){
 
 /* ============ ROUTER ============ */
 function render(){
+  lpSync();
   cancelAnimationFrame(raf);cancelAnimationFrame(menuRaf);cancelAnimationFrame(custRaf);setTimeout(syncMusic,0);
   if(screen!=="sad")clearInterval(sadTimer);
   if(screen!=="pr")prCleanup();

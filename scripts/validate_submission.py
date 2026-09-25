@@ -98,9 +98,10 @@ def check_v2_change(R, tag, c, base, referenced, seen_ids):
         return 0
     if c.get("character") not in CHARS_V2:
         R.err(f"{tag}: 'character' must be one of {sorted(CHARS_V2)}.")
-    if not str(c.get("target", "")).strip():
-        R.err(f"{tag}: 'target' is required.")
-    if c.get("character") == "shared":
+    has_loc = t in ("text", "colour", "scale") and isinstance(c.get("locator"), dict)
+    if not str(c.get("target", "")).strip() and not has_loc:
+        R.err(f"{tag}: 'target' is required (text changes without a known key need a 'locator' instead).")
+    if c.get("character") == "shared" and c.get("target"):
         R.warn(f"{tag}: character 'shared' - explain in 'note' why it applies to both characters.")
     sc = c.get("screen")
     if sc is not None and (not isinstance(sc, str) or not SCREEN_RE.match(sc)):

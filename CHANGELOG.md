@@ -1816,3 +1816,12 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - `window.mgExport` removed (DEV_AUDIT pick 11). Root `VERSION` file synced (it had stayed at 0.4_1) — from now on bump `const VERSION` and the root file together (§6).
 - Tests: `tools/fbstub/test_f3b.py` (34 checks incl. the downloaded ZIP passing `scripts/validate_submission.py`); F1/F6a tests still pass. `export-dialog` re-captured.
 - Size: index.html 5,648,571 bytes (+6,324 vs 0.4_5, LF-normalised).
+
+## 0.4_7 — 2026-09-25
+
+- F5 text edit by long-press: with dev mode on and a Firebase dev session, holding any text for 3 s (yellow outline from 0.3 s; moves > 10 px or an earlier release cancel) opens the popup «Modifica testo» (screen id, current text read-only, Proposta ≤ 500 with counter, Nota ≤ 300, colour + scale for menu sections and card names, Annulla/Salva, Esc = Annulla); the game freezes like for the bug report and the tap that ends the long press does nothing. Never on inputs, `data-nolp` controls (d-pad, Ferma pad) or the popups themselves.
+- DOM text works anytime (full current line for the typewriter boxes of El Gamblador, professor and battle); canvas text only while the game is paused or a dialogue waits for input: in dev mode only, `fillText`/`strokeText` are wrapped to record text rects (removed when dev mode ends).
+- Known keys (tile labels, card names, BJ/PR lines) preview live via the existing `S.tiles` / `S.ov` / `S.gtext`; other texts are saved as proposals with a locator (`mgs_editprops`), listed «anteprima non disponibile» and sent by «Invia testi» without a target. A text change with a locator needs no target (validator + docs/submissions-v2.md + export updated; validator tests 37).
+- Pen icons and the old edit dialog removed (`S.ov` store kept; «+»/«−» for custom tiles/cards kept). Dead `exportTargetsMd` removed. DEV_AUDIT / DEVELOPERS.md updated. Root `VERSION` = 0.4_7.
+- Tests: `tools/fbstub/test_f5.py` (42 checks); F1 (34), F3b (34), F6a (63) still pass. Screens: new `dev-textedit-popup`, library re-captured (97 screens; pens gone).
+- Size: index.html 5,657,865 bytes (+9,294 vs 0.4_6, LF-normalised).

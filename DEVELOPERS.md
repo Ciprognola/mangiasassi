@@ -3,7 +3,7 @@ How to send in text, colour, size, audio and sprite changes. No Git knowledge ne
 
 **Dev site (where you work):** https://ciprognola.github.io/mangiasassi/dev/ — the stable game stays at https://ciprognola.github.io/mangiasassi/. The dev site has its own save, so you can play and test freely.
 
-> The buttons **Invia testi** and **Scarica pacchetto** arrive with build 0.4_6. Until then the old **Esporta modifiche** button makes a ZIP in the previous format (still accepted). The long-press text edit and the skin tool are coming too.
+> The buttons **Invia testi** and **Scarica pacchetto** are in the game from build 0.4_6, and the long-press text edit from 0.4_7. The skin tool is coming too.
 
 ## The big picture
 1. You **log in** on the dev site and change things in developer mode.
@@ -23,6 +23,13 @@ You never edit the game itself (`index.html`). Only checked builds go there, whi
 1. Change what you want in developer mode.
 2. Tap **Invia testi**. The changes go to the maintainer and appear in the repo the next day as a package in your name.
 3. That's all. You can send again whenever you like.
+
+### Editing a text: hold it for 3 seconds
+Logged in with developer mode on, **press and hold any text for 3 seconds** (a yellow outline fills around it while you hold). A small window opens: it shows the screen, the current text, a box for your **Proposta**, an optional **Nota** and, for menu sections and card names, the colour and size. **Salva** keeps it; **Annulla** (or Esc) throws it away. The game pauses while the window is open.
+- Menu sections, card names and the Gamblador/professor lines are edited **live**: you see the change right away.
+- Any other text (battle moves, HUD, texts drawn in the game) has **«anteprima non disponibile»**: you don't see it change, it is sent as a *proposal* with the current text and its position, and the reviewer applies it by hand.
+- Text drawn inside the game (on the canvas) can only be edited while the game is paused or a dialogue is waiting for you to tap. Menu texts and dialogue boxes work any time. Buttons and game controls are never edited by accident: the tap that ends a long press does nothing.
+- Then send it with **Invia testi** as above.
 
 ## Audio and sprites (ZIP + upload)
 1. Add your audio/sprite files in developer mode, then tap **Scarica pacchetto**. You get a `.zip` with a `manifest.json` and your files (the game fills in every technical detail: sizes, frame data, what the file replaces).

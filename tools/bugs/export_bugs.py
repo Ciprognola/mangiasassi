@@ -66,9 +66,9 @@ def ver_key(v):
 
 
 def edit_to_change(doc_id, d):
-    ch = {"id": doc_id, "type": d.get("kind"), "character": d.get("char"), "target": d.get("target"),
+    ch = {"id": doc_id, "type": d.get("kind"), "character": d.get("char"),
           "before": d.get("before"), "value": d.get("value")}
-    for k in ("screen", "locator", "note"):
+    for k in ("target", "screen", "locator", "note"):
         if d.get(k) not in (None, ""):
             ch[k] = d[k]
     if d.get("base"):
