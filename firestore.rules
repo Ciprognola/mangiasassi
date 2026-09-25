@@ -21,5 +21,15 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['uid','text','screen','version','char','ts','ua','meta']);
       allow read, update, delete: if false;
     }
+    match /edits/{id} {
+      allow create: if isDev()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid','acct','kind','char','screen','target','locator','before','value','note','base','ts','meta'])
+        && request.resource.data.kind in ['text','colour','scale']
+        && request.resource.data.value is string
+        && request.resource.data.value.size() <= 500
+        && (!('note' in request.resource.data) || (request.resource.data.note is string && request.resource.data.note.size() <= 300));
+      allow read, update, delete: if false;
+    }
   }
 }

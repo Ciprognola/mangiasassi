@@ -1,7 +1,9 @@
 name: bugs-export
 
-# Daily export of the bug reports from Firestore into bugs/inbox/ on the dev branch (F6b).
+# Daily export from Firestore into the dev branch (F6b bug reports -> bugs/inbox/, F3a text edits -> submissions/<acct>/<date>-testi/).
 # Secret FIREBASE_SA = service-account JSON (Actions secret); it is only read from the environment by tools/bugs/export_bugs.py.
+# Two phases: export (files) -> commit + push -> mark the Firestore docs exported (only after the push succeeded).
+# This file lives on BOTH main and dev (main is needed for the schedule / "Run workflow"); keep the two copies identical.
 on:
   schedule:
     - cron: "0 6 * * *"
@@ -27,20 +29,34 @@ jobs:
           python-version: "3.x"
       - name: Install firebase-admin
         run: pip install --quiet firebase-admin
-      - name: Export new reports
+      - name: Export new reports and text edits
         env:
           FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
-        run: python tools/bugs/export_bugs.py bugs/inbox
+        run: |
+          python tools/bugs/export_bugs.py export --pending "$RUNNER_TEMP/pending.json" \
+            --bugs-msg "$RUNNER_TEMP/bugs_msg.txt" --edits-msg "$RUNNER_TEMP/edits_msg.txt"
       - name: Commit and push (only if files were added)
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          COMMITTED=0
           git add bugs/inbox
-          if git diff --cached --quiet; then
+          if ! git diff --cached --quiet; then
+            git commit -F "$RUNNER_TEMP/bugs_msg.txt"
+            COMMITTED=1
+          fi
+          git add submissions
+          if ! git diff --cached --quiet; then
+            git commit -F "$RUNNER_TEMP/edits_msg.txt"
+            COMMITTED=1
+          fi
+          if [ "$COMMITTED" = "0" ]; then
             echo "nothing to commit"
             exit 0
           fi
-          N=$(git diff --cached --name-only -- 'bugs/inbox/*.json' | wc -l)
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "bugs: export ${N} report(s)"
-          # dev moved meanwhile: our commit only adds new files under bugs/inbox/, so replaying it on top of the new tip cannot conflict
+          # dev moved meanwhile: our commits only add/extend files under bugs/inbox/ and submissions/<acct>/<date>-testi/, so replaying them on top of the new tip cannot conflict
           git push origin HEAD:dev || { git pull --rebase origin dev && git push origin HEAD:dev; }
+      - name: Mark the exported documents
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+        run: python tools/bugs/export_bugs.py mark --pending "$RUNNER_TEMP/pending.json"

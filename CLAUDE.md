@@ -242,28 +242,25 @@ it needed a reference/asset from the owner. §7 here stays as the short summary;
 record.
 
 ### Developer submission flow
-Collaborators edit text / audio / sprites in dev mode and export a package (ZIP + `manifest.json`,
-`schemaVersion: 1`; per change: `type` (text|audio|sprite), `character`, `target`, `value` or `file`, required
-`note`). Limits: **300 KB per audio, 200 KB per sprite, 500 chars per text value, 2 MB total.**
-Colours and scales export as `type: text` targets. Audio over 300 KB is **flagged** to `flagged/`, not blocked —
-Claude converts it. One general note per export, editable per change.
-Process: validator runs on the PR → Claude reviews and lists every change for the owner → only after approval
-is it hardcoded into a new static-named build (e.g. `V.04_14`).
+**Format v2 (from build 0.4_6) — spec: [docs/submissions-v2.md](docs/submissions-v2.md).** Text / colour / scale edits travel from the game straight to Firestore `edits` («Invia testi»); the daily workflow (`bugs-export.yml`, `tools/bugs/export_bugs.py`) turns them into normal packages `submissions/<acct>/<YYYY-MM-DD>-testi/` on `dev`. Audio, sprites (and later skins) stay a ZIP («Scarica pacchetto») uploaded by PR to `dev` into `submissions/<acct>/<YYYY-MM-DD>/`. `<acct>` = the Firebase account name (dev1…dev5, master). `manifest.json` `schemaVersion: 2` records `baseVersion`, `site` and, per change, `before` (value or `{sha256,bytes,…}` at the base version), `screen` (canonical id), `locator`, `meta` (sprite/audio measurements, filled in by the tool) and `note`. Schema v1 packages are still accepted (no conflict check).
+Limits: **300 KB per audio (bigger → `flagged/`, Claude converts), 200 KB per sprite, 500 chars per text value, 300 per note, 2 MB total.**
+Process: validator (`scripts/validate_submission.py`, tests `scripts/test_validate_submission.py`, fixtures `submissions/_fixtures/`) runs on the PR / on the bot's export → Claude reviews and lists every change for the owner → conflict check → only after approval is it hardcoded into a new build.
 
 ### Submission-first procedure (standard from v0.4)
-The developer exports from dev mode (**Esporta modifiche**, web app or local build) and uploads the package
-into `submissions/<name>/<YYYY-MM-DD>/` through a PR. Once the `validate` check is green the owner merges the PR
+The developer sends text edits from dev mode (**Invia testi**, exported by the bot into `submissions/<acct>/<YYYY-MM-DD>-testi/`) or downloads a ZIP (**Scarica pacchetto**; until 0.4_6: **Esporta modifiche**) and uploads it
+into `submissions/<acct>/<YYYY-MM-DD>/` through a PR to `dev`. Once the `validate` check is green the owner merges the PR
 (it only adds files under `submissions/`, never touches `index.html`). The next Claude Code session finds it via §1b.
 
 1. Run `python3 scripts/validate_submission.py <package folder>` locally too; report its output.
-2. **List every change** for the owner in a table: `type · character · target · file/value · size · note`,
+2. **List every change** for the owner in a table: `type · character · target · screen · file/value · size · base version · conflict · note`,
    plus anything flagged (audio > 300 KB in `flagged/`, cross-character assets, non-Italian text, unknown targets).
-3. **Wait for the owner's approval** ("ok", "approva", or a partial list). Nothing is embedded before that.
-4. Implement the approved changes as one build (convert flagged audio per §6 rule 7 first), bump `VERSION`,
-   commit `v0.3_NN: submission <name>/<date> — <summary>`.
-5. Append a line to `submissions/PROCESSED.md`: `<folder> · <build> · approved/rejected items · date`.
+3. **Conflict check** (v2 packages): compare each change's `before` with the target's current value in the latest `dev` build (text/colour/scale: the string; files: sha256/bytes of the embedded asset). Equal → conflict column «—». Different → «changed since <baseVersion>», the owner decides. Target unknown in the current build → flagged. v1 packages: «n/a».
+4. **Wait for the owner's approval** ("ok", "approva", or a partial list). Nothing is embedded before that.
+5. Implement the approved changes as one build (convert flagged audio per §6 rule 7 first), bump `VERSION`,
+   commit `v0.4_NN: submission <name>/<date> — <summary>`.
+6. Append a line to `submissions/PROCESSED.md`: `<folder> · <build> · approved/rejected items · date`.
    Rejected packages are listed too, so they are never picked up again.
-6. **Export bugfixing is in scope**: if the export itself produced something wrong (bad target name, missing
+7. **Export bugfixing is in scope**: if the export itself produced something wrong (bad target name, missing
    file, wrong manifest field, audio slot that doesn't map), fix the export code (`exportDialog`, `expAudioItems`,
    `expTextChanges`, …) in a **separate** build right after the submission build, and note it in the log.
 
@@ -486,7 +483,8 @@ Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 | F1 | Firebase dev login, roles, Cambia password, old local login removed | — | Sonnet · high | done (0.4_3) |
 | F6a | Bug report button + popup, devs only, player path flag off | F1, I3 | Sonnet · medium | done (0.4_4) |
 | F6b | Bug pipeline: GitHub Action → bugs/inbox/, triage into bugs/BUGS.md | F6a, service account (owner) | Sonnet · medium | done (infra) |
-| F3 | Submission format v2 + export code + validator + DEVELOPERS.md | I3, spec from Claude chat | Sonnet · high | todo |
+| F3a | Submission format v2: spec (docs/submissions-v2.md), DEVELOPERS.md, validator v2 + tests, Firestore `edits` rules, text-edit export in the bot | I3, F6b | Sonnet · high | done (docs/infra) |
+| F3b | Game side (build 0.4_6): export dialog split into «Invia testi» → Firestore edits and «Scarica pacchetto» → ZIP v2 with before/hash/meta; delete `window.mgExport` (audit pick 11); sync the root `VERSION` file | F3a, owner publishes the rules | Sonnet · high | todo |
 | F5 | Text edit by 3 s long-press, pens removed | F3, E1b | Sonnet · high | todo |
 | F4a | Skin tool part 1: export full character sheet + map | F3 | Sonnet · high | todo |
 | F4b | Skin tool part 2: import sheet, local preview, export as submission | F4a | Sonnet · high | todo |
@@ -516,6 +514,7 @@ Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 | 2026-09-25 | F6a | Icon in every top bar, devs only (BUG_PLAYERS=false until 0.5); auto info = screen id, version, character, girone, difficulty, device, time, account; no screenshot; offline queue (max 20) sent later |
 | 2026-09-25 | F6b | Daily export + manual run; docs marked exported (kept in Firestore); triage by Claude Code at session start (§1c), classify only, duplicates merged |
 | 2026-09-25 | 0.5 note | Before player bug reports go live: the repo is public — player reports must not store uid/ua/account in bugs/ (strip or keep them private) |
+| 2026-09-25 | F3 | Text, colour and scale edits travel from the game straight to Firestore `edits` (no ZIP, no folder), exported by the daily workflow into normal packages `submissions/<acct>/<date>-testi/`; sprites, audio and (later) skins stay a ZIP uploaded by PR to `dev`. The base version and the «before» value of every change are recorded automatically; sprite measurements are filled in by the tool. Conflict check (before vs the current build) added to the review (§5). The export workflow now marks Firestore docs exported only after the push succeeded (two-phase). Spec: docs/submissions-v2.md |
 | 2026-09-25 | F1 | No offline backup login: if Firebase is unreachable dev mode is unavailable (a session already logged in stays valid offline) |
 
 **Built-in audio slots** (filled by A-chunks):

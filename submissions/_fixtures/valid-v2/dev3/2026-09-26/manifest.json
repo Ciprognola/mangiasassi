@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 2,
+  "developer": "dev3",
+  "baseVersion": "0.4_5",
+  "site": "dev",
+  "exportedAt": "2026-09-26T08:00:00Z",
+  "note": "prova del formato v2",
+  "changes": [
+    {
+      "id": "c1",
+      "type": "text",
+      "character": "roccia",
+      "target": "dialogue.win",
+      "screen": "maze-over",
+      "before": "Vittoria",
+      "value": "Che vittoria!",
+      "note": "più vivace"
+    },
+    {
+      "id": "c2",
+      "type": "colour",
+      "character": "shared",
+      "target": "tile.new.color",
+      "screen": "menu-home-roccia",
+      "before": "#f2c230",
+      "value": "#ffcc00"
+    },
+    {
+      "id": "c3",
+      "type": "scale",
+      "character": "algidone",
+      "target": "tile.wish.scale",
+      "before": "1",
+      "value": "1.2",
+      "locator": {
+        "text": "Lista desideri",
+        "pos": "home, terza tessera"
+      }
+    },
+    {
+      "id": "c4",
+      "type": "sprite",
+      "character": "roccia",
+      "target": "sprite.rock",
+      "screen": "maze-play-roccia",
+      "before": {
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "bytes": 120,
+        "w": 1,
+        "h": 1
+      },
+      "file": "rock.png",
+      "meta": {
+        "frameKey": "rock",
+        "w": 1,
+        "h": 1,
+        "anchor": "center",
+        "ox": 0,
+        "oy": 0,
+        "base_w": 1,
+        "base_h": 1
+      },
+      "note": "sasso più scuro"
+    },
+    {
+      "id": "c5",
+      "type": "audio",
+      "character": "algidone",
+      "target": "sound.algidone.eat",
+      "before": null,
+      "file": "eat.mp3",
+      "meta": {
+        "bytes": 16,
+        "mime": "audio/mpeg",
+        "durationMs": 300
+      },
+      "note": "nuovo suono"
+    }
+  ]
+}

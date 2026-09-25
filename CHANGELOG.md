@@ -1802,3 +1802,8 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 ## infra — 2026-09-25 (F6b follow-up)
 
 - `bugs-export.yml` copied to `main` (workflow-only commit `ef4cfee`, needed for the schedule and "Run workflow"; the job still checks out `dev`); both copies must stay identical. §1: exception for the bot's own rebase. §8: "sad" screen unreachable (observation for 0.5). No build.
+
+## infra/docs — 2026-09-25 (F3a)
+
+- Submission format v2 (F3a): spec `docs/submissions-v2.md`, DEVELOPERS.md rewritten (login, Invia testi, Scarica pacchetto, PR to `dev`, before/base version, bug icon); `scripts/validate_submission.py` v2 (schemaVersion 1 and 2, folder mode `validate_submission.py <folder>`, `-testi` folders, tests `scripts/test_validate_submission.py` + fixtures `submissions/_fixtures/`); `firestore.rules`: `edits` collection (owner publishes it in the console); text-edit export in `tools/bugs/export_bugs.py` (two-phase: export → commit/push → mark; packages validated, failing ones committed and listed in the commit message; tests extended). CLAUDE.md §5 (conflict check, review columns), §10.3 (F3a done, F3b), §10.4. Workflow copied to `main`. No build.
+- Triage: 3 bug reports (pipeline tests) moved from `bugs/inbox/` to `bugs/triaged/` (2 entries in NEW).

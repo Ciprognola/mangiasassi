@@ -1,81 +1,63 @@
 # Developer guide - Mangiasassi
-How to send in text, audio and sprite changes. No Git knowledge needed, everything can be done in the browser.
+How to send in text, colour, size, audio and sprite changes. No Git knowledge needed, everything can be done in the browser.
 
-**Live test build (dev):** https://ciprognola.github.io/mangiasassi/dev/ — the stable game stays at https://ciprognola.github.io/mangiasassi/. Submission pull requests target the branch `dev`.
+**Dev site (where you work):** https://ciprognola.github.io/mangiasassi/dev/ — the stable game stays at https://ciprognola.github.io/mangiasassi/. The dev site has its own save, so you can play and test freely.
+
+> The buttons **Invia testi** and **Scarica pacchetto** arrive with build 0.4_6. Until then the old **Esporta modifiche** button makes a ZIP in the previous format (still accepted). The long-press text edit and the skin tool are coming too.
 
 ## The big picture
-1. You change things **locally** (in your own copy of the game, using developer mode).
-2. You send the changes here as a **package** (a folder with a `manifest.json` + your files).
-3. An automatic check verifies the package structure.
-4. The maintainer has Claude verify and list every change. Approved changes are hardcoded into the next build (e.g. `V0.2_6`), which goes live automatically.
+1. You **log in** on the dev site and change things in developer mode.
+2. **Texts, colours and sizes** are sent straight from the game (**Invia testi**) and reach the maintainer by themselves the next day. Nothing to upload.
+3. **Audio and sprites** are downloaded as a ZIP (**Scarica pacchetto**) and uploaded to GitHub with the web upload.
+4. The maintainer has Claude check and list every change. Approved changes go into the next build, which goes live automatically.
 
-You never edit the game itself (`index.html`). Only verified builds go there. That keeps the game stable for everyone.
+You never edit the game itself (`index.html`). Only checked builds go there, which keeps the game stable for everyone.
 
-## One-time setup
-1. You'll get an email from GitHub inviting you to the `mangiasassi` repository. Accept it (create a free GitHub account first if you don't have one).
-2. Bookmark the repo: https://github.com/Ciprognola/mangiasassi
+## Log in
+1. Open the dev site, go to **Opzioni** and tap **Build locale** 5 times.
+2. Type the **username** the owner gave you (just the name, like `dev3`, no `@`) and your password, then **Accedi**.
+3. Login only works from the site (not from a file on your computer) and needs internet the first time. After that you stay logged in on that device, also offline.
+4. There is no password reset by email. Forgot it? Ask the owner. To change it yourself: Opzioni → **Sviluppatore** → **Account** → **Cambia password**. **Esci** logs you out.
 
-## Step 1 - Make your changes locally
-1. Open the **dev site** (https://ciprognola.github.io/mangiasassi/dev/) and go to **Options**. Tap **Build locale** 5 times, type the **username** the owner gave you (just the name, e.g. `dev3`, no `@`) and your password, then **Accedi**. Login only works from the site (a file opened from your computer cannot log in) and needs an internet connection the first time; once logged in you stay logged in on that device, also offline.
-   - There is no password recovery by email: if you forget your password, ask the owner to reset your account.
-   - To change your password: Options → **Sviluppatore** → **Account** → **Cambia password** (current password + new one, at least 6 characters). **Esci** logs you out.
-2. Edit texts, audio or sprites as needed.
-3. Tap **Esporta modifiche** to download your package (`.zip`). It contains the `manifest.json` and your files.
+## Texts, colours and sizes (no upload)
+1. Change what you want in developer mode.
+2. Tap **Invia testi**. The changes go to the maintainer and appear in the repo the next day as a package in your name.
+3. That's all. You can send again whenever you like.
 
-> Until the export button is in the game, build the package by hand: copy `submissions/_template/manifest.json`, fill it in, and put your audio/sprite files next to it.
-
-## Step 2 - Prepare the folder on your computer
-Create this exact structure (the export does it for you):
-
+## Audio and sprites (ZIP + upload)
+1. Add your audio/sprite files in developer mode, then tap **Scarica pacchetto**. You get a `.zip` with a `manifest.json` and your files (the game fills in every technical detail: sizes, frame data, what the file replaces).
+2. Unzip it. You get a folder like this (the name is your account, the date is today):
 ```
 submissions/
-  your-name/
-    2026-09-21/          <- today's date, YYYY-MM-DD
+  dev3/
+    2026-09-26/
       manifest.json
       eat.mp3
       plane.png
 ```
-Use the same `your-name` every time, lowercase, no spaces.
+3. In the repo (https://github.com/Ciprognola/mangiasassi) switch to the branch **dev**, click **Add file -> Upload files** and drag the whole `submissions` folder in.
+4. At the bottom choose **Create a new branch for this commit and start a pull request**, name the branch `dev3-2026-09-26`, click **Propose changes**, then **Create pull request**. **Make sure the pull request goes to `dev`** (not `main`).
+5. Wait for the **validate** check (about a minute). **Green:** done. **Red:** click **Details**, read the message, fix the file (pull request -> **Files changed** -> "..." -> **Edit file** / upload again on the same branch); it re-runs by itself. Yellow warnings don't block you, but read them.
 
-## Step 3 - Upload it
-1. In the repo, click **Add file -> Upload files**.
-2. Drag the whole `submissions` folder into the page.
-3. At the bottom choose **Create a new branch for this commit and start a pull request**. Name the branch `your-name-2026-09-21`.
-4. Click **Propose changes**, then **Create pull request** and fill in the short form.
-
-## Step 4 - Wait for the green check
-A check called **validate** runs by itself in about a minute.
-- **Green:** done. The maintainer will review it.
-- **Red:** click **Details** and read the message, then fix it. To fix, open your pull request -> **Files changed** -> use the "..." menu on the file -> **Edit file** / delete and upload again on the same branch. The check re-runs automatically.
-- Yellow warnings don't block you, but read them.
-
-## manifest.json reference
-| Field | Meaning |
-|---|---|
-| `schemaVersion` | Always `1` |
-| `developer` | Your name, same as the folder |
-| `date` | Same as the folder date |
-| `baseVersion` | Version you built on, e.g. `V0.2_5` (see the `VERSION` file) |
-| `changes` | List of changes (below) |
-
-Each change:
-
-| Field | Meaning |
-|---|---|
-| `type` | `text`, `audio` or `sprite` |
-| `character` | `uomoRoccia`, `algidone` or `shared` |
-| `target` | Which game element it replaces (the export fills this in) |
-| `value` | New text (text changes only, max 500 characters) |
-| `file` | File name inside your folder (audio and sprite only) |
-| `note` | Short reason for the change (required) |
+## "Before" and the base version — nothing to type
+Every change remembers the game version you started from (the *base version*) and what the thing looked like then (the *before* value). The tool records both. If someone changed the same thing in the meantime, the reviewer sees «changed since 0.4_6» next to your change and the owner decides. You don't have to do anything.
 
 ## Rules
-- **Assets never cross characters.** Uomo roccia uses only planes and rocks. Algidone uses only gym equipment and snacks. Use `shared` only for things truly used by both, and say why in `note`.
+- **Assets never cross characters.** Uomo roccia uses only planes and rocks. Algidone uses only gym equipment and snacks. Use `shared` only for things truly used by both, and say why in the note.
 - **All game text is in Italian.**
-- **File limits** (the game is one HTML file with everything embedded, so size matters): audio `.mp3`/`.ogg`/`.wav` up to 300 KB each; sprites `.png`/`.webp` up to 200 KB each; 2 MB total per submission.
-- **Only add files inside your own submission folder.** The check rejects anything else.
-- **One submission per topic.** Smaller packages are reviewed faster.
-- If the live build has moved on since you started (`VERSION` changed), you'll get a warning. That's fine, the reviewer checks for conflicts.
+- **Limits** (the game is one HTML file with everything embedded, so size matters): audio `.mp3`/`.ogg`/`.wav` up to 300 KB each (bigger files are converted by Claude); sprites `.png`/`.webp` up to 200 KB each; text up to 500 characters; notes up to 300; 2 MB total per package.
+- **Only add files inside your own folder** `submissions/<your account>/<date>/`. The check rejects anything else.
+- **One package per topic.** Smaller packages are reviewed faster.
+- Audio and sprite changes need a short **note** saying why.
+
+## What happens after
+The reviewer lists your changes for the owner. After approval they become one build on the dev site (you'll see the new version number in the corner), and later a release. Nothing you send is published before that.
+
+## Found a bug?
+Logged in, tap the small **bug icon** at the top of any screen: the game pauses, you write a few lines and send. The game adds the screen, version and device by itself. No internet? It is saved and sent later.
+
+## Technical reference
+The exact format is in [docs/submissions-v2.md](docs/submissions-v2.md). Old packages (`schemaVersion: 1`, see `submissions/_template` and `_example`) are still accepted.
 
 ## Audio target names (`type: audio`)
 When you upload audio in dev mode, **the export fills in `target` for you** — you never type it by
