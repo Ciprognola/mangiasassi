@@ -29,6 +29,7 @@ Logged in with developer mode on, **press and hold any text for 3 seconds** (a y
 - Menu sections, card names and the Gamblador/professor lines are edited **live**: you see the change right away.
 - Any other text (battle moves, HUD, texts drawn in the game) has **«anteprima non disponibile»**: you don't see it change, it is sent as a *proposal* with the current text and its position, and the reviewer applies it by hand.
 - Text drawn inside the game (on the canvas) can only be edited while the game is paused or a dialogue is waiting for you to tap. Menu texts and dialogue boxes work any time. Buttons and game controls are never edited by accident: the tap that ends a long press does nothing.
+- If the current text contains placeholders in curly braces (like `{price}`), **keep them** in your proposal: the game fills them in.
 - Then send it with **Invia testi** as above.
 
 ## Audio and sprites (ZIP + upload)

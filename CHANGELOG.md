@@ -1825,3 +1825,7 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Pen icons and the old edit dialog removed (`S.ov` store kept; «+»/«−» for custom tiles/cards kept). Dead `exportTargetsMd` removed. DEV_AUDIT / DEVELOPERS.md updated. Root `VERSION` = 0.4_7.
 - Tests: `tools/fbstub/test_f5.py` (42 checks); F1 (34), F3b (34), F6a (63) still pass. Screens: new `dev-textedit-popup`, library re-captured (97 screens; pens gone).
 - Size: index.html 5,657,865 bytes (+9,294 vs 0.4_6, LF-normalised).
+
+## docs — 2026-09-25 (F5 decisions)
+
+- F5 owner decisions logged (§10.4), F3c cancelled, SESSION HANDOFF rewritten, DEVELOPERS.md: keep `{…}` placeholders in a proposal. No build.

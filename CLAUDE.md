@@ -3,7 +3,7 @@
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
 ## SESSION HANDOFF
-State: 0.4 shipped (tag v0.4). Working on v0.4.5 (DEV tools), plan in §10. Next chunk: whatever the owner pastes; the §10.3 table shows status. 0.5 and 0.6 are being drafted in Claude chat: nothing to do for them. No pending owner art.
+0.4_7 (F5) built, awaiting the owner's phone test. Next chunk: F4a (skin tool part 1), brief arrives from a new Claude chat. Sessions may run as Claude Code cloud sessions: then the brief starts with a cloud preamble; follow it.
 
 ---
 
@@ -523,6 +523,8 @@ Not in scope: everything in §8 marked 0.5+, and the 0.5/0.6 drafts.
 | 2026-09-25 | F3b | Accepted: unsupported audio formats are left out of the package with a warning; edits queue max 200 |
 | 2026-09-25 | §1b | The text packages exported from the owner's F3b test (submissions/master/<date>-testi/) are TESTS: reject every change, record them in PROCESSED.md as "rejected — owner F3b test", do not list them for approval |
 | 2026-09-25 | F5 | Long-press 3 s with a progress outline while holding; canvas text only while paused or while a dialogue waits for input (DOM text anytime); known keys preview live, other texts are sent as proposals with a locator (a text change with a locator needs no target: validator + spec updated). Pens removed, «+»/«−» kept, dead exportTargetsMd deleted |
+| 2026-09-25 | F5 (report) | «+»/«−» for custom tiles/cards stay (not pens). Locator-without-target change (validator, docs/submissions-v2.md, export script, tests) accepted. Placeholder prefill ({price} etc.) in the proposal box accepted |
+| 2026-09-25 | F3c | Cancelled: file packages stay «Scarica pacchetto» + PR upload to `dev`; `firestore.rules` in the repo is the published version (no packages collection). Indicative remaining builds: F4a 0.4_8, F4b 0.4_9, REQ 0.4_10, B1 0.4_11, F2 0.4_12, then REL "0.4.5" |
 | 2026-09-25 | F1 | No offline backup login: if Firebase is unreachable dev mode is unavailable (a session already logged in stays valid offline) |
 
 **Built-in audio slots** (filled by A-chunks):
