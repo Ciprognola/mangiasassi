@@ -1685,3 +1685,20 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
   encounter 1 ends after floor 1 (Continua -> maze, stage kept, `enc:1`), encounter 2 after floor 2 (Avanti then Continua), encounter 3 after the floor-3 final panel, 4th encounter stays N=3; game over -> Continua; pause Esci -> maze; forced at girone 10 (enc 0) without "Non ora", Continua -> the "Girone 10 / Mangiaroccia ricomincia" card;
   girone 10 with enc>=1 and no roll -> interlude only; home -> popup -> Guarda -> Giochi card with Gioca -> practice (Riprova, `enc` null); old save without `fa` loads; dev buttons and Forza incontro leave `mgs_v1` byte-identical, queue empty; Sblocca tutto card keeps its floor buttons; 0 console errors.
 - Not tested: real-device touch feel and timing of the invite/panels, and a random (unstubbed) encounter rate over many runs.
+
+## 0.3_36 — 2026-09-25
+**M8b — Ferma Algidone! integration part 2** (rewards, achievements, roadmap tile 10). Owner phone test of 0.3_35: OK.
+- **Rewards** (amends the "formula x N" proposal): on an encounter **win** (last floor N cleared) the encounter's final score, stock bonus included, is added to the maze run's `G.score`; the normal end-of-run payout converts it (difficulty + limiter, `finishRun`). Loss, pause/Esci, practice (Giochi card), dev tests and SIM pay nothing
+  (`faReal()`: `FA.enc.run && !FA.enc.dev && !SIM()`; paid once per encounter, `FA.paid`). The score is paid at the win panel, shown as "Punti" there.
+- **Achievements** (category Minigiochi `min`, now 4 slots, total **34**), event `faclear` fired the moment a floor is cleared (`faWin` floors 1-2, `faFinalWin` floor 3), so they stay unlocked even if the encounter is lost later, real encounters only: **"Fuori da Coccia!"** (m2, clear floor 1, +150 sordi / +90 exp),
+  **"Algidone è a terra"** (m3, clear floor 3 = all 3 floors, +400 / +240), **"Senza un graffio"** (m4, clear any floor without losing a life on that floor, +250 / +150; `FA.floorLives` set per floor). Existing unlock/popup path; it fires during the climb/collapse animation (no gameplay) and the popup sits above the pad, clear of the panel button (screenshot checked).
+  Achievements screen at 360 px: 5 tabs, 4 rows in Minigiochi, no horizontal overflow.
+- **Roadmap tile 10**: unlocks on the first real floor-1 clear (`S.p.fa.f1`, new field in `DEF` + migration; old saves get false), no longer on the girone count. No `ROAD_REWARDS[10]`, so it behaves like a "?" tile: "Premio in arrivo", not claimable, no pulse, no popup. Locked tap says "Tessera ancora bloccata" (no hint, like 3 and 5).
+  Face = `fa_salsiccia` drawn untouched at x1 (in-game it is x0.5; the tile is bigger). "Sblocca tutto" shows it unlocked.
+- **`index.html` size delta: +1855 bytes.**
+- Verified headless (real clicks, desktop + mobile tap, `Math.random` stubbed only inside `bjAfterClear`): encounter 1/2/3 wins add exactly the encounter score to the run (+880 / +1770 / +2660 with an instant win, i.e. stock bonus only), payout at run end through the pause menu (score 6310 -> +819 sordi);
+  loss and pause-Esci after a cleared floor add 0; m2/m4 fire at the first floor-1 clear, m3 at the floor-3 clear, none fires twice; a floor cleared after a death fires m2 but not m4; practice, dev "Incontro" and a SIM encounter leave the save byte-identical (no achievements, no f1, no score);
+  tile 10 locked (toast "Tessera ancora bloccata") before and "unlocked" ("Premio in arrivo", class `rtile unlocked`, queue empty) after the first real floor-1 clear; old save without `f1` loads; 0 console errors.
+- Typical scores for the balance pass (M9, not tuned now): a maze girone is ~130 pellets x10 + 200 clear + ghosts, so roughly **1,500-2,500 per girone**. An encounter scores the stock bonus (up to ~900 per floor for an instant win, ~400-600 for a normal clear) plus jumps (+10..30 each): roughly
+  **N=1 ~500-900, N=2 ~1,000-1,700, N=3 ~1,500-2,600** (measured max with instant wins: 880 / 1770 / 2660).
+- Not tested: real-device feel and the achievement popup timing on a phone; a full real play-through of an encounter (wins were triggered through `faWin`/`faFinalWin`).
