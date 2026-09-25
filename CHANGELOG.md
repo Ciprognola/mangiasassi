@@ -1738,3 +1738,7 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 ## docs — 2026-09-25
 
 - v0.4.5 plan (D1), 0.4 plan archived to docs/releases/0.4.md, firestore.rules, bugs/BUGS.md. No build.
+
+## infra — 2026-09-25
+
+- dev branch deployed at /dev/, stable at the root (I2 part A). No validate-submission workflow exists in the repo, so nothing to retarget.

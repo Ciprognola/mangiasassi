@@ -1,44 +1,48 @@
-# Sample workflow for building and deploying a Jekyll site to GitHub Pages
-name: Deploy Jekyll with GitHub Pages dependencies preinstalled
+# Pages deploy: stable (main) at the site root, dev branch at /dev/
+name: Deploy Pages (main at /, dev at /dev/)
 
 on:
-  # Runs on pushes targeting the default branch
   push:
-    branches: ["main"]
-
-  # Allows you to run this workflow manually from the Actions tab
+    branches: ["main", "dev"]
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  # Build job
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout main
         uses: actions/checkout@v4
+        with:
+          ref: main
+          path: _site
+      - name: Checkout dev (falls back to main's content)
+        run: |
+          if git ls-remote --exit-code --heads "${{ github.server_url }}/${{ github.repository }}" dev >/dev/null 2>&1; then
+            git clone --depth 1 --branch dev "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" _site/dev
+          else
+            mkdir -p _site/dev && cp -r _site/. _site/dev/ 2>/dev/null || true
+          fi
+      - name: Clean
+        run: |
+          find _site -name .git -prune -exec rm -rf {} +
+          rm -rf _site/dev/dev
+          touch _site/.nojekyll
       - name: Setup Pages
         uses: actions/configure-pages@v5
-      - name: Build with Jekyll
-        uses: actions/jekyll-build-pages@v1
-        with:
-          source: ./
-          destination: ./_site
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
 
-  # Deployment job
   deploy:
     environment:
       name: github-pages

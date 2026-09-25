@@ -33,28 +33,22 @@ In 0.4.5 every decision arrives pre-made in the brief; there are no in-session q
 
 ## 1. FIRST COMMAND OF EVERY SESSION — sync git
 
-Three commits were made **directly on GitHub's web UI, starting at `a5fc3ee`**. They are not in the local
-clone, which is why VS Code's Git Graph doesn't show them.
+Claude Code works and pushes on `dev`. `main` changes only at a release (merge dev → main), except workflow/docs chunks explicitly marked "on main".
 
 ```bash
 git status                              # must be clean
 git fetch origin
-git log --oneline main..origin/main     # should show a5fc3ee + the 2 after it
-git pull --ff-only origin main
+git checkout dev
+git pull --ff-only origin dev
+git log --oneline dev..origin/main      # owner web uploads / main-only commits
 grep -n 'const VERSION' index.html      # confirm which build you're actually editing
 ```
 
-Never force-push, never rebase `main`, never rewrite those web commits. If `--ff-only` fails, stop and ask.
+If origin/main has commits that dev lacks (owner web uploads), merge origin/main into dev only when they touch none of the files changed on dev since the last merge; otherwise stop and ask. Never rebase, never force-push, never rewrite web commits. If `--ff-only` fails, stop and ask.
 
-**If a push is rejected because `origin/main` moved** (someone — usually the owner via the web UI — committed
-while you were working): `git fetch origin` and inspect what changed (`git show --stat` on the new commit(s))
-before doing anything else. A merge is allowed **only** when the incoming commits touch **none** of the files
-your own commit changed — `git merge origin/main` (never `rebase`, never `push --force`), then report what was
-merged. Any file overlap at all → **stop and ask** the owner how to reconcile, don't merge or resolve it
-yourself.
+**If a push to `dev` is rejected because `origin/dev` moved**: `git fetch origin` and inspect the new commit(s) (`git show --stat`) first. A merge is allowed **only** when the incoming commits touch **none** of the files your own commit changed — `git merge origin/dev` (never `rebase`, never `push --force`), then report what was merged. Any file overlap → **stop and ask**.
 
-### 1b. SECOND COMMAND — check for developer submissions (submissions come first)
-
+### 1b. SECOND COMMAND — check for developer submissions (submissions come first; read on `dev`)
 Right after the pull, look for submission packages that have not been processed yet:
 
 ```bash

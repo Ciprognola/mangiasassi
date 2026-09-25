@@ -1,7 +1,7 @@
 # Developer guide - Mangiasassi
 How to send in text, audio and sprite changes. No Git knowledge needed, everything can be done in the browser.
 
-**Live test build:** https://ciprognola.github.io/mangiasassi/
+**Live test build (dev):** https://ciprognola.github.io/mangiasassi/dev/ — the stable game stays at https://ciprognola.github.io/mangiasassi/. Submission pull requests target the branch `dev`.
 
 ## The big picture
 1. You change things **locally** (in your own copy of the game, using developer mode).
