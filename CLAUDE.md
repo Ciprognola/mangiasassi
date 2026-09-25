@@ -4,7 +4,7 @@ Permanent project context for Claude Code. Read it fully at the start of every s
 
 ## SESSION HANDOFF (2026-09-25 → next session)
 **State: 0.4 shipped.** `VERSION` = `"0.4"` (also the root `VERSION` file), tag `v0.4` on the release commit, everything pushed to `main`, `git status` clean. Release smoke test 23/23 (desktop + mobile, dev off). Details: `CHANGELOG.md` "0.4 — Ferma Algidone!".
-**Next = 0.5 planning in Claude web** (no Claude Code task is pending; do not start any 0.5 item before a planned chunk arrives). Backlog to plan from: §8 (0.5 backlog: hit boxes around assets in the maze game; future items; Ferma follow-ups such as roadmap tile 10 reward, a DK-style loop after floor 3, other playable characters).
+**Next = the 0.5 build, which the owner says is mainly DEV tools and features** (session closed 2026-09-25; the owner will give the brief in a new chat once ready). Do not start any 0.5 item before a planned chunk arrives, and do not touch the 0.5 backlog items on your own. Backlog to plan from: §8 (0.5 backlog: hit boxes around assets in the maze game; future items; Ferma follow-ups such as roadmap tile 10 reward, a DK-style loop after floor 3, other playable characters).
 **Post-0.4, not started:** audio submissions A1…An (§8) — processed one build per approved submission via §5; any pending submission is found at session start (§1b). Built-in audio slots table in §10.9 is empty.
 **Next build number:** the first build after the release is `"0.4_1"`, then `"0.4_2"`, … (§6 rule 3, §7, §9 already rolled to 0.4).
 **No pending owner art.**
