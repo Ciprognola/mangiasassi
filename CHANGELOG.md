@@ -1798,3 +1798,7 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 
 - Bug export workflow `.github/workflows/bugs-export.yml` (daily 06:00 UTC + manual run, checks out `dev`, secret FIREBASE_SA) with `tools/bugs/export_bugs.py` (Firestore `bugs` where not exported → `bugs/inbox/<date>_<id>.json`, doc marked `exported`/`exportedAt`; mocked test `tools/bugs/test_export_bugs.py`); commits "bugs: export N report(s)" as github-actions[bot] to `dev`.
 - Triage procedure CLAUDE.md §1c; `bugs/BUGS.md` sections explained; `bugs/inbox/`, `bugs/triaged/` created. 0.5 privacy note added (§8, §10.4). No build.
+
+## infra — 2026-09-25 (F6b follow-up)
+
+- `bugs-export.yml` copied to `main` (workflow-only commit `ef4cfee`, needed for the schedule and "Run workflow"; the job still checks out `dev`); both copies must stay identical. §1: exception for the bot's own rebase. §8: "sad" screen unreachable (observation for 0.5). No build.

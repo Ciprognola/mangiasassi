@@ -44,7 +44,7 @@ git log --oneline dev..origin/main      # owner web uploads / main-only commits
 grep -n 'const VERSION' index.html      # confirm which build you're actually editing
 ```
 
-If origin/main has commits that dev lacks (owner web uploads), merge origin/main into dev only when they touch none of the files changed on dev since the last merge; otherwise stop and ask. Never rebase, never force-push, never rewrite web commits. If `--ff-only` fails, stop and ask.
+If origin/main has commits that dev lacks (owner web uploads), merge origin/main into dev only when they touch none of the files changed on dev since the last merge; otherwise stop and ask. Never rebase, never force-push, never rewrite web commits. If `--ff-only` fails, stop and ask. Exception: the bugs-export bot may rebase its own unpushed commit; Claude Code never rebases.
 
 **If a push to `dev` is rejected because `origin/dev` moved**: `git fetch origin` and inspect the new commit(s) (`git show --stat`) first. A merge is allowed **only** when the incoming commits touch **none** of the files your own commit changed — `git merge origin/dev` (never `rebase`, never `push --force`), then report what was merged. Any file overlap → **stop and ask**.
 
@@ -218,7 +218,7 @@ CHANGELOG.md                   changelog of the project — kept current, see be
 submissions/                   developer submission packages + README
 android/                       WebView wrapper
 scripts/validate_submission.py structure + size validator
-.github/workflows/             pages deploy + validate-submission
+.github/workflows/             pages deploy + validate-submission + bugs-export (bugs-export.yml lives on BOTH main and dev — main is needed for the schedule/manual run — and the two copies must stay identical)
 DEVELOPERS.md                  browser-only guide, no Git knowledge required
 CODEOWNERS                     → Ciprognola
 LICENSE                        MIT
@@ -423,6 +423,9 @@ Moved to 0.4.5 as B1: maze hitboxes around assets.
 ### Post-0.4 — audio submissions (A1…An)
 One build per approved audio submission (Uomo roccia sounds, Algidone sounds, Blackjack voiceover, Professore voiceover, professor intro music, and the new `sound.fa.<slot>` set for Ferma Algidone!). They will arrive eventually and
 are processed **after the 0.4 release** via the §5 procedure and the A0 built-in layer (keep the running slot table in §10.9; music: half-length + crossfade loop per §6 rule 7). Not a dependency of REL.
+
+### 0.5 observation — "sad" screen
+`screen="sad"` (`renderSad`, 3-2-1 countdown back to the splash) has no path that reaches it (no `go("sad")` anywhere): dead code or a missing trigger? Decide in 0.5; nothing changed now.
 
 ### 0.5 note — player bug reports and privacy
 Before player bug reports go live (0.5, `BUG_PLAYERS=true`): the repo is public — player reports must not store uid/ua/account in `bugs/` (strip them in the export or keep those reports private).
