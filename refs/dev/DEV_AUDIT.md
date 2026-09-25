@@ -77,8 +77,8 @@ Home menu: only the ✎ toggle. Pens, "+", "−" go with F5. The "Debug" achieve
 ## 4. Owner picks
 
 (Answer as "1 yes, 2 no, …")
-1. Replace the local login, role source and `S.creds` (#1–#3, #11) with F1, keeping the ×5 gesture as the entry — recommend **yes**. Scripts: `opt-login-modal` capture uses the gesture. **[owner: yes · LATER — yes — with F1]**
-2. Delete the Credenziali block and "+ Sviluppatore" / "Rimuovi" (#11) — **yes** (with F1). No script use. **[owner: yes · LATER — yes — with F1]**
+1. Replace the local login, role source and `S.creds` (#1–#3, #11) with F1, keeping the ×5 gesture as the entry — recommend **yes**. Scripts: `opt-login-modal` capture uses the gesture. **[owner: yes · DONE — built 0.4_3 (F1)]**
+2. Delete the Credenziali block and "+ Sviluppatore" / "Rimuovi" (#11) — **yes** (with F1). No script use. **[owner: yes · DONE — built 0.4_3 (F1)]**
 3. Delete the "Come si modifica" help text (#10) — **yes**. **[owner: yes · DONE — built 0.4_2]**
 4. Turn Sblocca tutto off whenever dev mode is switched off (fixes Trello #12) — **yes** (alternative: keep it and show a "SIM attivo" badge on ✎). `capture.py` relies on SIM staying on after `devOn=false` (for `wish-*-unlocked`): I would adapt the script (hide pens by CSS). **[owner: yes · DONE — built 0.4_2]**
 5. Merge the four map buttons and the map select (#13/#14) into one select of all 15 maps + Vai, keep Girone 4 / 7 — **yes**. `capture.py` (`dev_jump`, `#jg4`) must be adapted. **[owner: yes · DONE — built 0.4_2]**

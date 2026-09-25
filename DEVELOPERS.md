@@ -16,7 +16,9 @@ You never edit the game itself (`index.html`). Only verified builds go there. Th
 2. Bookmark the repo: https://github.com/Ciprognola/mangiasassi
 
 ## Step 1 - Make your changes locally
-1. Open the game and go to **Options**. Tap **Build locale** 5 times to enable developer mode.
+1. Open the **dev site** (https://ciprognola.github.io/mangiasassi/dev/) and go to **Options**. Tap **Build locale** 5 times, type the **username** the owner gave you (just the name, e.g. `dev3`, no `@`) and your password, then **Accedi**. Login only works from the site (a file opened from your computer cannot log in) and needs an internet connection the first time; once logged in you stay logged in on that device, also offline.
+   - There is no password recovery by email: if you forget your password, ask the owner to reset your account.
+   - To change your password: Options → **Sviluppatore** → **Account** → **Cambia password** (current password + new one, at least 6 characters). **Esci** logs you out.
 2. Edit texts, audio or sprites as needed.
 3. Tap **Esporta modifiche** to download your package (`.zip`). It contains the `manifest.json` and your files.
 

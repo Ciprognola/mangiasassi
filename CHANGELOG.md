@@ -1768,3 +1768,12 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
   - Role split kept (pick 15). The I3 note about the El Gamblador click is corrected: it was two capture runs at once, not the game (SCREENS.md notes, capture.py comment).
   - Screens library regenerated (93 screens, 1.55 MB): dev-*, fa-* (no overlay), wish-*.
 - Size: index.html 5,624,483 bytes (−2,207 vs 0.4_1, LF-normalised).
+
+## 0.4_3 — 2026-09-25
+
+- F1 Firebase dev login (DEV_AUDIT picks 1–2): login modal with username + password ("Accedi"), Firebase Auth email/password (`<user>@mangiasassi.invalid`), role read from Firestore `devs/{uid}` (master, dev1…dev5; dev1…dev5 behave as the old dev1, account name kept in `acct`); Italian errors (wrong credentials, too many attempts, offline, account without role); Account accordion "Connesso come …", Cambia password (reauthenticate + update), Esci (sign out, cache cleared, dev off, Sblocca tutto off).
+- SDK v12.19.0 loaded with dynamic `import()` only when needed (login modal, or at startup when the dev cache has a Firebase session), 8 s timeout, never blocks the menu; separate sessions per site (app name `mgs` / `mgs_dev`); cache `{role,acct,fb:true,devOn}`, background verification, offline keeps the session; old local-login cache cleared; `file://` shows "Accesso disponibile solo dal sito".
+- Removed the hardcoded credentials, the local check, `S.creds` (deleted from old saves on load), the Credenziali block and "+ Sviluppatore" / "Rimuovi".
+- Tests: `tools/fbstub/` (stub SDK, `test_f1.py`, 34 checks); `capture.py` seeds a stub session for dev screens (re-captured `opt-login-modal`, `dev-tab`, `dev-acc-account`).
+- DEVELOPERS.md: how to log in and change the password.
+- Size: index.html 5,629,738 bytes (+5,255 vs 0.4_2, LF-normalised).

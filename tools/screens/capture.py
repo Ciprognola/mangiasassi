@@ -12,6 +12,8 @@ in a fresh browser context per scenario, so it never depends on leftovers.
 Requires: playwright (python, chromium installed) and Pillow.
 """
 import argparse, functools, http.server, json, os, sys, threading, time
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "fbstub"))
+import fbstub
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -43,10 +45,13 @@ class Cap:
         if seed is not None:
             init.append("if(!localStorage.getItem('mgs_v1'))localStorage.setItem('mgs_v1',%s);" % json.dumps(json.dumps(seed)))
         if dev:
-            init.append("localStorage.setItem('mgs_dev',JSON.stringify({role:'master',devOn:true}));")
+            # F1: a Firebase-style dev session in the cache + the Firebase stub (tools/fbstub) with a signed-in "master": no real Firebase, no credentials
+            init.append("localStorage.setItem('mgs_dev',JSON.stringify({role:'master',acct:'master',fb:true,devOn:true}));")
         # silence audio + randomness where a clean frame matters is done per scenario
         init.append("document.addEventListener('DOMContentLoaded',()=>{const st=document.createElement('style');st.id='capstyle';st.textContent='#ach-pop{display:none!important}';document.head.appendChild(st)});")
         self.ctx.add_init_script("".join(init))
+        if dev:
+            fbstub.install(self.ctx, session="master")
         self.p = self.ctx.new_page()
         self.errors = []
         self.p.on("pageerror", lambda e: self.errors.append(str(e)))

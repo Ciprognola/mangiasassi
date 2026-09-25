@@ -441,8 +441,7 @@ const DEF_TILES=[
  {id:"quit",label:"Quitta",color:"#e5484d",scale:1}];
 const CHDEF=()=>({ownP:[0],ownR:[0],selP:0,selR:0,lvl:1,exp:0,gir:0,skins:[],skin:null});
 const DEF={p:{gam:{visits:0,seen:false},pr:{visits:0,seen:false},fa:{enc:0,seen:false,f1:false},pop:{queue:[],seen:{},needsSeed:false},road:{claimed:{}},sordi:0,best:0,char:"roccia",ch:{roccia:CHDEF(),algidone:CHDEF()}},
-  opts:{fs:1,sound:true,music:true,diff:"medium"},ach:{prog:{},done:{}},gtext:{},tiles:DEF_TILES,ov:{},quick:null,extra:{plane:[],rock:[],algidone:{plane:[],rock:[]}},
-  creds:{master:{u:"master",p:"master-0000"},devs:[{u:"dev1",p:"dev1-0000"}]}};
+  opts:{fs:1,sound:true,music:true,diff:"medium"},ach:{prog:{},done:{}},gtext:{},tiles:DEF_TILES,ov:{},quick:null,extra:{plane:[],rock:[],algidone:{plane:[],rock:[]}}};
 let S=Object.assign(JSON.parse(JSON.stringify(DEF)),store.get(SAVE_KEY)||{});
 let _hadSave=false,_hadPop=false;
 {const sp=(store.get(SAVE_KEY)||{}).p||{};_hadSave=!!store.get(SAVE_KEY);_hadPop=!!sp.pop;
@@ -453,6 +452,7 @@ for(const k of Object.keys(S.p.ch)){const c=S.p.ch[k];if(c.lvl==null){c.lvl=k===
 S.extra=S.extra||{plane:[],rock:[]};S.extra.algidone=S.extra.algidone||{plane:[],rock:[]};}
 S.ach=S.ach||{prog:{},done:{}};S.gtext=S.gtext||{};S.p.gam=Object.assign({visits:0,seen:false,won:0},S.p.gam||{});S.p.pr=Object.assign({visits:0,seen:false},S.p.pr||{});S.p.fa=Object.assign({enc:0,seen:false,f1:false},S.p.fa||{});S.ach.prog=S.ach.prog||{};S.ach.done=S.ach.done||{};
 if(S.sim){if(S.realP){S.p=S.realP;S.quick=S.realQuick||null}if(S.realAch)S.ach=S.realAch}S.sim=false;S.realP=null;S.realQuick=null;S.realAch=null;
+delete S.creds; // F1: le vecchie credenziali locali (password in chiaro) non esistono piu'
 /* popup di sblocco (§10.3 P1): un salvataggio gia' esistente prima di questa build non deve
    ritrovarsi inondato di popup per tutto cio' che aveva gia' sbloccato -- needsSeed lo segnala,
    seedPopSeen() (chiamata al primo giro sul menu, quando tutte le funzioni sono pronte) lo consuma. */
@@ -463,8 +463,11 @@ const persist=()=>store.set(SAVE_KEY,S);
    manualmente (bottone logout) o non si cancellano i dati locali -- prima
    restava solo in memoria e si perdeva a ogni riapertura */
 const _devSaved=store.get(DEV_KEY)||{};
-let role=_devSaved.role||null,devOn=!!_devSaved.devOn; // role: null | 'dev1' | 'master'
-const persistDev=()=>store.set(DEV_KEY,{role,devOn});
+let role=null,acct=null,devOn=false; // role: null | 'dev1' (dev1...dev5) | 'master'; acct = nome dell'account (master, dev1...dev5)
+if(_devSaved.fb===true&&_devSaved.role){role=_devSaved.role==="master"?"master":"dev1";acct=_devSaved.acct||null;devOn=!!_devSaved.devOn} // sessione Firebase: modalita' sviluppatore subito, verifica in background
+else if(_devSaved.role||_devSaved.devOn){try{localStorage.removeItem(DEV_KEY)}catch(e){}delete mem[DEV_KEY]} // resto del vecchio login locale: serve il login con Firebase
+const persistDev=()=>{if(!role){try{localStorage.removeItem(DEV_KEY)}catch(e){}delete mem[DEV_KEY];return}store.set(DEV_KEY,{role,acct,fb:true,devOn})};
+const isMaster=()=>role==="master";
 const devUI=()=>!!role&&devOn;
 const SIM=()=>!!S.sim;
 function simOn(){
@@ -477,6 +480,78 @@ function simOff(){
   if(!S.sim)return;
   S.p=S.realP;S.quick=S.realQuick||null;if(S.realAch)S.ach=S.realAch;S.realP=null;S.realQuick=null;S.realAch=null;S.sim=false;persist();
 }
+/* ============ FIREBASE (F1): login sviluppatori ============
+   SDK caricato con import() dinamico solo quando serve (modal di login, o all'avvio se la cache dice che c'e' una sessione):
+   il menu e i giochi non aspettano mai Firebase. Senza rete: solo login, segnalazioni e salvataggio cloud non sono disponibili.
+   Due sessioni separate per i due siti: il nome dell'app fa parte della chiave di persistenza di Auth. */
+const FB_CFG={apiKey:"AIzaSyA6wGraS0bw4hpHUUjru2APjnfcIEkpG8c",authDomain:"mangiasass.firebaseapp.com",projectId:"mangiasass",storageBucket:"mangiasass.firebasestorage.app",messagingSenderId:"666619489138",appId:"1:666619489138:web:a181c869f0d61ae3214beb"};
+const FB_BASE="https://www.gstatic.com/firebasejs/12.19.0/",FB_DOM="@mangiasassi.invalid",FB_ROLES=["master","dev1","dev2","dev3","dev4","dev5"];
+let _fb=null;
+function fbLoad(){
+  if(_fb)return _fb;
+  _fb=(async()=>{
+    if(location.protocol==="file:")throw new Error("file");
+    let tm;const to=new Promise((_,rej)=>{tm=setTimeout(()=>rej(new Error("timeout")),8000)});
+    try{
+      const [A,Au,Fs]=await Promise.race([Promise.all([import(FB_BASE+"firebase-app.js"),import(FB_BASE+"firebase-auth.js"),import(FB_BASE+"firebase-firestore.js")]),to]);
+      const app=A.initializeApp(FB_CFG,IS_DEVSITE?"mgs_dev":"mgs");
+      return{A,Au,Fs,app,auth:Au.getAuth(app),db:Fs.getFirestore(app)};
+    }finally{clearTimeout(tm)}
+  })();
+  _fb.catch(()=>{_fb=null});
+  return _fb;
+}
+async function fbRoleOf(fb,user){
+  const d=await fb.Fs.getDoc(fb.Fs.doc(fb.db,"devs",user.uid));
+  const r=d.exists()?d.data().role:null;
+  return FB_ROLES.includes(r)?r:null;
+}
+function fbErr(e){
+  const c=(e&&e.code)||"",m=(e&&e.message)||"";
+  if(m==="file")return"Accesso disponibile solo dal sito.";
+  if(/invalid-credential|wrong-password|user-not-found|invalid-email|user-disabled|invalid-login/.test(c))return"Utente o password errati.";
+  if(/too-many-requests/.test(c))return"Troppi tentativi: riprova più tardi.";
+  if(/requires-recent-login/.test(c))return"Per sicurezza esci e rientra, poi riprova.";
+  if(/weak-password/.test(c))return"La nuova password è troppo debole.";
+  if(/network|unavailable|timeout|deadline/.test(c+m)||m==="Failed to fetch"||m==="timeout"||!c)return"Accesso non disponibile: sei offline.";
+  return"Operazione non riuscita ("+c+").";
+}
+async function fbLogin(user,pass){
+  let fb;try{fb=await fbLoad()}catch(e){throw new Error(fbErr(e))}
+  let cred;try{cred=await fb.Au.signInWithEmailAndPassword(fb.auth,user+FB_DOM,pass)}catch(e){throw new Error(fbErr(e))}
+  let r;try{r=await fbRoleOf(fb,cred.user)}catch(e){try{await fb.Au.signOut(fb.auth)}catch(x){}throw new Error(fbErr(e))}
+  if(!r){try{await fb.Au.signOut(fb.auth)}catch(x){}throw new Error("Account senza ruolo.")}
+  return r;
+}
+function fbDrop(){simOff();role=null;acct=null;devOn=false;DEV_SKIN_TEST=null;persistDev();if(["menu","opt","wish","ach","road"].includes(screen))render()}
+async function fbChangePw(){
+  const er=$("#cpe"),o=$("#cpo").value,n=$("#cpn").value,r=$("#cpr").value;
+  if(!o||!n||!r){er.textContent="Compila tutti i campi.";return}
+  if(n.length<6){er.textContent="La nuova password deve avere almeno 6 caratteri.";return}
+  if(n!==r){er.textContent="Le due nuove password non coincidono.";return}
+  er.style.color="var(--mute)";er.textContent="Un momento…";
+  try{
+    let fb;try{fb=await fbLoad()}catch(e){throw new Error(fbErr(e))}
+    const u=fb.auth.currentUser;if(!u)throw new Error("Sessione scaduta: esci e rientra.");
+    try{await fb.Au.reauthenticateWithCredential(u,fb.Au.EmailAuthProvider.credential(u.email,o))}catch(e){throw new Error(/invalid-credential|wrong-password/.test((e&&e.code)||"")?"La password attuale non è giusta.":fbErr(e))}
+    try{await fb.Au.updatePassword(u,n)}catch(e){throw new Error(fbErr(e))}
+    ["#cpo","#cpn","#cpr"].forEach(s=>{$(s).value=""});er.textContent="";toast("Password cambiata");
+  }catch(e){er.style.color="";er.textContent=e.message||"Operazione non riuscita."}
+}
+async function fbLogout(){
+  const fb=_fb;fbDrop();
+  try{const f=await(fb||fbLoad());await f.Au.signOut(f.auth)}catch(e){}
+}
+async function fbVerify(){ // controllo in background della sessione in cache: nessun utente o ruolo tolto -> fuori; senza rete resta valida
+  try{
+    const fb=await fbLoad();await fb.auth.authStateReady();
+    const u=fb.auth.currentUser;if(!u)return fbDrop();
+    const r=await fbRoleOf(fb,u);if(!r)return fbDrop();
+    const nr=r==="master"?"master":"dev1";
+    if(nr!==role||r!==acct){if(role==="master"&&nr!=="master")simOff();role=nr;acct=r;persistDev();if(["opt"].includes(screen))render()}
+  }catch(e){}
+}
+if(role)setTimeout(fbVerify,0);
 let screen="menu", tab="planes";
 const root=document.getElementById("root");
 const modalEl=()=>document.getElementById("modal");
@@ -500,7 +575,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4_2";
+const VERSION="0.4_3";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -1648,20 +1723,28 @@ async function wipeData(){
   for(const id of Object.keys(BJ_LINES)){try{await IDB.del("snd_vo_"+id)}catch(e){}}
   try{await IDB.del("musicGam")}catch(e){}bgmGam=null;
   try{if(window.caches){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}}catch(e){}
-  S=JSON.parse(JSON.stringify(DEF));role=null;devOn=false;pendingFs=null;tab="planes";applyFs();persist();
+  S=JSON.parse(JSON.stringify(DEF));role=null;acct=null;devOn=false;pendingFs=null;tab="planes";applyFs();persist();
   await initMusic();await loadSounds();toast("Dati locali cancellati");go("menu");
 }
 function loginModal(){
-  const m=openModal(`<h3>Accesso sviluppatori</h3><label class="f">Utente</label><input type="text" id="lu" autocapitalize="off" autocomplete="off"><label class="f">Password</label><input type="password" id="lp" autocomplete="off"><div class="err" id="le"></div>
-    <div class="acts"><button class="btn ghost" id="lx">Annulla</button><button class="btn" id="lk">Entra</button></div>`);
+  const off=location.protocol==="file:";
+  const m=openModal(`<h3>Accesso sviluppatori</h3>${off?`<p>Accesso disponibile solo dal sito.</p>`:`<label class="f">Utente</label><input type="text" id="lu" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"><label class="f">Password</label><input type="password" id="lp" autocomplete="off">`}<div class="err" id="le"></div>
+    <div class="acts"><button class="btn ghost" id="lx">Annulla</button>${off?"":`<button class="btn" id="lk">Accedi</button>`}</div>`);
   m.querySelector("#lx").onclick=closeModal;
-  m.querySelector("#lk").onclick=()=>{
-    const u=m.querySelector("#lu").value.trim(),p=m.querySelector("#lp").value;
-    if(u===S.creds.master.u&&p===S.creds.master.p)role="master";
-    else if(S.creds.devs.some(d=>d.u===u&&d.p===p))role="dev1";
-    else{m.querySelector("#le").textContent="Credenziali non valide.";return}
-    devOn=true;persistDev();closeModal();toast("Dev mode attiva");go("menu");
+  if(off)return;
+  const go_=async()=>{
+    const er=m.querySelector("#le"),k=m.querySelector("#lk"),u=m.querySelector("#lu").value.trim().toLowerCase(),p=m.querySelector("#lp").value;
+    if(!u||!p){er.textContent="Inserisci utente e password.";return}
+    if(u.includes("@")){er.textContent="Scrivi solo il nome utente, senza @.";return}
+    k.disabled=true;er.textContent="Accesso in corso…";
+    try{
+      const r=await fbLogin(u,p);
+      role=r==="master"?"master":"dev1";acct=r;devOn=true;persistDev();closeModal();toast("Dev mode attiva");go("menu");
+    }catch(e){er.textContent=e.message||"Accesso non riuscito.";k.disabled=false}
   };
+  m.querySelector("#lk").onclick=go_;
+  m.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go_()}else if(e.key==="Escape"){e.preventDefault();closeModal()}});
+  setTimeout(()=>{const i=m.querySelector("#lu");if(i)i.focus()},50);
 }
 
 /* ============ ESPORTA MODIFICHE (manifest schemaVersion 1) ============ */
@@ -1840,7 +1923,7 @@ window.mgExport={build:exportBuild,targets:exportTargetsMd};
 
 /* --- finestra di esportazione --- */
 const EXP_NAMEKEY="mgs_devname";
-const expGetName=()=>{try{return localStorage.getItem(EXP_NAMEKEY)||""}catch(e){return ""}};
+const expGetName=()=>{try{return localStorage.getItem(EXP_NAMEKEY)||acct||""}catch(e){return acct||""}};
 const expSetName=v=>{try{localStorage.setItem(EXP_NAMEKEY,v)}catch(e){}};
 const expClean=v=>String(v||"").toLowerCase().replace(/[^a-z0-9_-]/g,"");
 function expDownload(name,u8){
@@ -1882,7 +1965,7 @@ async function exportDialog(){
 
 /* ============ DEV PANEL ============ */
 function gamDevHTML(){
-  const m=role==="master",lbl=(k,c)=>SND[c][k]?"personalizzato":"predefinito";
+  const m=isMaster(),lbl=(k,c)=>SND[c][k]?"personalizzato":"predefinito";
   const ctl=(c,s)=>`<label class="btn ghost sm" style="cursor:pointer">Carica<input type="file" accept="audio/*" data-sf="${c}:${s}" hidden></label><button class="btn ghost sm" data-sp="${c}:${s}">▶</button><button class="btn red sm" data-sr="${c}:${s}" ${SND[c][s]?"":"disabled"}>Rimuovi</button>`;
   const snd=Object.keys(BJ_SLOTS).map(s=>`<div style="display:flex;gap:6px;align-items:center;margin-top:8px"><span style="flex:1;font-size:.85rem">${BJ_SLOTS[s]}<small>${lbl(s,"gam")}</small></span>${ctl("gam",s)}</div>`).join("");
   const vo=Object.keys(BJ_LINES).map(id=>`<div style="margin-top:12px"><small>${esc(BJ_LINES[id][2])}</small><textarea data-vt="${id}" rows="2" style="margin:4px 0;resize:vertical">${esc(TXT(id))}</textarea><div style="display:flex;gap:6px;align-items:center"><span style="flex:1;font-size:.8rem;color:var(--mute)">Voce: ${SND.vo[id]?"caricata":"nessuna"}</span>${ctl("vo",id)}<button class="btn ghost sm" data-vtr="${id}" title="Ripristina il testo originale">↺ testo</button></div></div>`).join("");
@@ -1901,13 +1984,11 @@ function gamDevHTML(){
   return {mini,audio};
 }
 function devRows(){
-  const m=role==="master",g=gamDevHTML();
-  const creds=m?`<div class="opt" style="flex-direction:column;align-items:stretch"><div>Credenziali <small>Solo master: modifica utenti e password</small></div>
-    <label class="f">Master</label><input type="text" data-c="m:u" value="${esc(S.creds.master.u)}"><input type="text" data-c="m:p" value="${esc(S.creds.master.p)}" style="margin-top:6px">
-    ${S.creds.devs.map((d,i)=>`<label class="f">Sviluppatore 1 · n.${i+1}</label><input type="text" data-c="d${i}:u" value="${esc(d.u)}"><input type="text" data-c="d${i}:p" value="${esc(d.p)}" style="margin-top:6px"><button class="btn red sm" data-rd="${i}" style="margin-top:6px">Rimuovi</button>`).join("")}
-    <div class="acts"><button class="btn sm" id="ad">+ Sviluppatore</button></div></div>`:"";
-  const account=`<div class="opt"><div>Ruolo<small>${m?"Master developer":"Developer tipo 1"}</small></div><button class="btn red sm" id="lo">Esci</button></div>
-   ${creds}`;
+  const m=isMaster(),g=gamDevHTML();
+  const account=`<div class="opt"><div>Connesso come ${esc(acct||"?")}<small>Ruolo: ${m?"master developer":"sviluppatore"}</small></div><button class="btn red sm" id="lo">Esci</button></div>
+   <div class="opt" style="flex-direction:column;align-items:stretch"><div>Cambia password<small>Minimo 6 caratteri. Serve la password attuale.</small></div>
+     <input type="password" id="cpo" placeholder="Password attuale" autocomplete="off" style="margin-top:8px"><input type="password" id="cpn" placeholder="Nuova password" autocomplete="off" style="margin-top:6px"><input type="password" id="cpr" placeholder="Ripeti la nuova password" autocomplete="off" style="margin-top:6px">
+     <div class="err" id="cpe"></div><div class="acts"><button class="btn sm" id="cpw">Cambia</button></div></div>`;
   const audio=`${m?`<div class="opt" style="flex-direction:column;align-items:stretch"><div>Musica del menu<small>Carica un file .mp3 (max 8 MB). Resta salvato in questa installazione; per inserirlo nella build ufficiale mandalo a Claude.</small></div>
     <input type="file" id="mf" accept="audio/mpeg,.mp3" style="margin-top:8px;color:var(--ink)"><div class="err" id="me"></div>
     <div class="acts"><button class="btn ghost sm" id="mp">Prova</button><button class="btn red sm" id="mr">Ripristina originale</button></div></div>`:""}
@@ -1954,18 +2035,18 @@ function bindDev(){
       if(!/\.mp3$/i.test(f.name)&&f.type!=="audio/mpeg"){er.textContent="Serve un file .mp3.";return}
       if(f.size>12*1024*1024){er.textContent="File troppo grande (max 12 MB).";return}
       try{await IDB.set("musicGam",f);bgmGam=null;toast("Musica del tavolo aggiornata")}catch(x){er.textContent="Salvataggio non riuscito."}return}
-    if(e.target.id==="mf"&&role==="master"){const f=e.target.files[0];if(!f)return;const er=$("#me");
+    if(e.target.id==="mf"&&isMaster()){const f=e.target.files[0];if(!f)return;const er=$("#me");
       if(!/\.mp3$/i.test(f.name)&&f.type!=="audio/mpeg"){er.textContent="Serve un file .mp3.";return}
       if(f.size>8*1024*1024){er.textContent="File troppo grande (max 8 MB).";return}
       try{await IDB.set("menuMusic",f);await initMusic();toast("Musica aggiornata")}catch(x){er.textContent="Salvataggio non riuscito."}return}
-    const c=e.target.dataset.c;if(!c||role!=="master")return;const [w,f]=c.split(":");
-    if(w==="m")S.creds.master[f]=e.target.value.trim();else S.creds.devs[+w.slice(1)][f]=e.target.value.trim();persist();toast("Credenziali aggiornate")};
+  };
   root.onclick=e=>{
     const t=e.target;
     if(t.closest("#back"))return go("menu");
     if(t.closest("#xopen"))return exportDialog();
-    if(t.closest("#lo")){simOff();role=null;devOn=false;DEV_SKIN_TEST=null;persistDev();return go("menu")}
-    const sm=t.closest("[data-sim]");if(sm&&role==="master"){if(sm.dataset.sim==="1")simOn();else simOff();toast(S.sim?"Simulazione attiva":"Dati reali ripristinati");return render()}
+    if(t.closest("#lo")){fbLogout();return go("menu")}
+    if(t.closest("#cpw")){return fbChangePw()}
+    const sm=t.closest("[data-sim]");if(sm&&isMaster()){if(sm.dataset.sim==="1")simOn();else simOff();toast(S.sim?"Simulazione attiva":"Dati reali ripristinati");return render()}
     if(t.closest("#mgrow")){prTest();return}
     if(t.closest("#mgrok")){prTestKick();return}
     if(t.closest("#mgrob")){prTestBattle(+$("#pbsp").value,+$("#pbsr").value);return}
@@ -1993,8 +2074,6 @@ function bindDev(){
     if(t.closest("#lvs")){const v=Math.max(1,Math.min(100,parseInt($("#lvt").value)||1));cs().lvl=v;cs().exp=0;persist();return toast("Livello impostato a "+v)}
     if(t.closest("#mp")){started=true;if(bgm){bgm.currentTime=0;bgm.play().catch(()=>{})}return}
     if(t.closest("#mr"))return confirmBox("Ma che sei gojo?","Tornare alla musica originale?","Sì, deo caro","Noneee",async()=>{try{await IDB.del("menuMusic")}catch(x){}await initMusic();toast("Musica originale")});
-    if(t.closest("#ad")){S.creds.devs.push({u:"dev"+(S.creds.devs.length+1),p:"dev-"+Math.floor(1000+Math.random()*9000)});persist();return render()}
-    const rd=t.closest("[data-rd]");if(rd){S.creds.devs.splice(+rd.dataset.rd,1);persist();return render()}
     if(t.closest("#rs"))return confirmBox("Ma che sei gojo?","Cancellare tutte le modifiche locali e tornare alla build originale?","Sì, deo caro","Noneee",()=>{S.tiles=JSON.parse(JSON.stringify(DEF_TILES));S.ov={};S.extra={plane:[],rock:[],algidone:{plane:[],rock:[]}};persist();render()});
   };
 }
