@@ -227,6 +227,7 @@ html{-webkit-text-size-adjust:100%}
 .top .bugb{width:44px;height:44px}
 #fahud .bugb{width:44px;height:44px}
 .bugb.fixr{position:absolute;top:8px;right:8px;z-index:6}
+.bugb.spl{position:absolute;top:8px;right:8px;z-index:30}
 .prs .bugb{position:absolute;top:8px;right:8px;z-index:6;width:40px;height:40px}
 .prs .bugb.prt{right:150px}
 .bugbox textarea{min-height:120px;resize:none;font-size:.95rem}
@@ -595,6 +596,8 @@ function screenId(){
   }
   switch(screen){
     case"splash":return"splash-question";
+    case"sad":return"sad-countdown";
+    case"bye":return"bye-goodbye";
     case"menu":return"menu-home-"+ck;
     case"wish":{
       if(tab==="planes")return"wish-enemies-"+ck;
@@ -646,7 +649,7 @@ function screenId(){
   }
   return"unknown:"+screen;
 }
-const SCREEN_IDS=new Set(["splash-question","menu-home-roccia","menu-home-algidone","career-modal-roccia","career-modal-algidone","opt-generali","opt-generali-audio","opt-generali-screen","opt-generali-game","opt-generali-data","opt-login-modal","dev-tab","dev-acc-account","dev-acc-test","dev-acc-audio","dev-acc-obj","dev-acc-exp","export-dialog","wish-enemies-roccia","wish-enemies-algidone","wish-items-roccia","wish-items-algidone","wish-giocatore-locked","wish-giocatore-unlocked","wish-giochi-locked","wish-giochi-unlocked","ach-gen","ach-roc","ach-alg","ach-gio","ach-min","road-top-current","gift-closed","gift-opened","popup-milestone","cust-roccia","cust-algidone","maze-intro-roccia","maze-play-roccia","maze-steel-roccia","maze-water-roccia","maze-fire-roccia","maze-ice-roccia","maze-forest-roccia","maze-fire-algidone","maze-acciaio-roccia","maze-cinghiale-algidone","maze-over","bj-invite","bj-dealer-line","bj-table-hand","bj-result","bj-menu-again","bj-raise-stake","pr-choice-menu","pr-dialogue-question","pr-dialogue-yes","pr-throwout-street","pb-command","pb-move-panel","pb-win-ending","pb-win-question","fa-invite","fa-intro-floor1","fa-intro-floor2","fa-intro-floor3","fa-floor1-play","fa-floor2-play","fa-floor3-play","fa-pause","fa-game-over","fa-floor-win-panel","fa-final-panel","bug-popup"]);
+const SCREEN_IDS=new Set(["splash-question","sad-countdown","bye-goodbye","menu-home-roccia","menu-home-algidone","career-modal-roccia","career-modal-algidone","opt-generali","opt-generali-audio","opt-generali-screen","opt-generali-game","opt-generali-data","opt-login-modal","dev-tab","dev-acc-account","dev-acc-test","dev-acc-audio","dev-acc-obj","dev-acc-exp","export-dialog","wish-enemies-roccia","wish-enemies-algidone","wish-items-roccia","wish-items-algidone","wish-giocatore-locked","wish-giocatore-unlocked","wish-giochi-locked","wish-giochi-unlocked","ach-gen","ach-roc","ach-alg","ach-gio","ach-min","road-top-current","gift-closed","gift-opened","popup-milestone","cust-roccia","cust-algidone","maze-intro-roccia","maze-play-roccia","maze-steel-roccia","maze-water-roccia","maze-fire-roccia","maze-ice-roccia","maze-forest-roccia","maze-fire-algidone","maze-acciaio-roccia","maze-cinghiale-algidone","maze-over","bj-invite","bj-dealer-line","bj-table-hand","bj-result","bj-menu-again","bj-raise-stake","pr-choice-menu","pr-dialogue-question","pr-dialogue-yes","pr-throwout-street","pb-command","pb-move-panel","pb-win-ending","pb-win-question","fa-invite","fa-intro-floor1","fa-intro-floor2","fa-intro-floor3","fa-floor1-play","fa-floor2-play","fa-floor3-play","fa-pause","fa-game-over","fa-floor-win-panel","fa-final-panel","bug-popup"]);
 
 /* congelamento del gioco mentre il popup e' aperto: come la pausa di ciascun gioco, senza il suo menu. Restituisce la funzione che riprende. */
 let _pnBase=null,_pnOff=0,_pnFz=null;
@@ -656,6 +659,7 @@ function bugFreeze(){
   if(screen==="game"&&G&&G.state!=="over"&&G.state!=="pause"){const prev=G.state;G.prevState=prev;G.state="pause";return()=>{if(G&&G.state==="pause"){G.state=prev;G.last=performance.now()}}}
   if(screen==="bj"&&B&&!B.dead&&!bjPauseT){bjPauseT=performance.now()/1000;bjGate=new Promise(r=>{bjGateRes=r});return()=>{if(B&&!B.dead)bjResume()}}
   if(screen==="fa"&&FA&&!FA.dead&&!FA.paused){FA.paused=true;faKeysClear();return()=>{if(FA&&!FA.dead){FA.paused=false;faKeysClear()}}}
+  if(screen==="sad"){clearInterval(sadTimer);return()=>{if(screen==="sad")sadArm()}}
   if(screen==="pr"&&PR&&!PR.dead){
     const P=PR,now=performance.now();
     for(const r of P.sp){clearTimeout(r.id);P.sl.delete(r.id);r.left=Math.max(0,r.left-(now-r.t0))} // le attese restano quanto mancava
@@ -675,7 +679,7 @@ function bugOpen(){
   const m=openModal(`<div class="bugbox"><h3>Hai un insetto?</h3><textarea id="bgt" maxlength="${BUG_MAX}" placeholder="Cosa è successo?"></textarea><small class="cnt" id="bgc">0/${BUG_MAX}</small>
     <div class="acts"><button class="btn red" id="bgx">Indietro</button><button class="btn ok" id="bgk" disabled>Invia</button></div></div>`);
   const ta=m.querySelector("#bgt"),ok=m.querySelector("#bgk");let sending=false;
-  const close=()=>{closeModal();const b=BUG;BUG=null;if(b&&b.resume)b.resume()};
+  const close=()=>{closeModal();const b=BUG;BUG=null;if(b&&b.resume)b.resume();if(screen==="splash")render()}; // la domanda del splash e' una modale: la ridisegno
   BUG={resume,close};
   const upd=()=>{m.querySelector("#bgc").textContent=ta.value.length+"/"+BUG_MAX;ok.disabled=sending||!ta.value.trim()};
   ta.addEventListener("input",upd);
@@ -742,7 +746,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4_4";
+const VERSION="0.4_5";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -4456,9 +4460,10 @@ addEventListener("keyup",e=>{const m=FA_KMAP[e.key.toLowerCase()];if(m)delete FA
 addEventListener("blur",faKeysClear);
 
 /* ============ AVVIO ============ */
-let sadTimer=0;
+let sadTimer=0,sadN=3;
+const sadArm=()=>{clearInterval(sadTimer);sadTimer=setInterval(()=>{sadN--;if(sadN<=0){clearInterval(sadTimer);go("splash")}else{const cd=$("#cd");if(cd)cd.textContent=sadN}},1000)};
 function renderSplash(){
-  shell(`<div class="screen"><div class="center"><canvas id="logo" width="96" height="96" style="width:120px;height:112px;image-rendering:pixelated"></canvas><h1 style="font-size:2.2rem;color:var(--runway);margin:8px 0 0">Mangiasassi</h1></div></div>`);
+  shell(`<div class="screen">${bugBtn("spl")}<div class="center"><canvas id="logo" width="96" height="96" style="width:120px;height:112px;image-rendering:pixelated"></canvas><h1 style="font-size:2.2rem;color:var(--runway);margin:8px 0 0">Mangiasassi</h1></div></div>`);
   const lg=$("#logo").getContext("2d");lg.imageSmoothingEnabled=false;if(charKey()==="algidone"){const im=IMG.al_st,h=94;lg.imageSmoothingEnabled=true;drawSkinned(lg,"algidone","al_st",im,48-im.width*h/im.height/2,1,im.width*h/im.height,h)}else drawFace(lg,48,48,92,2,false);
   const m=openModal(`<h3>Mangiasassi</h3><p style="color:var(--mute);margin-bottom:6px">Versione ${VERSION}</p><p class="disp" style="font-size:1.25rem;text-align:center;margin:14px 0 4px">Roccia sì o roccia no?</p>
     <div class="acts" style="justify-content:center"><button class="btn red" id="rno">Roccia no</button><button class="btn" id="rsi">Roccia sì</button></div>`);
@@ -4467,7 +4472,7 @@ function renderSplash(){
 }
 function rocciaNo(){prFadeOut(()=>prIntro())}
 function renderSad(){
-  shell(`<div class="screen" style="position:absolute;top:0;right:0;bottom:0;left:0;background:#000;z-index:5"><div class="center"><canvas id="sad" width="240" height="220" style="width:240px;height:220px;image-rendering:pixelated"></canvas>
+  shell(`<div class="screen" style="position:absolute;top:0;right:0;bottom:0;left:0;background:#000;z-index:5">${bugBtn("fixr")}<div class="center"><canvas id="sad" width="240" height="220" style="width:240px;height:220px;image-rendering:pixelated"></canvas>
     <p class="disp" id="cd" style="font-size:2.4rem;color:var(--mute);margin:14px 0 0">3</p></div></div>`);
   const x=$("#sad").getContext("2d");x.imageSmoothingEnabled=false;
   const k=5,r=IMG.rock,oy=8;x.drawImage(r,0,oy,r.width*k,r.height*k);
@@ -4476,8 +4481,7 @@ function renderSad(){
   px(12,12,7,1,"#222");px(29,12,7,1,"#222");px(11,13,2,1,"#222");px(35,13,2,1,"#222");
   px(19,29,10,1,"#222");px(17,30,2,1,"#222");px(29,30,2,1,"#222");px(16,31,2,1,"#222");px(30,31,2,1,"#222");
   px(14,20,2,4,"#4fb3ff");px(14,25,2,2,"#4fb3ff");px(31,20,2,4,"#4fb3ff");
-  let n=3;const cd=$("#cd");clearInterval(sadTimer);
-  sadTimer=setInterval(()=>{n--;if(n<=0){clearInterval(sadTimer);go("splash")}else if(cd)cd.textContent=n},1000);
+  sadN=3;sadArm();
 }
 
 /* ============ PROFESSORE (minigioco "Roccia no"): sprite, musica, dialogo ============ */
@@ -6083,7 +6087,7 @@ function render(){
   else if(screen==="road"){renderRoad();bindRoad()}
   else if(screen==="cust"){renderCust();bindCust()}
   else if(screen==="dev"){return go("menu")}
-  else if(screen==="bye"){shell(`<div class="screen"><div class="center"><h2 style="font-size:1.6rem;color:var(--runway)">Alla prossima!</h2><p>Puoi chiudere la scheda o l'app.</p><button class="btn" id="re">Riapri</button></div></div>`);root.onclick=e=>{if(e.target.closest("#re"))go("menu")}}
+  else if(screen==="bye"){shell(`<div class="screen">${bugBtn("fixr")}<div class="center"><h2 style="font-size:1.6rem;color:var(--runway)">Alla prossima!</h2><p>Puoi chiudere la scheda o l'app.</p><button class="btn" id="re">Riapri</button></div></div>`);root.onclick=e=>{if(e.target.closest("#re"))go("menu")}}
 }
 addEventListener("keydown",e=>{
   if(e.repeat||e.ctrlKey||e.altKey||e.metaKey||(e.key!=="Enter"&&e.key!=="Escape"))return;

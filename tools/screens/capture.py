@@ -523,6 +523,9 @@ def sc_bug(b, only):
     c.click("#bugb", 400)
     c.p.fill("#bgt", "Il pulsante non risponde dopo la pausa.")
     c.shot("bug-popup", 200)
+    c.p.keyboard.press("Escape"); time.sleep(0.3)
+    c.ev("go('bye')"); c.shot("bye-goodbye", 300)
+    c.ev("go('sad')"); c.shot("sad-countdown", 200)  # legacy screen, not reachable from the UI: shown through go()
     c.close()
 
 

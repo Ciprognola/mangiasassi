@@ -1787,3 +1787,9 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Tests: `tools/fbstub/test_f6.py` (46 checks; stub extended with `addDoc`/`collection`/`serverTimestamp`, deny/hang flags). Screens: new `bug-popup`; library re-captured (icon now visible in the dev screens).
 - CSS: `.btn.ok` (green), `.btn:disabled`.
 - Size: index.html 5,641,827 bytes (+12,089 vs 0.4_3, LF-normalised).
+
+## 0.4_5 — 2026-09-25
+
+- Bug icon also on the splash ("Roccia sì o roccia no?"), the "sad" countdown and the "bye" screens (logged-in devs only, same rules as F6a; no overlap at 360×640 / 390×844). The splash question is a modal: after Indietro it is redrawn; the sad countdown is frozen while the popup is open (`sadArm`). New ids `sad-countdown`, `bye-goodbye` in `SCREEN_IDS` / SCREENS.md (`sad` has no UI path today; `bye` is the Android quit).
+- Tests: `test_f6.py` 63 checks.
+- Size: index.html 5,642,247 bytes (+420 vs 0.4_4, LF-normalised).
