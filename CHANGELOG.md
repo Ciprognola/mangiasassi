@@ -1931,3 +1931,20 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Tests: `test_f6` 66/66 (+3: back on the bug popup mid-maze), `test_f5` 45/45 (+3: back on «Modifica testo» mid-maze), `test_f2b` 115/115 (+9: back on the conflict popup at the splash and mid-run, keys and taps work again), `test_f4b1` 59/59 (+6: halved, ×0.6 and doubled pages → new message, same width/other height → old message, a correct page still imports, LEGGIMI steps; one run hit a timing failure in the unrelated multi-page BK import, green on rerun), `test_f2a` 37/37, `test_f3b` 34/34, `test_f4a` 77/77, `test_f4b2` 30/30, `test_skin_coverage` 12/12, `test_f1` 33/34 (above). `node --check` on every script block + smoke (in the suites).
 - Not tested: the real Android back button on a device (the wrapper's sources aren't in the repo; tests dispatch `mgback` on `window`), real phones, a real ibisPaint export.
 - Size: index.html 5,717,191 bytes (+866 vs 0.4_14, LF checkout).
+
+## 0.4.5 — 2026-09-26
+
+**Release build** (bare `"0.4.5"`, tag `v0.4.5`): the DEV tools release. No player-facing UI changes on the stable site — everything below is dev-only or shipped flag-off.
+
+- **F1** — Firebase dev login (roles master/dev1…dev5), "Cambia password", the old local login removed.
+- **F3** — submission format v2: text/colour/scale edits sent straight from the game («Invia testi», Firestore `edits`, exported daily into normal packages) alongside the existing ZIP + PR upload («Scarica pacchetto») for audio/sprites/skins, with before-value + conflict checks.
+- **F5** — text edit by 3-second long-press (DOM live preview for known keys, canvas texts as reviewed proposals); the old pen icons are gone.
+- **F6** — «Segnala un bug» (devs only in this release; the player path is built but stays behind `BUG_PLAYERS=false`), daily export + owner triage into `bugs/BUGS.md`.
+- **F4** — the skin creation tool: export a character's full sprite sheet, import a drawn sheet with a live local preview (never touches your save), export it as a submission package once you're happy. Cinghiale and the Ferma Algidone! thrower are skinnable too.
+- **F2** — player login and cloud save, both built and tested but shipped with their flags off (`PLAYER_LOGIN=false`, `CLOUD_SAVE=false`); switched on in 0.5.
+- **I2/I3** — separate `dev`/`main` branches (Pages deploys `main` at `/` and `dev` at `/dev/`), and a screens library (`refs/screens/`, `tools/screens/capture.py`) of every screen/popup as a canonical reference.
+- **E1** — a dev-mode audit and cleanup pass.
+- Full detail for every 0.4_1…0.4_15 build is above; the release plan and its decisions log are archived at `docs/releases/0.4.5.md`.
+- REQ (tile-10 reward skin) and B1 (maze hitboxes) move to 0.5 — no owner art/screenshot yet; added to the 0.5 backlog (§8).
+- Checks before this release: all test suites green except the known `test_f1` "Esc closes the login" (root-caused, not fixed — 0.5 backlog); `node --check` + smoke test; a save made on the tagged `v0.4` build still loads here with progress, achievements, extras, texts/colours and no console errors; `refs/skins/SKIN_COVERAGE.md` regenerated — every remaining `manca` is one of the grandfathered BK gaps (13 Ferma thrower + 6 Cinghiale frames), nothing new.
+- Not tested: real devices, the live Pages deploy after this release.

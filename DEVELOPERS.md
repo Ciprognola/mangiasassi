@@ -3,8 +3,6 @@ How to send in text, colour, size, audio and sprite changes. No Git knowledge ne
 
 **Dev site (where you work):** https://ciprognola.github.io/mangiasassi/dev/ — the stable game stays at https://ciprognola.github.io/mangiasassi/. The dev site has its own save, so you can play and test freely.
 
-> The buttons **Invia testi** and **Scarica pacchetto** are in the game from build 0.4_6, and the long-press text edit from 0.4_7. The skin tool is coming too.
-
 ## The big picture
 1. You **log in** on the dev site and change things in developer mode.
 2. **Texts, colours and sizes** are sent straight from the game (**Invia testi**) and reach the maintainer by themselves the next day. Nothing to upload.
@@ -64,6 +62,9 @@ The reviewer lists your changes for the owner. After approval they become one bu
 ## Found a bug?
 Logged in, tap the small **bug icon** at the top of any screen: the game pauses, you write a few lines and send. The game adds the screen, version and device by itself. No internet? It is saved and sent later.
 
+## Cloud save (dev-site test only)
+Your progress isn't backed up to the cloud yet for players — that switches on in a later release. On the **dev site only**, logged in, Opzioni → Generali → **Account** has a **«Salvataggio cloud (test)»** switch so you can help test it: turn it on and your dev-site save syncs to your account, with a status line, **«Sincronizza ora»** and, if two devices ever disagree, a popup to pick which copy to keep. Leave it off unless you're specifically testing this.
+
 ## Technical reference
 The exact format is in [docs/submissions-v2.md](docs/submissions-v2.md). Old packages (`schemaVersion: 1`, see `submissions/_template` and `_example`) are still accepted.
 
@@ -101,6 +102,15 @@ No drawing app skills beyond drawing itself needed — the game builds and cuts 
 5. Unzip and upload through GitHub exactly like any other package (§"Audio and sprites", steps 2-5).
 
 A brand-new costume isn't given to any player automatically — the owner decides how it's unlocked once it's approved.
+
+### Drawing from a phone
+1. Open the `_GUIDE.png` page in a drawing app that supports layers (for example ibisPaint X).
+2. Add a new transparent layer and draw only on it.
+3. Hide the GUIDE layer.
+4. Export only your layer as a PNG, at the original size (100%, no resizing) with a transparent background.
+5. Load it with **Carica costume**, as above.
+
+If a page comes out resized (some phone apps rescale on export), the game tells you: **«L'app ha ridimensionato il foglio: esportalo a dimensione originale»** — re-export at 100% and try again.
 
 ## Skin delivery format (artists)
 A skin (costume/accessory drawn on the character, always for **one** character: Uomo roccia or Algidone) arrives as art under `refs/skins/<skin>/`. A skin declares a render mode:
