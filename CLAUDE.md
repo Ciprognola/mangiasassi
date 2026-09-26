@@ -520,6 +520,138 @@ A synced save may refer to dev-added extra objects that exist only on another de
       the push to `main`, not by the session. Sessions never push a tag themselves.
 
 ---
-## 10. Current release
+## 10. Current release — 0.5 (plan from Claude chat, 2026-09-26)
 
-0.4.5 released (tag `v0.4.5`). Plan and decisions log archived in `docs/releases/0.4.5.md`. Next: **0.5** — the plan arrives from Claude chat; nothing to build until then.
+Source of facts: `docs/releases/0.5-P0.md`. Line numbers there drift — re-grep before use.
+Dev builds are numbered `0.4.5_N` until the 0.5 release. One chunk per build; stop for the owner's phone test after each chunk.
+Any question a chunk raises → ask as [Q], log the answer in §10.9. Player-facing text in Italian, in-universe; the owner edits wording later via long-press.
+
+### 10.0 Sandbox rules (apply to every 0.5 feature)
+- The single-HTML game is a sandbox; after its 1.0 a clean build imports its features. Every new feature must stay transferable:
+  data in tables (constants/objects at the top of its section), logic in self-contained modules with clear hooks
+  (e.g. `onSpawn / update / draw` per ghost ability, a run-layer object for runs). No tangling with unrelated maze code.
+- **Each feature/mode keeps its own tuning table** (lives, timings, speeds, rewards). Changing one mode's values never changes another's — e.g. Mangiaroccia lives and Hardcore are not affected by anything in the Ferma Algidone! run, and vice versa.
+
+### 10.1 Decisions (final)
+- «Lista desideri» → «Negozio»: done by a dev via long-press (`tile.wish.label`) + «Invia testi». Not a chunk.
+- «Mr. Stone»: in-game title only (all title strings, P0 §7). Repo and URL unchanged.
+- Asset libraries stay tied to each character. Characters unlock as found in the game. Difficulty stays in Opzioni. Costumes unlock via progression/quests (no shop).
+- Enemy art stays procedural; enemies stay outside the skin system and §6 rule 11.
+- **Level-10 map lock removed**: `mapsUnlocked()` no longer gates maps; the girone schedule (10.2) picks the map class. Achievement `g4` keeps its sordi/XP; update its description text.
+- El Gamblador «Non ora»: keep today's behaviour (hidden only at the first-ever table). Fix the §2 text.
+- Maze: add 2 s respawn invulnerability after losing a life (blinking), like Ferma. Maze lives otherwise unchanged.
+- `smashable()` also protects the ghost house and tunnel rows (shared helper, reused by Super Panino).
+- «sad» screen: delete (`renderSad`, `sadArm`, render case) — unreachable.
+- Maze stays without music in 0.5.
+- Forced Ferma Algidone! encounter in the maze: girone 8 instead of 10.
+- Caverna/Neon uncapped pellets (141/139): leave as is.
+- Moved out of 0.5: pre-run loadout with multipliers (0.7 or post-1.0); mini-game buying, «premium», full shop (post-1.0). 0.6 unchanged.
+
+### 10.2 Maze — map classes, ghosts, girone schedule
+Map class by grid width:
+| Class | Maps (`mi`) | Ghosts |
+|---|---|---|
+| S | 0–4 (15×17) | 3 |
+| M | 5 Caverna, 6 Cristalli, 7 Rovine, 10 Tundra, 12 Deserto, 13 Neon | 4 |
+| L | 8 Palude, 9 Vulcano, 11 Fabbrica, 14 Gran Labirinto | 5 |
+
+- 3 ghosts: use the first 3 `MET.ghosts` starts. 5 ghosts: the 5th reuses a house start with a longer `wait`; add a 5th `TINTS` entry; its `chase` = average of the difficulty's 4 values.
+- Schedule (same for Hardcore; no immediate map repeat within a class):
+
+| Girone | Class | Ghost stages |
+|---|---|---|
+| 1 | S | all stage 1 |
+| 2 | S | 1× stage 2 |
+| 3 | M | all stage 1 (professor-win runs start here) |
+| 4 | M | 2× stage 2 |
+| 5 | M | 2× stage 2, then El Gamblador |
+| 6 | L | 2× stage 2 |
+| 7 | L | 2× stage 2 + 1× stage 3 |
+| 8 | L | 2× stage 3 (forced Ferma encounter by now) |
+| 9+ | random S 20% / M 40% / L 40% | all ≥ stage 2; +1 stage-3 ghost every 2 gironi (up to all) |
+
+- Keep this as one data table (`GIRONI`) + a function `gironeSpec(stage)` → `{cls, ghosts:[stage,…]}`.
+
+### 10.3 Ghost stage abilities (starting values; E6 balances)
+Stage is per ghost. Scared (`s`) or eaten (`g`) ghosts never use abilities. Each stage shows a procedural marker (e.g. outline colour/glow) so the player can read it. All values in one table per ability.
+- **Aeroplani (Uomo roccia's enemies)**
+  - Stage 2 — sprint: when the player is in the same row/column within 6 tiles, wind-up 0.6 s (shake + particles, visible), then ×1.8 speed for 1.5 s; cooldown 6 s.
+  - Stage 3 — also shoots: on line of sight along a row/column within 8 tiles, one projectile at 7 tiles/s, stopped by walls; cooldown 4 s; **never while winding up or sprinting**. A hit kills like a ghost (respects invulnerability and active abilities).
+- **Attrezzi (Algidone's enemies)**
+  - Stage 2 — grease: drops a grease patch on its tile every 8 s (max 3 active per ghost); player ×0.6 speed on it; each patch fades out after 10 s. Ghosts unaffected.
+  - Stage 3 — Super Panino: when two stage-3 attrezzi come within 1 tile, short intro animation (≈1 s, game paused), they merge into one Super Panino: ≈1.6 tiles, faster, chase 0.9, breaks walls in its path via the shared `smashable()` helper (protected cells never). Lasts 12 s, then splits back into the two stage-3 attrezzi. During a power-up it can be eaten for 3200.
+- Needed systems (none exist today, P0 §3c): a small maze projectile list and a row/column line-of-sight helper, both as self-contained modules.
+
+### 10.4 Rewards (maze and Ferma run)
+- At each girone clear, the points earned **in that girone** get a bonus: `girPts × (classMult × stageMult − 1)`, shown as «Bonus girone ×N.N».
+  - classMult: S 1.0 / M 1.2 / L 1.4.
+  - stageMult: 1 + 0.10 per stage-2 ghost + 0.25 per stage-3 ghost (Super Panino counts as its two ghosts).
+  - Ferma run: its own table — loopMult = 1 + 0.2 × loop.
+- `finishRun` unchanged: limiter, `DIFF.mult`, `.7` apply afterwards → multipliers first, then limiter.
+
+### 10.5 Nuovo gioco — game choice (S1)
+- Uomo roccia: «Nuovo gioco» (and «Hardcore») asks «Mangiaroccia» or «Ferma Algidone!». Algidone: starts the maze directly (he can't play his own game).
+- Fix `nextMinigame()` so the interlude card follows the current run's game.
+- Until FR1 lands, the «Ferma Algidone!» choice shows «In arrivo».
+
+### 10.6 Ferma Algidone! run
+- Built on a **run layer** (FR0): a mode-agnostic run object holding girone counter, score, lives, flags (`g5`, `sec`), career/Percorso counters, girone achievements, encounter hooks, `finishRun`, quicksave. Maze `G` and Ferma both use it. FR0 = no behaviour change.
+- All Ferma-run numbers live in its own table `FA_RUN` (independent of the maze and of Ferma practice/encounter values).
+- Girone g plays level `(g−1) mod 3`; loop = `floor((g−1)/3)`. Floor 3 collapse → next girone = level 1 of the next loop.
+- **Ferma gironi count** toward career gironi, Percorso and girone achievements, exactly like maze gironi.
+- **Lives**: `FA_RUN.lives = 3` at run start, refilled at each girone (own setting; maze lives/Hardcore untouched).
+- **Death**: costs one life and nothing else — no bite, no loss on the time bar. The player respawns at the start of the level **without a hard reset of the level**: time bar, bite schedule, picked bolts/holes, score and Algidone's state carry on; only the items in flight are cleared; 2 s invulnerability (existing).
+- **Time bar** (looks like today's stock bar, no numbers): drains only when Algidone eats. The random 22% eat chance is replaced by a scheduled bite every `L/N` s (±15%); throws continue in between. Each bite removes 1/N of the bar.
+  - Loop 1: L = 120 s, N = 12. Each loop: L −15 s (min 75), N −2 (min 6), then ±1 random.
+  - Last bite: slow motion, fade to black, lost popup → the run ends (`finishRun`).
+  - Floor-end bonus = uneaten bites × 100 (replaces `floor(stock)*10`).
+- **Game over** = 0 lives or empty time bar; either ends the run.
+- Per loop, on top of the difficulty setting: throw interval ×0.9^loop (floor ×0.6), item speed ×1.05^loop (cap ×1.3).
+- Floor 3 bolts: three hand-authored layouts (loop 1 = today's, loop 2, loop 3+), harder each time, plus a validator (test) that keeps every bolt/hole clear of ladder x's 60/190/210/230/300 and the floor beatable.
+- Encounters between gironi: El Gamblador mandatory at girone 5, then 15% per girone; `miniInterlude` on multiples of 5. **No Ferma encounter inside a Ferma run.** Encounters return to the Ferma run.
+- Quicksave at girone boundaries only; «Gioco corrente» restarts the current level.
+- Practice (Giochi) and the maze encounter also switch to the eat-driven bar (their own loop-1 values); there, too, a death costs a life only (no bite), same respawn rule.
+
+### 10.7 Player accounts (Firebase Spark)
+- L0 (Claude chat, not Claude Code): rules update + check that `FIREBASE_SA` has the Firebase Authentication Admin role.
+- Registration: open, in-game, client SDK `createUserWithEmailAndPassword`, email `<username>@mangiasassi.invalid`. Username: 3–16 chars, `a–z 0–9 _ -`, stored lowercase; reserved: master, dev1–dev5, admin, algidone, gamblador, professore, mrstone, usagi. No password recovery.
+- New doc `players/{uid}`: `username, created, confirmed` (timestamps).
+- Confirmation: popup at the first open after 25 days since `confirmed`; tap to confirm → `confirmed = now`. Unconfirmed at 30 days → account + save deleted. Dev accounts exempt.
+- Deletion request: after 5 wrong passwords (counter per device) the player can request deletion of that username → doc `delreq/{username}` `{ts}`, creatable without sign-in. Executed after 7 days, **cancelled if the account signed in after the request**. Then the player can register again.
+- Cleanup: scheduled GitHub Action (Admin SDK, `FIREBASE_SA`) runs daily: 30-day unconfirmed deletions + due deletion requests (Auth user, `players`, `saves`).
+- Player bug reports: flags on (`PLAYER_LOGIN`, `CLOUD_SAVE`, `BUG_PLAYERS`); rules let any signed-in user create `bugs`; the export strips `uid`, `ua` and account for player reports (public repo).
+
+### 10.8 Chunks (order, model, effort)
+| Phase | Chunk | Content | Model / effort |
+|---|---|---|---|
+| 1 | P1a | Login Esc bug; cloud-conflict card wrap at 390 px; `test_f4b1` fixed waits → real-state waits | Sonnet 5 / medium |
+| 1 | P1b | Maze 2 s respawn invulnerability; `smashable()` protects house + tunnel rows; delete «sad» screen; CLAUDE.md §2/§4 corrections (terrain only on extra maps, «Non ora», Cinghiale immunity) | Sonnet 5 / medium |
+| 1 | B1 | Maze hitboxes — **waits for the owner's screenshot** | Sonnet 5 / high |
+| 2 | U1 | «Mr. Stone» title; Giochi «???» + «non sbloccato»; El Gamblador picture on his card and unlock popup (`gambImg`); forced Ferma encounter at girone 8 | Sonnet 5 / medium |
+| 2 | U2 | Eaten-stone animation recoloured to the chosen rock (all rocks) and snacks | Sonnet 5 / high |
+| 2 | U3 | Unlock hints: golden border on roadmap tiles 3/5/10 linking to their achievement, «sblocca regalo!» on gift achievements, new «batti il professore» achievement; GEKA hat only after beating the professor (keep for current owners) | Sonnet 5 / high |
+| 2 | U4 | Algidone's own rank names (use `rankOf`; propose names, owner approves); arrow-key menu navigation on web; menu music in Achievements, Percorso, Personalizza | Sonnet 5 / medium |
+| 2 | S1 | Game choice at «Nuovo gioco» (10.5), `nextMinigame` fix | Sonnet 5 / medium |
+| 3a | M1a | Map classes, `GIRONI` schedule, 3/4/5 ghosts, level-10 lock removed, `g4` text | Sonnet 5 / high |
+| 3a | M1b | Girone bonus multipliers (10.4) + «Bonus girone» line | Sonnet 5 / medium |
+| 3a | E1 | Ghost stage framework: per-ghost stage, ability module hooks, stage markers, projectile + line-of-sight modules | Opus 5.5 / high |
+| 3a | E2 | Aerei stage 2 sprint with wind-up | Sonnet 5 / high |
+| 3a | E3 | Aerei stage 3 shooting | Sonnet 5 / high |
+| 3a | E4 | Attrezzi stage 2 grease | Sonnet 5 / medium |
+| 3a | E5 | Attrezzi stage 3 Super Panino | Opus 5.5 / high |
+| 3a | E6 | Balance pass (headless sims of gironi 1–12, report numbers before changing) | Sonnet 5 / high |
+| 3b | FR0 | Run layer extraction, no behaviour change | Opus 5.5 / high |
+| 3b | FR1a | Ferma run: looping levels, girone counting, lives + soft respawn, eat-driven time bar, last-bite ending | Opus 5.5 / high |
+| 3b | FR1b | Loop difficulty scaling, 3 bolt layouts + validator test, loopMult rewards, quicksave; practice/encounter bar switch | Sonnet 5 / high |
+| 3b | FR2 | Encounters inside the Ferma run (El Gamblador g5 mandatory, 15%, interlude) | Sonnet 5 / high |
+| 4 | L0 | Firebase console + rules — Claude chat, not Claude Code | — |
+| 4 | L1 | Registration UI, username rules, `players/{uid}` | Sonnet 5 / high |
+| 4 | L2 | Player flags on + 25/30-day confirmation popup | Sonnet 5 / medium |
+| 4 | L3 | Cleanup GitHub Action (Admin SDK) | Sonnet 5 / high |
+| 4 | L4 | Deletion request after 5 wrong passwords | Sonnet 5 / medium |
+| 4 | L5 | Player bug reports + export stripping | Sonnet 5 / medium |
+| 5 | REQ | Tile-10 reward costume — **waits for the owner's art + name** | Sonnet 5 / medium |
+| 5 | REL | Release 0.5 (§9 checklist) | Sonnet 5 / medium |
+
+### 10.9 Answers log
+(empty — log [Q] answers here, with the chunk and date)
