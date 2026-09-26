@@ -690,6 +690,7 @@ function cloudStatText(){
   if(!cloudOn())return"Cloud: disattivato";
   const s=CL.status,M=cm();
   if(s==="big")return"Salvataggio troppo grande per il cloud";
+  if(s==="space")return"Spazio insufficiente su questo dispositivo";
   if(s==="ver")return"Aggiorna il gioco per sincronizzare";
   if(s==="na")return"Cloud: non disponibile";
   if(s==="later")return"Cloud: in attesa della tua scelta";
@@ -795,30 +796,48 @@ function cloudOnPersist(){ // da persist(): segna dirty se il salvataggio vero e
     if(M.dirty&&cloudOn())cloudArm();
   }catch(e){}
 }
-function cloudWrite(data,cur){ // scrive una copia come salvataggio locale, tenendo i campi solo-dev di questo dispositivo
+function cloudWrite(data,cur){ // scrive una copia come salvataggio locale, tenendo i campi solo-dev di questo dispositivo; false se il browser non l'ha scritta davvero
   const o=cloudReal(cloudParse(data));
   for(const k of CLOUD_DEVONLY){if(cur&&k in cur)o[k]=cur[k];else delete o[k]}
-  try{localStorage.setItem(SAVE_KEY,JSON.stringify(o))}catch(e){mem[SAVE_KEY]=o}
+  const str=JSON.stringify(o);
+  try{localStorage.setItem(SAVE_KEY,str);return localStorage.getItem(SAVE_KEY)===str}catch(e){return false}
 }
-const cloudBackup=(data,from,summary)=>store.set(CLOUDBAK_KEY,{data,from,ts:Date.now(),summary});
+function cloudBackup(data,from,summary){ // false se la copia non e' finita davvero nel browser (memoria piena): niente si sovrascrive senza backup
+  const v={data,from,ts:Date.now(),summary};
+  try{const str=JSON.stringify(v);localStorage.setItem(CLOUDBAK_KEY,str);return localStorage.getItem(CLOUDBAK_KEY)===str}catch(e){return false}
+}
+/* ricarica dopo aver scritto una copia: si torna dove si era (mai alla domanda del splash), con un avviso. Solo a schede aperte dall'utente:
+   l'applicazione automatica all'avvio (schermata splash) ricarica come prima. Il segnale passa da sessionStorage (svanisce con la scheda) */
+const CLOUD_RESUME="mgs_resume";
+function cloudReload(msg){
+  CLOUD_LOCK=true;
+  try{if(screen!=="splash")sessionStorage.setItem(CLOUD_RESUME,JSON.stringify({s:screen==="cust"?"wish":screen,tab:optTab,acc:optOpen.gen,acd:optOpen.dev,toast:msg}))}catch(e){}
+  location.reload();
+}
+function cloudResumeBoot(){ // all'avvio: se la ricarica l'ha chiesta il gioco stesso, si rientra nella schermata di prima
+  let r=null;try{r=JSON.parse(sessionStorage.getItem(CLOUD_RESUME)||"null");sessionStorage.removeItem(CLOUD_RESUME)}catch(e){}
+  if(!r||!["menu","opt","wish","ach","road"].includes(r.s))return false;
+  started=true;
+  if(r.s==="opt"){optTab=r.tab==="dev"?"dev":"gen";optOpen.gen=r.acc||null;optOpen.dev=r.acd||null}
+  go(r.s);if(r.toast)toast(r.toast);
+  return true;
+}
 function cloudApply(C,uid,lsum){CL.pend={C,uid,lsum};cloudPendCheck()}
 function cloudPendCheck(){if(CL.pend&&cloudCanApply())setTimeout(cloudApplyNow,0)}
 function cloudApplyNow(){
   const P=CL.pend;if(!P||!cloudCanApply()||CLOUD_LOCK)return;CL.pend=null;
   const L=cloudLocal();
   if(P.lsum!=null&&L.sum!==P.lsum)return cloudSync(); // applicazione automatica ma il dispositivo e' cambiato nel frattempo: si decide di nuovo
-  cloudBackup(L.raw||"{}","device",cloudSummary(cloudReal(L.obj),cloudLw()));
-  cloudWrite(P.C.data,L.obj);
+  if(!cloudBackup(L.raw||"{}","device",cloudSummary(cloudReal(L.obj),cloudLw()))||!cloudWrite(P.C.data,L.obj)){cloudStat("space");toast("Spazio insufficiente: salvataggio del cloud non caricato");return}
   cmSet({uid:P.uid,rev:P.C.rev,sum:cloudSumOf(P.C.data),dirty:false,ts:Date.now()});
-  CLOUD_LOCK=true;location.reload();
+  cloudReload("Salvataggio del cloud caricato");
 }
 function cloudRestore(){ // solo sito /dev/: scambia backup e salvataggio attuale, poi dirty
   const b=store.get(CLOUDBAK_KEY);if(!b||!b.data||!cloudCanApply())return;
   const L=cloudLocal();
-  cloudBackup(L.raw||"{}","device",cloudSummary(cloudReal(L.obj),cloudLw()));
-  cloudWrite(b.data,L.obj);
+  if(!cloudBackup(L.raw||"{}","device",cloudSummary(cloudReal(L.obj),cloudLw()))||!cloudWrite(b.data,L.obj)){toast("Spazio insufficiente: backup non ripristinato");return}
   const M=cm();if(M){M.dirty=true;cmSet(M)}
-  CLOUD_LOCK=true;location.reload();
+  cloudReload("Backup ripristinato");
 }
 function cloudConflict(C,uid){
   const L=cloudLocal();
@@ -838,7 +857,7 @@ function cloudConfShow(){
   BUG={resume,close:later}; // come il popup del bug: gioco fermo, nessun tasto arriva al gioco, Esc = Decidi dopo
   m.querySelector("#cll").onclick=later;
   m.querySelector("#clc").onclick=()=>{close();if(!cloudCanApply())toast("Il salvataggio del cloud arriva quando torni al menu");cloudApply(X.C,X.uid,null)} // scelta esplicita: si applica al menu anche se nel frattempo si e' giocato (quei progressi vanno nel backup);
-  m.querySelector("#cld").onclick=()=>{close();cloudBackup(X.C.data,"cloud",sc);
+  m.querySelector("#cld").onclick=()=>{close();if(!cloudBackup(X.C.data,"cloud",sc)){CL.later=true;cloudStat("space");toast("Spazio insufficiente: il salvataggio del cloud non è stato sostituito");return}
     const go_=()=>{if(CL.run)return;CL.run=cloudUp(X.uid,X.C.rev,cloudLocal()).catch(cloudFail).finally(cloudDone)};
     if(CL.run)CL.run.finally(()=>setTimeout(go_,0));else go_()};
 }
@@ -1246,7 +1265,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_1";
+const VERSION="0.4.5_2";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -7160,7 +7179,7 @@ addEventListener("mgback",()=>{
   tileAction("quit");
 });
 applyFs();fitUI();
-loadImgs().then(()=>{bakeBoarFrames();return loadSkinImgs()}).then(()=>{go("splash");initMusic();loadSounds()});
+loadImgs().then(()=>{bakeBoarFrames();return loadSkinImgs()}).then(()=>{if(!cloudResumeBoot())go("splash");initMusic();loadSounds()});
 </script>
 </body>
 </html>

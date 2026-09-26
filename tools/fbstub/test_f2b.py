@@ -229,7 +229,8 @@ with sync_playwright() as pw:
     # ---- Ripristina backup (dev site): swaps backup and current save, marks dirty
     check("Account accordion shows «Ripristina backup» on the dev site", open_account(p) and p.evaluate("!!document.querySelector('#clrb')"))
     p.click("#clrb"); p.wait_for_timeout(200); p.click("#cy"); p.wait_for_timeout(2500)
-    p.wait_for_selector("#rsi, #root .brand")
+    p.wait_for_selector("#rsi, #root .brand, #root .top", timeout=10000)
+    check("Ripristina backup: back in Opzioni with the Account accordion, never the splash question", p.evaluate("screen")=="opt" and not p.evaluate("!!document.querySelector('#rsi')"))
     s2 = p.evaluate("({r:S.p.ch.roccia.lvl,so:S.p.sordi,ov:S.ov.char_roccia&&S.ov.char_roccia.label})")
     bk2 = bakk(p); M2 = p.evaluate("JSON.parse(localStorage.getItem('mgs_cloud_dev'))")
     check("Ripristina backup: the old (fresh) local save is back, dev fields kept", s2["r"] == 1 and s2["so"] == 0 and s2["ov"] == "Pietrone", s2)
