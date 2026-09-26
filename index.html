@@ -829,7 +829,7 @@ function cloudConfShow(){
   const md=modalEl();
   if(BUG||(md&&md.firstChild&&screen!=="splash")){clearTimeout(CL.wait);CL.wait=setTimeout(cloudConfShow,1000);return} // un altro popup aperto: si aspetta
   const L=cloudLocal(),sc=cloudSummary(cloudReal(cloudParse(X.C.data)),X.C.ts),sd=cloudSummary(cloudReal(L.obj),cloudLw());
-  const card=(t,s,id)=>`<div class="clcard"><b>${t}</b><span>${esc(CHARS.roccia.name)} · Liv. ${s.r}</span><span>${esc(CHARS.algidone.name)} · Liv. ${s.a}</span><span>${s.s} sordi</span><small>${cloudDate(s.d)}</small><button class="btn sm" id="${id}">Usa questo</button></div>`;
+  const card=(t,s,id)=>`<div class="clcard"><b>${t}</b><span>${esc(CHARS.roccia.name)}<br>Liv. ${s.r}</span><span>${esc(CHARS.algidone.name)}<br>Liv. ${s.a}</span><span>${s.s} sordi</span><small>${cloudDate(s.d)}</small><button class="btn sm" id="${id}">Usa questo</button></div>`;
   const resume=bugFreeze();
   const m=openModal(`<div id="clpop" data-nolp><h3>Due salvataggi diversi</h3><div class="clcards">${card("Nel cloud",sc,"clc")}${card("Su questo dispositivo",sd,"cld")}</div><div class="acts"><button class="btn ghost" id="cll">Decidi dopo</button></div></div>`);
   const close=()=>{CL.conf=null;closeModal();const b=BUG;BUG=null;if(b&&b.resume)b.resume();if(screen==="splash")render()};
@@ -1245,7 +1245,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4_14";
+const VERSION="0.4_15";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -2969,6 +2969,13 @@ Come disegnare:
 6. Il costume è overlay (disegni SOLO i pixel nuovi, es. un cappello: il personaggio del gioco resta visibile sotto) oppure replace (ridisegni l'intero personaggio, es. cambi colori o vestiti: copre tutto il frame base). Si decide una volta sola per l'intero costume, non fotogramma per fotogramma.
 7. Quando hai finito, esporta il livello con il tuo disegno (${folder}_DRAW_HERE.png, sfondo trasparente) e caricalo in Opzioni → Sviluppatore → Costumi → «Carica costume» per vederlo in anteprima nel gioco. L'invio come pacchetto per l'approvazione arriva con il prossimo strumento.
 
+Dal telefono:
+1. Apri la pagina GUIDE (${folder}_GUIDE.png) in un'app di disegno che supporta i livelli (per esempio ibisPaint X).
+2. Aggiungi un nuovo livello trasparente e disegna solo su quello.
+3. Nascondi il livello GUIDE.
+4. Esporta solo il tuo livello come PNG, alla dimensione originale (100%, senza ridimensionare) e con lo sfondo trasparente.
+5. Caricalo con «Carica costume».
+
 Non ridimensionare i file, non spostare le celle, non disegnare fuori dai riquadri.
 `;
 /* geometria del foglio di un personaggio (righe, pagine, dimensioni di ogni pagina): condivisa fra
@@ -3146,6 +3153,7 @@ async function skinImportRun(){
     for(const file of files){
       const id=await skinImportFileToImageData(file),d={data:id.data,w:id.width,h:id.height};
       let cands=layout.pages.filter(p=>p.w===d.w&&p.h===d.h);
+      if(!cands.length&&layout.pages.some(p=>p.w!==d.w&&p.h!==d.h&&Math.abs(d.w/p.w-d.h/p.h)<=.005))throw new Error("L'app ha ridimensionato il foglio: esportalo a dimensione originale"); // stesso rapporto di una pagina, scala diversa: un ridimensionamento (larghezza uguale e altezza diversa = foglio vecchio)
       if(!cands.length)throw new Error("Foglio di un'altra versione: riscarica il foglio");
       let page=cands[0];
       if(cands.length>1){
@@ -7138,6 +7146,7 @@ addEventListener("keydown",e=>{
   if(screen==="cust"&&e.key==="Escape"){e.preventDefault();return go("wish")}
 });
 addEventListener("mgback",()=>{
+  if(BUG&&BUG.close){BUG.close();return} // popup bug / «Modifica testo» / conflitto cloud aperto: indietro = il loro annullamento (Indietro/Annulla/Decidi dopo)
   if(screen==="splash")return rocciaNo();
   if(screen==="pr"){if(PR&&PR.pb&&pbBack())return;if(PR&&PR.test)go("menu");return}
   if(screen==="sad")return;

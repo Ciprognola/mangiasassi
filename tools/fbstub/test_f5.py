@@ -109,6 +109,12 @@ with sync_playwright() as pw:
     x, y = centre(p, "#cv"); hold(p, x, y); check("maze running: canvas long press ignored", not popup(p))
     hold_el(p, "#sc", 3.3); check("maze HUD label (DOM) works anytime", popup(p) and p.evaluate("G.state") == "pause", p.evaluate("screenId()"))
     p.keyboard.press("Escape"); p.wait_for_timeout(500); check("Annulla resumes the maze", p.evaluate("G.state") != "pause")
+    hold_el(p, "#sc", 3.3); check("text edit popup open again (for the back button)", popup(p) and p.evaluate("G.state") == "pause")
+    p.evaluate("window.__kd=0;window.addEventListener('keydown',()=>{window.__kd++})"); p.keyboard.press("ArrowLeft"); p.wait_for_timeout(100); kd0 = p.evaluate("window.__kd")
+    p.evaluate("window.dispatchEvent(new Event('mgback'))"); p.wait_for_timeout(500)
+    check("Android back (mgback) = Annulla: popup closed, maze resumed, no pause menu, BUG cleared", not popup(p) and p.evaluate("G.state") != "pause" and not p.evaluate("!!document.querySelector('#r')") and p.evaluate("BUG===null"))
+    p.keyboard.press("ArrowLeft"); p.wait_for_timeout(100)
+    check("after back: keys reach the game again (blocked while open)", kd0 == 0 and p.evaluate("window.__kd") == 1, (kd0, p.evaluate("window.__kd")))
     p.click("#bugb"); p.wait_for_timeout(300); hold_el(p, ".bugbox h3", 3.3); check("bug popup is never long-pressable", p.evaluate("!!document.querySelector('#bgt')") and not popup(p))
     check("no console errors (maze)", not errs, errs); ctx.close()
     # ------------------------------------------------------------ Ferma: pause-panel text (DOM) and canvas text only while paused

@@ -296,6 +296,15 @@ with sync_playwright() as pw:
     check("next start -> the popup comes back", p.evaluate("!!document.querySelector('#clpop')"))
     p.keyboard.press("Escape"); p.wait_for_timeout(300)
     check("Esc = Decidi dopo", not p.evaluate("!!document.querySelector('#clpop')") and cl(p)["later"])
+    p.reload(); p.wait_for_selector("#rsi, #clpop"); p.wait_for_timeout(1500)
+    check("popup again at the next start (for the back button)", p.evaluate("!!document.querySelector('#clpop')"))
+    p.evaluate("window.__kd=0;window.addEventListener('keydown',()=>{window.__kd++})"); p.keyboard.press("Enter"); p.wait_for_timeout(100); kd0 = p.evaluate("window.__kd")
+    p.evaluate("window.dispatchEvent(new Event('mgback'))"); p.wait_for_timeout(400)
+    check("Android back (mgback) = Decidi dopo: popup closed, later set, BUG cleared, splash question back", not p.evaluate("!!document.querySelector('#clpop')") and cl(p)["later"] and p.evaluate("BUG===null") and p.evaluate("!!document.querySelector('#rsi')") and p.evaluate("screen") == "splash")
+    p.keyboard.press("Enter"); p.wait_for_timeout(100)
+    check("after back: keys reach the game again (blocked while open)", kd0 == 0 and p.evaluate("window.__kd") == 1, (kd0, p.evaluate("window.__kd")))
+    p.click("#rsi"); p.wait_for_timeout(700)
+    check("after back: taps work (splash -> menu)", p.evaluate("screen") == "menu")
     check("no console errors (decidi dopo)", not errs, errs)
     ctx.close()
 
@@ -467,6 +476,9 @@ with sync_playwright() as pw:
     p.evaluate("window.__mark=1;sessionStorage.removeItem('__off');window.__fbs.offline=false;window.dispatchEvent(new Event('online'))"); p.wait_for_timeout(900)
     if p.evaluate("!!document.querySelector('#clpop')"):
         check("mid-run conflict popup freezes the maze (G.state pause)", p.evaluate("G.state") == "pause")
+        p.evaluate("window.dispatchEvent(new Event('mgback'))"); p.wait_for_timeout(500)
+        check("mid-run Android back = Decidi dopo: popup closed, maze running, no pause menu", not p.evaluate("!!document.querySelector('#clpop')") and p.evaluate("G.state") == "play" and not p.evaluate("!!document.querySelector('#r')") and cl(p)["later"])
+        p.evaluate("CL.later=false;window.dispatchEvent(new Event('online'))"); p.wait_for_timeout(900)  # back on track for the deferred-apply check below
         p.click("#clc"); p.wait_for_timeout(500)
     check("mid-run: nothing applied yet (no reload, still in the run, apply pending)", p.evaluate("window.__mark") == 1 and p.evaluate("screen") == "game" and cl(p)["pend"])
     p.click("#ps"); p.wait_for_timeout(300); p.click("#q"); p.wait_for_timeout(300)
@@ -477,6 +489,22 @@ with sync_playwright() as pw:
         p.click("#clc"); p.wait_for_timeout(2500)
     check("back at the menu -> cloud copy applied (page reloaded)", p.evaluate("typeof window.__mark") == "undefined" and p.evaluate("S.p.sordi") == 31337)
     check("no console errors (deferred apply)", not errs, errs)
+    ctx.close()
+
+    # ============================================================ Android back (mgback) on a conflict popup that opens mid-run = Decidi dopo, the maze runs again
+    ctx, p, errs = page(b, site="dev", local=norm(b, save())); settle(p)
+    open_game_acc(p); change_diff(p, "hard"); p.click("#back"); p.wait_for_timeout(300)
+    check("setup: device dirty", cl(p)["M"]["dirty"] is True)
+    p.evaluate("(()=>{const a=JSON.parse(localStorage.getItem('__fbstub_saves'));const d=JSON.parse(a['%s'].data);d.p.sordi=777;a['%s']={data:JSON.stringify(d),rev:2,ts:Date.now(),ver:'0.4_14'};localStorage.setItem('__fbstub_saves',JSON.stringify(a))})()" % (UID + "_dev", UID + "_dev"))
+    p.evaluate("sessionStorage.setItem('__off','1')"); p.reload(); settle(p)
+    p.click("[data-tile=new]"); p.wait_for_timeout(1500)
+    p.evaluate("sessionStorage.removeItem('__off');window.__fbs.offline=false;window.dispatchEvent(new Event('online'))"); p.wait_for_timeout(900)
+    check("mid-run: cloud newer + device dirty -> popup, maze frozen", p.evaluate("!!document.querySelector('#clpop')") and p.evaluate("G.state") == "pause")
+    p.evaluate("window.dispatchEvent(new Event('mgback'))"); p.wait_for_timeout(300)
+    p.wait_for_timeout(600)
+    check("mid-run Android back = Decidi dopo: popup closed, maze running, no pause menu, BUG cleared", not p.evaluate("!!document.querySelector('#clpop')") and p.evaluate("G.state") == "play" and not p.evaluate("!!document.querySelector('#r')") and cl(p)["later"] and p.evaluate("BUG===null"))
+    check("... nothing applied or uploaded (local kept, cloud rev 2)", p.evaluate("S.p.sordi") == 4200 and docs(p)[UID + "_dev"]["rev"] == 2)
+    check("no console errors (mid-run back)", not errs, errs)
     ctx.close()
 
     # ============================================================ old saves still load (legacy, pre two characters) + upload as progress

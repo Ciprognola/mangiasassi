@@ -255,6 +255,23 @@ with sync_playwright() as pw:
     p.set_input_files("#skinImpFiles", stale_path); p.click("#skinImpGo"); p.wait_for_timeout(400)
     txt = p.evaluate("document.querySelector('#skinImpOut').innerText")
     check("import error: stale 0.4_10-sized page -> exact Italian error", "riscarica il foglio" in txt, txt)
+    # 0.4_15: a page shrunk/enlarged uniformly by a phone app -> its own message; same width + other height = an old sheet
+    for (sw, sh, why) in ((layout["w"] // 2, layout["h"] // 2, "halved"), (round(layout["w"] * .6), round(layout["h"] * .6), "x0.6 (phone export)"), (layout["w"] * 2, layout["h"] * 2, "doubled")):
+        rs = Image.new("RGBA", (sw, sh), (0, 0, 0, 0)); rs_path = os.path.join(WORK, "resized_%dx%d.png" % (sw, sh)); rs.save(rs_path)
+        p.set_input_files("#skinImpFiles", rs_path); p.click("#skinImpGo"); p.wait_for_timeout(400)
+        txt = p.evaluate("document.querySelector('#skinImpOut').innerText")
+        check("import error: page resized uniformly (%s, %dx%d) -> «L'app ha ridimensionato il foglio: esportalo a dimensione originale»" % (why, sw, sh), "L'app ha ridimensionato il foglio: esportalo a dimensione originale" in txt and "riscarica" not in txt, txt)
+    old_v = Image.new("RGBA", (layout["w"], layout["h"] - 10), (0, 0, 0, 0))  # 0.4_11-era roccia height (1804x3400): same width, other height
+    old_path = os.path.join(WORK, "old_version.png"); old_v.save(old_path)
+    p.set_input_files("#skinImpFiles", old_path); p.click("#skinImpGo"); p.wait_for_timeout(400)
+    txt = p.evaluate("document.querySelector('#skinImpOut').innerText")
+    check("import error: same width, different height (old sheet, %dx%d) stays «Foglio di un'altra versione»" % (layout["w"], layout["h"] - 10), "Foglio di un'altra versione: riscarica il foglio" in txt and "ridimensionato" not in txt, txt)
+    p.set_input_files("#skinImpFiles", path_new); p.click("#skinImpGo"); p.wait_for_timeout(600)
+    pv = p.evaluate("SKIN_IMPORT_PV && Object.keys(SKIN_IMPORT_PV.frames).length")
+    check("a correct page still imports as before (after the resize/old-sheet errors)", pv == len(keys_in_sheet) - 1, pv)
+    lg = p.evaluate("SKIN_LEGGIMI('Uomo roccia','roccia')")
+    check("LEGGIMI.txt has the «Dal telefono» steps (layers, hide GUIDE, export 100% transparent, Carica costume)",
+          "Dal telefono" in lg and "ibisPaint X" in lg and "Nascondi il livello GUIDE" in lg and "100%" in lg and "«Carica costume»" in lg, lg[-500:])
 
     guide_like = Image.new("RGBA", (layout["w"], layout["h"]), (201, 204, 209, 255))  # GUIDE bg colour, fully opaque
     guide_path = os.path.join(WORK, "guide_like.png"); guide_like.save(guide_path)

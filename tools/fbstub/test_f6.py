@@ -103,6 +103,13 @@ with sync_playwright() as pw:
     check("maze frozen while popup open (no pause menu)", p.evaluate("G.state") == "pause" and a == p.evaluate(snap) and not p.evaluate("!!document.querySelector('#r')"), st)
     p.keyboard.press("ArrowLeft"); p.wait_for_timeout(300); check("keys don't reach the frozen maze", a == p.evaluate(snap))
     p.click("#bgx"); p.wait_for_timeout(700); check("Indietro resumes the maze", p.evaluate("G.state") == "play" and a != p.evaluate(snap))
+    # Android back (the app dispatches the window event "mgback") = Indietro: popup closed, freeze released, keys reach the game again
+    p.click("#bugb"); p.wait_for_timeout(200); check("bug popup open again (for the back button)", p.evaluate("!!document.querySelector('#bgt')") and p.evaluate("G.state") == "pause")
+    p.evaluate("window.__kd=0;window.addEventListener('keydown',()=>{window.__kd++})"); p.keyboard.press("ArrowLeft"); p.wait_for_timeout(100); kd0 = p.evaluate("window.__kd")
+    p.evaluate("window.dispatchEvent(new Event('mgback'))"); p.wait_for_timeout(700); a = p.evaluate(snap); p.wait_for_timeout(400)
+    check("back = Indietro: popup closed, maze running, no pause menu, BUG cleared", not p.evaluate("!!document.querySelector('#bgt')") and p.evaluate("G.state") == "play" and not p.evaluate("!!document.querySelector('#r')") and p.evaluate("BUG===null") and a != p.evaluate(snap))
+    p.keyboard.press("ArrowLeft"); p.wait_for_timeout(100)
+    check("back = Indietro: keys reach the game again (blocked while open)", kd0 == 0 and p.evaluate("window.__kd") == 1, (kd0, p.evaluate("window.__kd")))
     p.evaluate("G.st={on:true,t:8,tp:0,cd:0}"); check("screenId maze ability", p.evaluate("screenId()") == "maze-acciaio-roccia"); p.evaluate("G.st.on=false")
     p.evaluate("G.lives=1;G.state='dying';G.t=0"); p.wait_for_timeout(900); check("screenId over + icon on the over screen", p.evaluate("screenId()") == "maze-over" and has_bug(p))
     ctx.close()
