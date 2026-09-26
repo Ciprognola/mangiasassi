@@ -376,7 +376,8 @@ with sync_playwright() as pw:
 
     base_menu = snap_menu()
     p.evaluate("""()=>{
-      const im=devSkinOutlineImg(IMG.f0.width,IMG.f0.height);
+      const mk=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').fillStyle='rgba(255,46,196,.6)';c.getContext('2d').fillRect(0,0,w,h);return c};
+      const im=mk(IMG.f0.width,IMG.f0.height);
       SKIN_IMPORT_PV={char:'roccia',id:null,mode:'overlay',name:'x',frames:{f0:im,f1:im,f2:im}};
       render();
     }""")
@@ -401,7 +402,8 @@ with sync_playwright() as pw:
     fa_snap = "()=>{faDraw();return document.getElementById('fac').toDataURL()}"
     fa_base = p.evaluate(fa_snap)
     p.evaluate("""()=>{
-      const im=devSkinOutlineImg(IMG.f0.width,IMG.f0.height);
+      const mk=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').fillStyle='rgba(255,46,196,.6)';c.getContext('2d').fillRect(0,0,w,h);return c};
+      const im=mk(IMG.f0.width,IMG.f0.height);
       SKIN_IMPORT_PV={char:'roccia',id:null,mode:'overlay',name:'x',frames:{f0:im,f1:im,f2:im,fd0:im,fd1:im,fd2:im,fu0:im,fu3:im}};
     }""")
     fa_pv = p.evaluate(fa_snap)
@@ -412,7 +414,8 @@ with sync_playwright() as pw:
     boar_snap = "()=>{const c=document.createElement('canvas');c.width=300;c.height=300;const x=c.getContext('2d');x.translate(150,150);x.imageSmoothingEnabled=false;drawBoar(x,0,0,60,{face:1,anim:.2,moving:true});return c.toDataURL()}"
     boar_base = p.evaluate(boar_snap)
     p.evaluate("""()=>{
-      const im=devSkinOutlineImg(IMG.boar_lato0.width,IMG.boar_lato0.height);
+      const mk=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').fillStyle='rgba(255,46,196,.6)';c.getContext('2d').fillRect(0,0,w,h);return c};
+      const im=mk(IMG.boar_lato0.width,IMG.boar_lato0.height);
       SKIN_IMPORT_PV={char:'algidone',id:null,mode:'overlay',name:'x',frames:{boar_lato0:im,boar_lato1:im}};
     }""")
     boar_pv = p.evaluate(boar_snap)
@@ -427,7 +430,8 @@ with sync_playwright() as pw:
     }"""
     thrower_base = p.evaluate(thrower_snap)
     p.evaluate("""()=>{
-      const im=devSkinOutlineImg((IMG.alg_idle0||FAIMG.alg_idle0).width,(IMG.alg_idle0||FAIMG.alg_idle0).height);
+      const mk=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').fillStyle='rgba(255,46,196,.6)';c.getContext('2d').fillRect(0,0,w,h);return c};
+      const im=mk((IMG.alg_idle0||FAIMG.alg_idle0).width,(IMG.alg_idle0||FAIMG.alg_idle0).height);
       SKIN_IMPORT_PV={char:'algidone',id:null,mode:'overlay',name:'x',frames:{alg_idle0:im}};
     }""")
     thrower_pv = p.evaluate(thrower_snap)

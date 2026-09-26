@@ -27,7 +27,8 @@ def leaf(case):  # submissions/_fixtures/<case>/<acct>/<date>
 for case in sorted(os.listdir(FIX)):
     if case.startswith("valid-"):
         rc, out = run(leaf(case)); check(f"fixture {case} passes", rc == 0, out.strip()[-120:] if rc else "")
-EXPECT = {"broken-dev-mismatch": "must match the folder name", "broken-sprite-size": "PNG is 1x1", "broken-no-before": "'before' is required", "broken-colour": "#rrggbb"}
+EXPECT = {"broken-dev-mismatch": "must match the folder name", "broken-sprite-size": "PNG is 1x1", "broken-no-before": "'before' is required", "broken-colour": "#rrggbb",
+          "broken-skin-mode": "skin meta.mode must be", "broken-skin-meta": "skin meta needs a non-empty skinId"}
 for case, want in EXPECT.items():
     rc, out = run(leaf(case)); check(f"fixture {case} fails with '{want}'", rc == 1 and want in out, out.strip()[-160:])
 
@@ -42,7 +43,7 @@ MUT = [
     ("missing general note", lambda m: m.pop("note"), "general 'note'"),
     ("empty changes", lambda m: m.update(changes=[]), "non-empty list"),
     ("v1 character in v2", lambda m: m["changes"][0].update(character="uomoRoccia"), "'character' must be"),
-    ("unknown type", lambda m: m["changes"][0].update(type="skin"), "'type' must be"),
+    ("unknown type", lambda m: m["changes"][0].update(type="bogus"), "'type' must be"),
     ("duplicate id", lambda m: m["changes"][1].update(id="c1"), "duplicate id"),
     ("text too long", lambda m: m["changes"][0].update(value="x" * 501), "longer than 500"),
     ("note too long", lambda m: m["changes"][0].update(note="x" * 301), "at most 300"),

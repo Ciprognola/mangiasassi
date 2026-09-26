@@ -23,7 +23,7 @@ MAX_NOTE = 300
 CHARS_V1 = {"uomoRoccia", "algidone", "shared"}
 CHARS_V2 = {"roccia", "algidone", "shared"}
 TYPES_V1 = {"text", "audio", "sprite"}
-TYPES_V2 = {"text", "colour", "scale", "audio", "sprite"}
+TYPES_V2 = {"text", "colour", "scale", "audio", "sprite", "skin"}
 SITES = {"dev", "stable"}
 SCREEN_RE = re.compile(r"^[a-z0-9][a-z0-9:_-]*$")
 VERSION_V2_RE = re.compile(r"^\d+\.\d+(\.\d+)?(_\d+)?$")
@@ -117,6 +117,8 @@ def check_v2_change(R, tag, c, base, referenced, seen_ids):
         R.err(f"{tag}: 'note' must be a string of at most {MAX_NOTE} characters.")
     if t in ("audio", "sprite") and not str(note or "").strip():
         R.err(f"{tag}: 'note' is required for file changes (say why you made this change).")
+    # 'skin' is a file change too but note is optional (the change already identifies itself via
+    # meta.skinId/skinName/frameKey)
     if "before" not in c:
         R.err(f"{tag}: 'before' is required (the value at baseVersion; null when it did not exist).")
     bf = c.get("before")
@@ -163,6 +165,24 @@ def check_v2_change(R, tag, c, base, referenced, seen_ids):
         for k in ("ox", "oy"):
             if not is_int(m.get(k)):
                 R.err(f"{tag}: sprite meta.{k} must be an integer.")
+        if size is not None and str(c.get("file", "")).lower().endswith(".png"):
+            ps = png_size(os.path.join(base, c["file"]))
+            if ps and is_int(m.get("w")) and is_int(m.get("h")) and (m["w"], m["h"]) != ps:
+                R.err(f"{tag}: meta says {m['w']}x{m['h']} but the PNG is {ps[0]}x{ps[1]}.")
+    elif t == "skin":
+        for k in ("skinId", "skinName", "frameKey"):
+            if not str(m.get(k, "")).strip():
+                R.err(f"{tag}: skin meta needs a non-empty {k}.")
+        if m.get("mode") not in ("overlay", "replace"):
+            R.err(f"{tag}: skin meta.mode must be 'overlay' or 'replace'.")
+        if m.get("action") not in ("new", "update"):
+            R.err(f"{tag}: skin meta.action must be 'new' or 'update'.")
+        for k in ("w", "h", "base_w", "base_h"):
+            if not is_int(m.get(k), 1):
+                R.err(f"{tag}: skin meta.{k} must be a positive integer.")
+        for k in ("ox", "oy"):
+            if not is_int(m.get(k)):
+                R.err(f"{tag}: skin meta.{k} must be an integer.")
         if size is not None and str(c.get("file", "")).lower().endswith(".png"):
             ps = png_size(os.path.join(base, c["file"]))
             if ps and is_int(m.get("w")) and is_int(m.get("h")) and (m["w"], m["h"]) != ps:

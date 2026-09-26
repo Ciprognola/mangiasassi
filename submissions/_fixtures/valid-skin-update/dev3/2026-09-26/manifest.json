@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 2,
+  "developer": "dev3",
+  "baseVersion": "0.4_11",
+  "site": "dev",
+  "exportedAt": "2026-09-26T08:00:00Z",
+  "note": "aggiorno un fotogramma di un costume esistente",
+  "changes": [
+    {
+      "id": "s1",
+      "type": "skin",
+      "character": "roccia",
+      "target": "skin.geka.f1",
+      "screen": "maze-play-roccia",
+      "before": {
+        "sha256": "ef8ef32555eb522f3c986ecf62d88b3d9e5d67a2708d6fad9c274a03a3e7a284",
+        "bytes": 120,
+        "w": 1,
+        "h": 1
+      },
+      "file": "skins/geka/sk_geka_f1.png",
+      "meta": {
+        "skinId": "geka",
+        "skinName": "Cappello GEKA SNC",
+        "mode": "replace",
+        "action": "update",
+        "frameKey": "f1",
+        "w": 1,
+        "h": 1,
+        "ox": 0,
+        "oy": 1,
+        "base_w": 1,
+        "base_h": 1
+      },
+      "note": "cambiato colore del cappello"
+    }
+  ]
+}

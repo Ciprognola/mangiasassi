@@ -217,8 +217,9 @@ with sync_playwright() as pw:
     check("coverage: the accordion body actually shows the BK line with a frame count", "Costume BK" in txt and "27/46" in txt)
     check("no console errors (coverage)", not errs, errs)
     ctx.close()
-    # ------------------------------------------------------------ thrower skin hook (F4a2 2): DEV_SKIN_TEST overlay/replace change the thrower;
-    # a real skin with no alg_* art (BK today) renders pixel-identical to no skin at all (0.4_8 baseline)
+    # ------------------------------------------------------------ thrower skin hook (F4a2 2): the local preview (SKIN_IMPORT_PV,
+    # F4b1/migrated off DEV_SKIN_TEST in F4b2) in overlay/replace changes the thrower; a real skin with no alg_* art
+    # (BK today) renders pixel-identical to no skin at all (0.4_8 baseline)
     ctx, p, errs = page(b); menu(p)
     p.evaluate("go('opt')"); p.wait_for_timeout(300); p.click("[data-otab=dev]"); p.wait_for_timeout(200)
     p.click("details.acc:has(#mgfa) > summary"); p.wait_for_timeout(200); p.click("#mgfa"); p.wait_for_timeout(2500)
@@ -234,23 +235,41 @@ with sync_playwright() as pw:
       oc.getContext('2d').drawImage(c,bx,by,bw,bh,0,0,bw,bh);
       return oc.toDataURL();
     }"""
+    # semi-transparent fill (not solid opaque): overlay (body + tint on top, body still shows through)
+    # must look different from replace (tint only, body hidden) -- a solid opaque fill would make the
+    # two modes pixel-identical and give a false "no difference" failure
+    THROWER_KEYS = ["alg_idle0", "alg_idle1", "alg_angry0", "alg_angry1", "alg_throw0", "alg_throw1", "alg_throw2", "alg_throw3", "alg_eat0", "alg_eat1", "alg_eat2", "alg_kick1", "alg_kick2"]
+
+    def set_tint_preview(char, mode, keys):
+        p.evaluate("""([char,mode,keys])=>{
+          const frames={};
+          for(const key of keys){
+            const im=IMG[key]||FAIMG[key],c=document.createElement('canvas');c.width=im.width;c.height=im.height;
+            c.getContext('2d').fillStyle='rgba(255,46,196,.6)';c.getContext('2d').fillRect(0,0,c.width,c.height);
+            frames[key]=c;
+          }
+          SKIN_IMPORT_PV={char,id:null,mode,name:'t',frames};
+        }""", [char, mode, keys])
     base_shot = p.evaluate(snap)
     p.evaluate("S.p.ch.algidone.skin='bk'"); bk_shot = p.evaluate(snap); p.evaluate("S.p.ch.algidone.skin=null")
     check("thrower: BK equipped (no alg_* art yet) renders pixel-identical to no skin", bk_shot == base_shot)
-    p.evaluate("DEV_SKIN_TEST={char:'algidone',mode:'overlay'}"); overlay_shot = p.evaluate(snap)
-    p.evaluate("DEV_SKIN_TEST={char:'algidone',mode:'replace'}"); replace_shot = p.evaluate(snap)
-    p.evaluate("DEV_SKIN_TEST=null"); restored_shot = p.evaluate(snap)
-    check("thrower: DEV_SKIN_TEST overlay changes the thrower's rendering", overlay_shot != base_shot)
-    check("thrower: DEV_SKIN_TEST replace changes the thrower's rendering", replace_shot != base_shot)
+    set_tint_preview("algidone", "overlay", THROWER_KEYS)
+    overlay_shot = p.evaluate(snap)
+    p.evaluate("SKIN_IMPORT_PV.mode='replace'"); replace_shot = p.evaluate(snap)
+    p.evaluate("SKIN_IMPORT_PV=null"); restored_shot = p.evaluate(snap)
+    check("thrower: preview overlay changes the thrower's rendering", overlay_shot != base_shot)
+    check("thrower: preview replace changes the thrower's rendering", replace_shot != base_shot)
     check("thrower: overlay and replace look different from each other", overlay_shot != replace_shot)
-    check("thrower: turning DEV_SKIN_TEST off restores the exact original pixels", restored_shot == base_shot)
-    p.evaluate("DEV_SKIN_TEST={char:'roccia',mode:'replace'}"); roccia_test_shot = p.evaluate(snap); p.evaluate("DEV_SKIN_TEST=null")
-    check("thrower: roccia's own DEV_SKIN_TEST does not touch the (algidone) thrower", roccia_test_shot == base_shot)
+    check("thrower: clearing the preview restores the exact original pixels", restored_shot == base_shot)
+    set_tint_preview("roccia", "replace", ["f0", "f1", "f2"])
+    roccia_test_shot = p.evaluate(snap); p.evaluate("SKIN_IMPORT_PV=null")
+    check("thrower: roccia's own preview does not touch the (algidone) thrower", roccia_test_shot == base_shot)
     check("no console errors (thrower hook)", not errs, errs)
     ctx.close()
     # ------------------------------------------------------------ Cinghiale skin hook (F4c): golden-hash regression on the
     # no-skin procedural path (must stay pixel-identical to 0.4_9 forever), BK equipped still unaffected (grandfathered,
-    # no boar art yet), DEV_SKIN_TEST overlay/replace visibly change every one of the 6 baked frames (3 directions x 2 phases)
+    # no boar art yet), the local preview in overlay/replace visibly changes every one of the 6 baked frames
+    # (3 directions x 2 phases) -- migrated off DEV_SKIN_TEST (removed) in F4b2
     ctx, p, errs = page(b); menu(p)
     golden_ok = True; golden_bad = None
     for case in BOAR_GOLDEN_CASES:
@@ -268,16 +287,26 @@ with sync_playwright() as pw:
             bk_ok = False; bk_bad = case
     p.evaluate("S.p.ch.algidone.skin=null")
     check("Cinghiale: BK equipped (no boar_* art yet) still renders via the procedural path, unaffected", bk_ok, bk_bad)
+    p.evaluate("""()=>{
+      const frames={};
+      for(const k of ['boar_lato0','boar_lato1','boar_su0','boar_su1','boar_giu0','boar_giu1']){
+        const im=IMG[k],c=document.createElement('canvas');c.width=im.width;c.height=im.height;
+        c.getContext('2d').fillStyle='rgba(255,46,196,.6)';c.getContext('2d').fillRect(0,0,c.width,c.height);
+        frames[k]=c;
+      }
+      window.__boarTestFrames=frames;
+    }""")
     diffs = []
     for dirname, faces in (("lato", (1, 3)), ("su", (0,)), ("giu", (2,))):
         for face in faces:
             base = p.evaluate(BOAR_SNAP_JS, [face, 0.2, True])
-            p.evaluate("DEV_SKIN_TEST={char:'algidone',mode:'overlay'}"); ov = p.evaluate(BOAR_SNAP_JS, [face, 0.2, True])
-            p.evaluate("DEV_SKIN_TEST={char:'algidone',mode:'replace'}"); rep = p.evaluate(BOAR_SNAP_JS, [face, 0.2, True])
-            p.evaluate("DEV_SKIN_TEST=null"); restored = p.evaluate(BOAR_SNAP_JS, [face, 0.2, True])
+            p.evaluate("SKIN_IMPORT_PV={char:'algidone',id:null,mode:'overlay',name:'t',frames:window.__boarTestFrames}")
+            ov = p.evaluate(BOAR_SNAP_JS, [face, 0.2, True])
+            p.evaluate("SKIN_IMPORT_PV.mode='replace'"); rep = p.evaluate(BOAR_SNAP_JS, [face, 0.2, True])
+            p.evaluate("SKIN_IMPORT_PV=null"); restored = p.evaluate(BOAR_SNAP_JS, [face, 0.2, True])
             if not (base != ov and base != rep and ov != rep and restored == base):
                 diffs.append((dirname, face))
-    check("Cinghiale: DEV_SKIN_TEST overlay/replace visibly change every direction (incl. mirrored lato) and restore cleanly", not diffs, diffs)
+    check("Cinghiale: preview overlay/replace visibly change every direction (incl. mirrored lato) and restore cleanly", not diffs, diffs)
     check("no console errors (Cinghiale skin hook)", not errs, errs)
     ctx.close()
     # ------------------------------------------------------------ a real run where Cinghiale is activated (girone 7 dev jump,

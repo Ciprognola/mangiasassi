@@ -92,6 +92,16 @@ effect, or silence for voice lines, or the original embedded music track).
 | `music.gam` | El Gamblador table music | The game's original table track |
 | `music.pr.intro` / `.battle` / `.win` / `.lose` | Professor mini-game music (4 slots) | The game's original tracks for each |
 
+## Making a costume in the game (`Carica costume`)
+No drawing app skills beyond drawing itself needed — the game builds and cuts the sheet for you.
+1. Opzioni → Sviluppatore → **Costumi**, pick a character, tap **Scarica foglio** (optionally «Parti da» an existing costume, to draw over what's already there). You get a `_GUIDE.png` (reference: shows every frame's real position) and a `_DRAW_HERE.png` (blank, transparent) — draw only on the second one, keeping the exact same canvas size.
+2. Back in **Costumi**, under **Carica costume**: choose the character, a new costume's name (or "Aggiorna" an existing one, whose mode you can't change), Overlay/Replace for a new costume, then pick your finished `_DRAW_HERE.png` file(s) and tap **Importa**.
+3. Check the **preview** right there in the game — it shows live everywhere that character's frames are drawn (maze, menu, Ferma Algidone!, everything), without touching your save. Fix and re-import if something looks off; the preview is replaced by each new import, never stacked.
+4. Once happy, tap **Scarica pacchetto** (same as audio/sprites, §"Audio and sprites" above) — it includes every changed frame automatically. **The preview is only in memory: it's gone if you reload the page, so download the package before you do anything else.**
+5. Unzip and upload through GitHub exactly like any other package (§"Audio and sprites", steps 2-5).
+
+A brand-new costume isn't given to any player automatically — the owner decides how it's unlocked once it's approved.
+
 ## Skin delivery format (artists)
 A skin (costume/accessory drawn on the character, always for **one** character: Uomo roccia or Algidone) arrives as art under `refs/skins/<skin>/`. A skin declares a render mode:
 `overlay` (an accessory drawn on top of the base frame) or `replace` (drawn instead of the base frame, for a full costume that recolours the character). Frames a skin does not provide simply render without it.

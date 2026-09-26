@@ -536,7 +536,7 @@ async function fbLogin(user,pass){
   if(!r){try{await fb.Au.signOut(fb.auth)}catch(x){}throw new Error("Account senza ruolo.")}
   return r;
 }
-function fbDrop(){simOff();role=null;acct=null;devOn=false;DEV_SKIN_TEST=null;SKIN_IMPORT_PV=null;persistDev();lpSync();if(["menu","opt","wish","ach","road"].includes(screen))render()}
+function fbDrop(){simOff();role=null;acct=null;devOn=false;SKIN_IMPORT_PV=null;persistDev();lpSync();if(["menu","opt","wish","ach","road"].includes(screen))render()}
 async function fbChangePw(){
   const er=$("#cpe"),o=$("#cpo").value,n=$("#cpn").value,r=$("#cpr").value;
   if(!o||!n||!r){er.textContent="Compila tutti i campi.";return}
@@ -948,7 +948,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4_11";
+const VERSION="0.4_12";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -1220,36 +1220,10 @@ function skinImg(char,frameKey){
   if(!im)return null;
   return{img:im,mode:(SKINS[id]&&SKINS[id].mode)||"overlay"};
 }
-/* --- test skin da pannello dev (§10.9 K1b): mai salvato (variabile in memoria, non tocca S.p),
-   invisibile e inerte con dev off. Permette di verificare visivamente l'aggancio in entrambi i
-   modi prima che arrivi un vero skin dall'artista. --- */
-let DEV_SKIN_TEST=null; // {char,mode} impostato dal pannello dev
-const _devSkinOutline={},_devSkinTint={};
-function devSkinOutlineImg(w,h){
-  const k=w+"x"+h;if(_devSkinOutline[k])return _devSkinOutline[k];
-  const c=document.createElement("canvas");c.width=w;c.height=h;const x=c.getContext("2d");
-  x.strokeStyle="#ff2ec4";x.lineWidth=2;x.strokeRect(1,1,w-2,h-2);
-  x.strokeStyle="rgba(255,46,196,.55)";x.beginPath();x.moveTo(0,0);x.lineTo(w,h);x.moveTo(w,0);x.lineTo(0,h);x.stroke();
-  return _devSkinOutline[k]=c;
-}
-function devSkinTintImg(im,frameKey){
-  if(_devSkinTint[frameKey])return _devSkinTint[frameKey];
-  const c=document.createElement("canvas");c.width=im.width;c.height=im.height;const x=c.getContext("2d");
-  x.drawImage(im,0,0);const d=x.getImageData(0,0,c.width,c.height),a=d.data;
-  for(let i=0;i<a.length;i+=4){if(a[i+3]===0)continue;a[i]=Math.min(255,a[i]*.25+180);a[i+1]=Math.min(255,a[i+1]*.25+10);a[i+2]=Math.min(255,a[i+2]*.25+225)}
-  x.putImageData(d,0,0);return _devSkinTint[frameKey]=c;
-}
-/* combina il test dev (se attivo) con lo skin reale equipaggiato -- usata da ogni draw path al
-   posto di chiamare skinImg() direttamente, cosi' il pannello dev puo' testare l'aggancio senza
-   toccare S.p.ch[*].skin. */
-function activeSkin(char,frameKey,baseIm){
-  if(devOn&&DEV_SKIN_TEST&&DEV_SKIN_TEST.char===char){
-    return DEV_SKIN_TEST.mode==="replace"
-      ?{img:devSkinTintImg(baseIm,frameKey),mode:"replace"}
-      :{img:devSkinOutlineImg(baseIm.width,baseIm.height),mode:"overlay"};
-  }
-  return skinImg(char,frameKey);
-}
+/* activeSkin() combinava lo skin reale con il test dev K1b (DEV_SKIN_TEST, rimosso in F4b2: il
+   suo pannello e' sostituito dall'anteprima locale SKIN_IMPORT_PV, gia' dentro skinImg() -- F4b1);
+   resta come passthrough sottile per non dover toccare ogni chiamante (drawBoar, drawSkinned, ...). */
+function activeSkin(char,frameKey,baseIm){return skinImg(char,frameKey)}
 /* disegna un livello skin (overlay o replace) tenendo conto dell'eventuale offset ox,oy quando il
    frame skin e' piu' grande del frame base -- dx,dy,dw,dh sono il rettangolo di destinazione del
    frame BASE (come lo calcola gia' il chiamante); sx,sy derivano da li'. Se il chiamante ha gia'
@@ -1916,7 +1890,7 @@ function renderWish(){
   else if(tab==="rocks")body=`<div class="grid">${names("rock").map((_,i)=>cardHTML("rock",i)).join("")}${devUI()?addCard("rock"):""}</div>`;
   else if(tab==="games")body=gamesHTML();
   else body=`<div class="grid">${Object.keys(CHARS).map(k=>{const o=S.ov["char_"+k]||{},sel=charKey()===k,bg=o.color?`background:${o.color};color:${contrast(o.color)}`:"";
-    const cc=S.p.ch[k],custOk=cc.skins.length>0||(devOn&&DEV_SKIN_TEST&&DEV_SKIN_TEST.char===k);
+    const cc=S.p.ch[k],custOk=cc.skins.length>0||(devOn&&SKIN_IMPORT_PV&&SKIN_IMPORT_PV.char===k);
     const useBtn=sel?`<span class="st" style="color:var(--runway);font-weight:700">Selezionato</span>`:`<button class="btn sm" data-char="${k}">Usa</button>`;
     const custBtn=custOk?`<button class="btn ghost sm" data-cust="${k}">Personalizza</button>`:"";
     return `<div class="card ${sel?"sel":""}" style="${bg}"><canvas data-draw="hero:${k}:${Math.round((o.scale||1)*100)}"></canvas><div class="nm">${esc(o.label||CHARS[k].name)}</div><div class="st" style="font-weight:700;color:var(--runway)">Liv. ${cc.lvl}</div><div class="bar" style="width:80%;margin:0"><i style="width:${lvPct(k)}%"></i></div><div class="acts" style="margin-top:6px">${useBtn}${custBtn}</div></div>`}).join("")}
@@ -1987,7 +1961,7 @@ function startCustAnim(){
 }
 function renderCust(){
   const cc=S.p.ch[custChar],name=(S.ov["char_"+custChar]||{}).label||CHARS[custChar].name;
-  const devReach=devOn&&DEV_SKIN_TEST&&DEV_SKIN_TEST.char===custChar;
+  const devReach=devOn&&SKIN_IMPORT_PV&&SKIN_IMPORT_PV.char===custChar;
   const skinBtns=`<button class="btn ${cc.skin?"ghost":""} sm" data-skinsel="">Nessuno</button>`+
     cc.skins.map(id=>`<button class="btn ${cc.skin===id?"":"ghost"} sm" data-skinsel="${id}">${esc(skinName(id))}</button>`).join("");
   const dirBtn=(d,label)=>`<button class="${custDir===d?"on":""}" data-custdir="${d}">${label}</button>`;
@@ -2111,7 +2085,7 @@ function loginModal(){
 }
 
 /* ============ ESPORTA MODIFICHE (manifest schemaVersion 1) ============ */
-const EXP_LIM={text:500,audio:300*1024,total:2*1024*1024};
+const EXP_LIM={text:500,audio:300*1024,sprite:200*1024,total:2*1024*1024};
 const EXP_CH={roccia:"uomoRoccia",algidone:"algidone"};
 const EXP_DEFCOL="#23364c";
 const expCrcT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
@@ -2219,9 +2193,35 @@ function expBuiltinB64(target){
   const m=/^music\.pr\.(\w+)$/.exec(target);
   return m&&PR_MUSDEF[m[1]]?PR_MUSDEF[m[1]].b64:null;
 }
-/* aggancio per F4 (strumento skin/sprite): gli sprite modificati. Oggi la dev mode non ne produce. Ogni elemento:
-   {character:"roccia|algidone|shared", target, blob (png/webp nuovo), built (Blob dell'asset incorporato, o null), frameKey, anchor, ox, oy, base_w, base_h, screen?} */
-async function expSpriteItems(){return[]}
+/* aggancio per il pacchetto sprite/skin. Un elemento generico (mai prodotto oggi, tenuto per un
+   futuro strumento non-costume): {type:"sprite",character,target,blob,built,frameKey,anchor,ox,oy,
+   base_w,base_h,screen?}. Un elemento costume (F4b2, dall'anteprima locale SKIN_IMPORT_PV di F4b1):
+   {type:"skin",character,target:"skin.<id>.<frameKey>",file:"skins/<id>/sk_<id>_<frameKey>.png",
+   blob (fotogramma tagliato, dimensione nativa),built (Blob del fotogramma gia' nel costume, o null
+   se nuovo/aggiunto),screen,frameKey,skinId,skinName,mode,action:"new"|"update",ox,oy,base_w,base_h}
+   -- i fotogrammi "invariato" (bytes identici a quelli gia' nel costume di destinazione, segnalati
+   durante l'importazione) sono gia' esclusi da SKIN_IMPORT_PV.unchanged, quindi non escono di qui. */
+const SKIN_MAZE_SCREEN={roccia:"maze-play-roccia",algidone:"maze-fire-algidone"};
+async function expSpriteItems(){
+  if(!SKIN_IMPORT_PV)return[];
+  const{char,id,mode,name,frames,unchanged}=SKIN_IMPORT_PV,items=[];
+  const action=id?"update":"new",skinId=id||skinSlug(name);
+  for(const frameKey in frames){
+    if(unchanged&&unchanged.has(frameKey))continue;
+    const cv=frames[frameKey],b64=cv.toDataURL("image/png").split(",")[1];
+    const blob=new Blob([expB64ToU8(b64)],{type:"image/png"});
+    let built=null;
+    if(id&&SKINS[id]&&SKINS[id].frames[frameKey]){
+      const ex=SKINS[id].frames[frameKey],exB64=typeof ex==="object"?ex.b64:ex;
+      built=new Blob([expB64ToU8(exB64)],{type:"image/png"});
+    }
+    const base=skinBaseImg(frameKey)||{};
+    items.push({type:"skin",character:char,target:"skin."+skinId+"."+frameKey,
+      file:"skins/"+skinId+"/sk_"+skinId+"_"+frameKey+".png",blob,built,screen:SKIN_MAZE_SCREEN[char],
+      frameKey,skinId,skinName:name,mode,action,ox:cv.skOx||0,oy:cv.skOy||0,base_w:base.width||0,base_h:base.height||0});
+  }
+  return items;
+}
 function expTextEdits(){
   const tx=expTextChanges();
   const list=tx.out.map(c=>({key:c.target,target:c.target,kind:/\.color$/.test(c.target)?"colour":/\.scale$/.test(c.target)?"scale":"text",char:EXP_CHV2[c.character]||"shared",
@@ -2303,9 +2303,9 @@ async function expBuildPackage(o){
     if(flagged)warnings.push("Oltre 300 KB ("+Math.round(size/1024)+" KB): va in flagged/ e lo converte Claude — "+a.target);
   }
   for(const s of await expSpriteItems()){
-    const ext=(s.blob.type||"").indexOf("webp")>=0?"webp":"png",size=s.blob.size;
-    if(size>EXP_LIM.sprite){errors.push("Sprite oltre 200 KB ("+Math.round(size/1024)+" KB): "+s.target);continue}
-    total+=size;items.push({type:"sprite",character:s.character,target:s.target,blob:s.blob,ext,file:s.target.replace(/\./g,"_")+"."+ext,size,spr:s});
+    const ext=(s.blob.type||"").indexOf("webp")>=0?"webp":"png",size=s.blob.size,lbl=s.type==="skin"?"Fotogramma costume":"Sprite";
+    if(size>EXP_LIM.sprite){errors.push(lbl+" oltre 200 KB ("+Math.round(size/1024)+" KB): "+s.target);continue}
+    total+=size;items.push({type:s.type||"sprite",character:s.character,target:s.target,blob:s.blob,ext,file:s.file||(s.target.replace(/\./g,"_")+"."+ext),size,spr:s});
   }
   if(total>EXP_LIM.total)errors.push("Gli asset superano 2 MB in totale ("+(total/1048576).toFixed(2)+" MB).");
   const res={ok:false,errors,warnings,count:items.length,totalBytes:total,zip:null,zipName:"mangiasassi_"+(acct||"x")+"_"+date+".zip",items:items.map(x=>({type:x.type,target:x.target,file:x.file,size:x.size,flagged:!!x.flagged}))};
@@ -2333,7 +2333,10 @@ async function expBuildPackage(o){
       const s=x.spr,sz=await expImgSize(x.blob)||[0,0];let before=null;
       if(s.built){const bu=new Uint8Array(await s.built.arrayBuffer()),bs=await expImgSize(s.built);before={sha256:await expSha256(bu),bytes:bu.length};if(bs){before.w=bs[0];before.h=bs[1]}}
       if(s.screen)c.screen=s.screen;
-      c.before=before;c.file=x.file;c.meta={frameKey:s.frameKey,w:sz[0],h:sz[1],anchor:s.anchor,ox:s.ox,oy:s.oy,base_w:s.base_w,base_h:s.base_h};
+      c.before=before;c.file=x.file;
+      c.meta=x.type==="skin"
+        ?{skinId:s.skinId,skinName:s.skinName,mode:s.mode,action:s.action,frameKey:s.frameKey,w:sz[0],h:sz[1],ox:s.ox,oy:s.oy,base_w:s.base_w,base_h:s.base_h}
+        :{frameKey:s.frameKey,w:sz[0],h:sz[1],anchor:s.anchor,ox:s.ox,oy:s.oy,base_w:s.base_w,base_h:s.base_h};
     }
     c.note=noteOf(x.target);changes.push(c);
     ents.push({name:sub+x.file,data:u8});
@@ -2367,6 +2370,7 @@ async function exportDialog(){
     <div class="acts" style="margin-top:10px"><button class="btn" id="xs" ${sendOff?"disabled":""}>Invia testi</button></div>${hint}
     <hr style="border:0;border-top:1px solid var(--steel);margin:14px 0">
     <p style="margin:0 0 6px"><b>Audio e sprite</b> · ${pv.count} file${pv.count?` (${Math.round(pv.totalBytes/1024)} KB su 2048 KB)`:""}</p>
+    ${SKIN_IMPORT_PV?`<small style="display:block;color:var(--mute);margin-bottom:6px">Costume in anteprima: <b>${esc(SKIN_IMPORT_PV.name)}</b> · ${SKIN_IMPORT_PV.char==="algidone"?"Algidone":"Uomo roccia"} · ${SKIN_IMPORT_PV.mode} · ${SKIN_IMPORT_PV.id?"aggiornamento":"nuovo costume"} · ${pv.items.filter(i=>i.type==="skin").length} fotogrammi</small>`:""}
     ${pv.empty?`<small style="display:block;color:var(--mute)">Nessun audio o sprite da esportare.</small>`:""}
     ${pv.warnings.length?`<small style="display:block;color:var(--mute);margin-top:6px">${pv.warnings.map(esc).join("<br>")}</small>`:""}
     <label class="f">Nota generale (obbligatoria)</label><textarea id="xn" rows="2" maxlength="${EDIT_NOTE_MAX}" placeholder="Perché queste modifiche?"></textarea>
@@ -2440,8 +2444,6 @@ function devRows(){
      <div style="display:flex;gap:8px;margin-top:8px"><input type="number" id="lvt" min="1" max="100" value="${cs().lvl}" style="width:90px;background:#0f1824;border:2px solid var(--steel);border-radius:10px;color:var(--ink);padding:8px;font:inherit"><button class="btn sm" id="lvs">Imposta</button></div></div>
    <div class="opt" style="flex-direction:column;align-items:stretch"><div>Regali del percorso<small>Anteprima dell'animazione del regalo per ogni premio registrato. Non modifica il salvataggio.</small></div>
      <div class="acts">${Object.keys(ROAD_REWARDS).map(n=>`<button class="btn ghost sm" data-roadprev="${n}">${esc(ROAD_REWARDS[n].name)}</button>`).join("")}</div></div>
-   <div class="opt" style="flex-direction:column;align-items:stretch"><div>Skin di prova (K1b)<small>Verifica l'aggancio degli skin senza uno skin vero: contorno magenta = overlay, tinta magenta = replace. Mai salvato, sparisce disattivando la modalità sviluppatore.</small></div>
-     <div class="acts" style="flex-wrap:wrap">${["roccia","algidone"].map(c=>["overlay","replace"].map(m=>`<button class="btn ${DEV_SKIN_TEST&&DEV_SKIN_TEST.char===c&&DEV_SKIN_TEST.mode===m?"":"ghost"} sm" data-devskin="${c}:${m}">${c==="roccia"?"Roccia":"Algidone"} · ${m}</button>`).join("")).join("")}<button class="btn ${DEV_SKIN_TEST?"ghost":""} red sm" data-devskin="off">Disattiva</button></div></div>
    ${g.mini}`;
   const obj=`<div class="opt" style="flex-direction:column;align-items:stretch"><div>Popup di sblocco<small>Anteprima dei popup mostrati sul menu principale (nuovo asset, personaggio, minigioco, traguardo) e del popup obiettivo. Non modifica il salvataggio.</small></div>
      <div class="acts"><button class="btn ghost sm" data-popprev="asset">Asset</button><button class="btn ghost sm" data-popprev="char">Personaggio</button><button class="btn ghost sm" data-popprev="game">Minigioco</button><button class="btn ghost sm" data-popprev="milestone">Traguardo</button><button class="btn ghost sm" data-popprev="ach">Obiettivo</button></div></div>`;
@@ -2500,7 +2502,6 @@ function bindDev(){
     if(t.closest("#gmr")){IDB.del("musicGam").catch(()=>{});bgmGam=null;toast("Musica originale ripristinata");return}
     const popprev=t.closest("[data-popprev]");if(popprev){popPreview(popprev.dataset.popprev);return}
     const roadprev=t.closest("[data-roadprev]");if(roadprev){roadPreviewGift(roadprev.dataset.roadprev);return}
-    const dsk=t.closest("[data-devskin]");if(dsk){const v=dsk.dataset.devskin;DEV_SKIN_TEST=v==="off"?null:{char:v.split(":")[0],mode:v.split(":")[1]};return render()}
     const skc=t.closest("[data-skinchar]");if(skc){skinExpChar=skc.dataset.skinchar;return render()}
     if(t.closest("#skinExpGo"))return skinExportSheetUI();
     const dim=t.closest("[data-skinimpmode]");if(dim){skinImpMode=dim.dataset.skinimpmode;return render()}
@@ -2614,8 +2615,14 @@ function skinRows(char){
       const [k,dir]=Array.isArray(kd)?kd:[kd,s.dir]; // una voce puo' essere "key" (usa s.dir) o [key,dir] per una riga a direzioni miste (es. Cinghiale, F4c)
       const im=skinBaseImg(k);if(!im||!im.width){warn.push("Fotogramma mancante in IMG: "+k);continue}
       const bw4=im.width*SKIN_SCALE,bh4=im.height*SKIN_SCALE;
-      const cw=Math.round(bw4*(1+2*SKIN_MARGIN)),ch=Math.round(bh4*(1+2*SKIN_MARGIN));
-      items.push({key:k,cellW:cw,cellH:ch,baseX:Math.round(bw4*SKIN_MARGIN),baseY:Math.round(bh4*SKIN_MARGIN),baseW:bw4,baseH:bh4,dir,setLabel:s.label});
+      // F4b2 1: margine arrotondato PER ECCESSO a un blocco x4 intero -- baseX/baseY (e quindi ogni
+      // cella) restano sempre multipli esatti di SKIN_SCALE, cosi' l'origine del frame base cade
+      // sempre su un confine di blocco: il taglio nativo fa sempre la media di un blocco x4 pulito,
+      // mai a cavallo di due pixel nativi diversi (il bug che il filtro proporzionale di F4b1 doveva
+      // aggirare quando la cella non era un multiplo esatto di 4).
+      const mx=Math.ceil(bw4*SKIN_MARGIN/SKIN_SCALE)*SKIN_SCALE,my=Math.ceil(bh4*SKIN_MARGIN/SKIN_SCALE)*SKIN_SCALE;
+      const cw=bw4+2*mx,ch=bh4+2*my;
+      items.push({key:k,cellW:cw,cellH:ch,baseX:mx,baseY:my,baseW:bw4,baseH:bh4,dir,setLabel:s.label});
     }
     if(items.length)addSection(s.label,items);
   }
@@ -2829,7 +2836,7 @@ async function skinImportRun(){
     if(!targetIsNew&&!(SKINS[targetId]&&SKINS[targetId].char===c))throw new Error("Costume di destinazione non valido.");
     const mode=targetIsNew?skinImpMode:SKINS[targetId].mode;
     if(targetIsNew&&!skinImpName.trim())throw new Error("Dai un nome al costume.");
-    const warn=[],frames={};
+    const warn=[],frames={},unchanged=new Set();
     for(const file of files){
       const id=await skinImportFileToImageData(file),d={data:id.data,w:id.width,h:id.height};
       let cands=layout.pages.filter(p=>p.w===d.w&&p.h===d.h);
@@ -2856,7 +2863,7 @@ async function skinImportRun(){
         const sha=await expSha256(expB64ToU8(b64));
         if(targetId){
           const ex=SKINS[targetId].frames[cell.key],exB64=ex&&(typeof ex==="object"?ex.b64:ex);
-          if(exB64&&await expSha256(expB64ToU8(exB64))===sha)warn.push("Invariato: "+cell.key);
+          if(exB64&&await expSha256(expB64ToU8(exB64))===sha){warn.push("Invariato: "+cell.key);unchanged.add(cell.key)}
         }
         cv.skOx=Math.round(cell.baseX/SKIN_SCALE);cv.skOy=Math.round(cell.baseY/SKIN_SCALE);
         frames[cell.key]=cv;
@@ -2865,7 +2872,7 @@ async function skinImportRun(){
       for(let i=0;i<d.w*d.h;i++)if(d.data[i*4+3]>0&&!mask[i])outside++;
       if(outside)warn.push(outside+" pixel disegnati fuori dai riquadri (ignorati)");
     }
-    SKIN_IMPORT_PV={char:c,id:targetId,mode,name:targetIsNew?skinImpName.trim():(SKINS[targetId].name||targetId),frames};
+    SKIN_IMPORT_PV={char:c,id:targetId,mode,name:targetIsNew?skinImpName.trim():(SKINS[targetId].name||targetId),frames,unchanged};
     skinImpMsg=`<small style="display:block;color:var(--runway)">Anteprima aggiornata (${Object.keys(frames).length} fotogrammi importati).</small>${warn.length?`<small style="display:block;color:var(--mute);margin-top:4px">${warn.map(esc).join("<br>")}</small>`:""}`;
   }catch(e){skinImpMsg=`<div class="err">${esc(e&&e.message||"Importazione non riuscita.")}</div>`}
   skinImpBusy=false;render();
@@ -2887,7 +2894,7 @@ function skinImportHTML(){
    <label class="btn ghost sm" style="cursor:pointer;margin-top:8px;align-self:flex-start">Scegli file<input type="file" id="skinImpFiles" accept="image/png" multiple hidden></label>
    <div class="acts" style="margin-top:8px"><button class="btn sm" id="skinImpGo" ${skinImpBusy?"disabled":""}>Importa</button>${SKIN_IMPORT_PV&&SKIN_IMPORT_PV.char===c?`<button class="btn ghost sm" id="skinImpClear">Rimuovi anteprima</button>`:""}</div>
    <div id="skinImpOut" style="margin-top:8px">${skinImpMsg||""}</div>
-   ${pv?`<small style="display:block;margin-top:4px">Anteprima: ${pv.have}/${pv.total}${pv.missing.length?" — mancano: "+pv.missing.map(esc).join(", "):""}</small>`:""}
+   ${pv?`<small style="display:block;margin-top:4px">Anteprima: ${pv.have}/${pv.total}${pv.missing.length?" — mancano: "+pv.missing.map(esc).join(", "):""}</small><small style="display:block;margin-top:4px;color:var(--mute)">L'anteprima si perde se ricarichi: scarica il pacchetto prima.</small>`:""}
   </div>`;
 }
 function skinToolHTML(){

@@ -55,9 +55,23 @@ def seed_edits(p):
     p.evaluate("""(()=>{S.tiles.find(t=>t.id==='new').label='Nuova partita';S.ov.game_0={color:'#112233'};S.ov.game_1={scale:1.2};S.gtext.intro='Ciao, bella serata';persist()})()""")
 
 
+def launch_browser(pw):
+    """Some sandboxes preinstall a Chromium revision older than this pip playwright expects; fall
+    back to whatever chrome-linux/chrome is actually on disk before giving up (see test_f4a.py)."""
+    try:
+        return pw.chromium.launch()
+    except Exception:
+        import glob
+        base = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "")
+        cands = glob.glob(os.path.join(base, "chromium-*", "chrome-linux", "chrome")) if base else []
+        if cands:
+            return pw.chromium.launch(executable_path=cands[0])
+        raise
+
+
 srv = C.serve()
 with sync_playwright() as pw:
-    b = pw.chromium.launch()
+    b = launch_browser(pw)
     # ---------------------------------------------------------------- Invia testi
     ctx, p, errs = page(b); menu(p); seed_edits(p)
     check("window.mgExport removed", p.evaluate("typeof mgExport") == "undefined")

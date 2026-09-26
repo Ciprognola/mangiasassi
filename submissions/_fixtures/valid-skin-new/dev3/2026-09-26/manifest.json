@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 2,
+  "developer": "dev3",
+  "baseVersion": "0.4_11",
+  "site": "dev",
+  "exportedAt": "2026-09-26T08:00:00Z",
+  "note": "primo costume di prova",
+  "changes": [
+    {
+      "id": "s1",
+      "type": "skin",
+      "character": "roccia",
+      "target": "skin.miatuta.f0",
+      "screen": "maze-play-roccia",
+      "before": null,
+      "file": "skins/miatuta/sk_miatuta_f0.png",
+      "meta": {
+        "skinId": "miatuta",
+        "skinName": "Mia Tuta",
+        "mode": "overlay",
+        "action": "new",
+        "frameKey": "f0",
+        "w": 1,
+        "h": 1,
+        "ox": 0,
+        "oy": 0,
+        "base_w": 1,
+        "base_h": 1
+      }
+    }
+  ]
+}
