@@ -1,0 +1,75 @@
+name: tag-release
+
+# Tags a release and publishes its GitHub Release once it lands on main. Cloud Claude Code sessions get an
+# HTTP 403 pushing tags (contents:write on a workflow token is allowed, a session's own git credentials are not),
+# so this replaces that manual step. A no-op on every ordinary push: it only acts when the root VERSION file is
+# a bare release version (digits and dots only, e.g. 0.4.5 -- never 0.4.5_1).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Tag the release and publish it, if VERSION is a bare release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          VERSION="$(cat VERSION | tr -d '[:space:]')"
+          if ! [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+            echo "VERSION '$VERSION' is not a bare release version (has a _N build suffix, or isn't digits/dots) -- nothing to do."
+            exit 0
+          fi
+          echo "Release version: $VERSION"
+
+          TARGET="$(git log --first-parent --grep="^Release ${VERSION}\$" -1 --format=%H main)"
+          if [ -z "$TARGET" ]; then
+            echo "::error::No commit on main's first-parent history has the message 'Release $VERSION' -- can't find what to tag."
+            exit 1
+          fi
+          echo "Target commit: $TARGET"
+
+          TAG="v${VERSION}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists on origin -- skipping tag creation."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" -m "Release ${VERSION}" "$TARGET"
+            git push origin "refs/tags/${TAG}"
+            echo "Pushed tag $TAG -> $TARGET"
+          fi
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "GitHub Release $TAG already exists -- skipping."
+            exit 0
+          fi
+
+          VER_ESC="$(printf '%s' "$VERSION" | sed 's/\./\\./g')"
+          START="$(grep -n "^## ${VER_ESC}\([[:space:]]\|\$\)" CHANGELOG.md | head -1 | cut -d: -f1)"
+          if [ -z "$START" ]; then
+            echo "::warning::No '## $VERSION' heading found in CHANGELOG.md -- releasing with empty notes."
+            : > "$RUNNER_TEMP/notes.md"
+          else
+            END="$(awk -v s="$START" 'NR>s && /^## /{print NR; exit}' CHANGELOG.md)"
+            if [ -z "$END" ]; then
+              tail -n "+$START" CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+            else
+              sed -n "${START},$((END-1))p" CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+            fi
+          fi
+
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$TARGET" \
+            --title "Release ${VERSION}" --notes-file "$RUNNER_TEMP/notes.md"
+          echo "Created GitHub Release $TAG"

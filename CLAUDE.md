@@ -232,7 +232,7 @@ CHANGELOG.md                   changelog of the project — kept current, see be
 submissions/                   developer submission packages + README
 android/                       WebView wrapper
 scripts/validate_submission.py structure + size validator
-.github/workflows/             pages deploy + validate-submission + bugs-export (bugs-export.yml lives on BOTH main and dev — main is needed for the schedule/manual run — and the two copies must stay identical)
+.github/workflows/             pages deploy + validate-submission + bugs-export (bugs-export.yml lives on BOTH main and dev — main is needed for the schedule/manual run — and the two copies must stay identical) + tag-release (main only: tags + publishes a release once VERSION on main is a bare release version)
 DEVELOPERS.md                  browser-only guide, no Git knowledge required
 CODEOWNERS                     → Ciprognola
 LICENSE                        MIT
@@ -515,6 +515,9 @@ A synced save may refer to dev-added extra objects that exist only on another de
 - [ ] Commit `v0.4.5_NN: …`, push to `dev`
 - [ ] **Release only**: `SKIN_COVERAGE.md` regenerated against the release build; no `manca` on a frame added
       since the last stable release, unless the owner names that gap as accepted (§6 rule 11)
+- [ ] **Release only**: merge `dev` → `main` with a commit message exactly `Release <version>` (e.g.
+      `Release 0.4.5`) — tags and the GitHub Release are created by `.github/workflows/tag-release.yml` on
+      the push to `main`, not by the session. Sessions never push a tag themselves.
 
 ---
 ## 10. Current release
