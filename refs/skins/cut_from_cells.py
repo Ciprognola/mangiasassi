@@ -1,22 +1,77 @@
 #!/usr/bin/env python3
 """Cut a finished skin sheet into per-frame PNGs.
 Usage: python3 cut_from_cells.py <skin>/<skin>_cells.json <skin>/<skin>_DRAWN.png <out_dir>
-Writes sk_<skin>_<frameKey>.png, one per cell, at the exact base-frame size.
+Writes sk_<skin>_<frameKey>.png, one per cell.
+Legacy sheets (no "scale" field, e.g. geka/bk K1b kit: cell == native frame size) are cut as-is,
+unchanged from before.
+F4a sheets (schema 1: "scale"/"margin" fields, cell = base frame x scale + a transparent margin):
+each cut PNG is downscaled by 1/scale back to native resolution (still larger than the base frame,
+since the margin is kept, in case the artist drew outside it); ox/oy (native px, the base frame's
+offset from the cut PNG's top-left, from the margin) are written to <skin>_offsets.json alongside
+the PNGs for every frame where they are non-zero -- this is normal for every F4a frame, not a sign
+of anything unusual.
 Empty cells -> WARNING (missing frame, the game renders that frame without the skin).
-Pixels drawn outside every cell -> WARNING (they would be lost)."""
+Pixels drawn outside every cell -> WARNING (they would be lost).
+
+Downscaling (F4b1 item 3, README.md "cutting algorithm"): box_downscale() below is the SAME
+algorithm as the game's own skinBoxDownscale() (index.html, "Carica costume" import) -- a
+premultiplied-alpha box filter with identical arithmetic (both round with "half up": int(x+.5)
+here, Math.floor(x+.5) in JS). Every intermediate value is an exact integer sum of at most
+scale*scale products of two bytes, well inside a double's exact range, so the two
+implementations give byte-identical pixels for the same input despite being two different
+languages -- not an approximation shared "in spirit" like both using LANCZOS would be. Replaces
+the former Image.resize(..., Image.LANCZOS), which was never guaranteed to agree with a browser
+canvas's own resampling."""
 import json,sys,os
 from PIL import Image
-cfg=json.load(open(sys.argv[1]));sheet=Image.open(sys.argv[2]).convert('RGBA');out=sys.argv[3]
-os.makedirs(out,exist_ok=True)
-if sheet.size!=(cfg['sheet']['w'],cfg['sheet']['h']):sys.exit(f"ERROR sheet is {sheet.size}, template is {cfg['sheet']['w']}x{cfg['sheet']['h']} - do not resize the template")
-a=sheet.getchannel('A');missing=[];mask=Image.new('L',sheet.size,0)
-for k,c in cfg['frames'].items():
-    box=(c['x'],c['y'],c['x']+c['w'],c['y']+c['h']);mask.paste(255,box)
-    im=sheet.crop(box)
-    if im.getchannel('A').getextrema()[1]==0:missing.append(k);continue
-    im.save(f"{out}/sk_{cfg['skin']}_{k}.png")
-from PIL import ImageChops
-outside=sum(1 for v in ImageChops.subtract(a,mask).tobytes() if v)
-print(f"{cfg['skin']} ({cfg['mode']}): {len(cfg['frames'])-len(missing)}/{len(cfg['frames'])} frames cut")
-if missing:print("WARNING missing frames:",", ".join(missing))
-if outside:print(f"WARNING {outside} drawn pixels are outside the cells and were ignored")
+
+def box_downscale(im,factor):
+    """im: a PIL RGBA image. Returns a new RGBA image at round(w/factor) x round(h/factor).
+    The cell (margin included) is not always an exact multiple of factor even though the base
+    frame inside it always is (F4b1: found via the roccia/algidone round-trip test failing on an
+    odd base width), so each output pixel's source block is the proportional slice
+    [floor(ox*w/ow), floor((ox+1)*w/ow)) -- well-defined for ANY w/ow ratio, not just an exact
+    factor, and (floor division is exact/shared between languages) still byte-identical to
+    index.html's skinBoxDownscale()."""
+    w,h=im.size;ow,oh=round(w/factor),round(h/factor)
+    px=im.load();out=Image.new('RGBA',(ow,oh));opx=out.load()
+    for oy in range(oh):
+        y0,y1=(oy*h)//oh,((oy+1)*h)//oh
+        for ox in range(ow):
+            x0,x1=(ox*w)//ow,((ox+1)*w)//ow
+            sr=sg=sb=sa=0;cnt=0
+            for sy in range(y0,y1):
+                for sx in range(x0,x1):
+                    r,g,b,a=px[sx,sy]
+                    sr+=r*a;sg+=g*a;sb+=b*a;sa+=a;cnt+=1
+            if sa==0:opx[ox,oy]=(0,0,0,0)
+            else:opx[ox,oy]=(int(sr/sa+.5),int(sg/sa+.5),int(sb/sa+.5),int(sa/cnt+.5))
+    return out
+
+def main():
+    cfg=json.load(open(sys.argv[1]));sheet=Image.open(sys.argv[2]).convert('RGBA');out=sys.argv[3]
+    os.makedirs(out,exist_ok=True)
+    if sheet.size!=(cfg['sheet']['w'],cfg['sheet']['h']):sys.exit(f"ERROR sheet is {sheet.size}, template is {cfg['sheet']['w']}x{cfg['sheet']['h']} - do not resize the template")
+    scale=cfg.get('scale') or 1
+    a=sheet.getchannel('A');missing=[];mask=Image.new('L',sheet.size,0);offsets={}
+    for k,c in cfg['frames'].items():
+        box=(c['x'],c['y'],c['x']+c['w'],c['y']+c['h']);mask.paste(255,box)
+        im=sheet.crop(box)
+        if im.getchannel('A').getextrema()[1]==0:missing.append(k);continue
+        if scale!=1:
+            base=c.get('base')
+            if base:
+                ox,oy=(base['x']-c['x'])/scale,(base['y']-c['y'])/scale
+                if ox or oy:offsets[k]={"ox":round(ox,2),"oy":round(oy,2)}
+            im=box_downscale(im,scale)
+        im.save(f"{out}/sk_{cfg['skin']}_{k}.png")
+    if offsets:json.dump(offsets,open(f"{out}/{cfg['skin']}_offsets.json",'w'),indent=1)
+    from PIL import ImageChops
+    outside=sum(1 for v in ImageChops.subtract(a,mask).tobytes() if v)
+    print(f"{cfg['skin']} ({cfg['mode']}): {len(cfg['frames'])-len(missing)}/{len(cfg['frames'])} frames cut"+(f", downscaled 1/{scale}" if scale!=1 else ""))
+    if offsets:print(f"{len(offsets)} frame(s) have an ox/oy offset -> {cfg['skin']}_offsets.json")
+    if missing:print("WARNING missing frames:",", ".join(missing))
+    if outside:print(f"WARNING {outside} drawn pixels are outside the cells and were ignored")
+
+if __name__=="__main__":
+    main()

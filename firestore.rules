@@ -9,8 +9,15 @@ service cloud.firestore {
       allow read: if signedIn() && request.auth.uid == uid;
       allow write: if false;
     }
-    match /saves/{uid} {
-      allow read, write: if signedIn() && request.auth.uid == uid;
+    match /saves/{docId} {
+      function mine() { return request.auth != null && (docId == request.auth.uid || docId == request.auth.uid + '_dev'); }
+      function ok() { return request.resource.data.keys().hasOnly(['data','rev','ts','ver'])
+        && request.resource.data.data is string && request.resource.data.data.size() <= 900000
+        && request.resource.data.ver is string && request.resource.data.ts == request.time; }
+      allow read: if mine();
+      allow create: if mine() && ok() && request.resource.data.rev == 1;
+      allow update: if mine() && ok() && request.resource.data.rev == resource.data.rev + 1;
+      allow delete: if false;
     }
     match /bugs/{id} {
       allow create: if isDev()
@@ -19,6 +26,16 @@ service cloud.firestore {
         && request.resource.data.text.size() > 0
         && request.resource.data.text.size() <= 1000
         && request.resource.data.keys().hasOnly(['uid','text','screen','version','char','ts','ua','meta']);
+      allow read, update, delete: if false;
+    }
+    match /edits/{id} {
+      allow create: if isDev()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid','acct','kind','char','screen','target','locator','before','value','note','base','ts','meta'])
+        && request.resource.data.kind in ['text','colour','scale']
+        && request.resource.data.value is string
+        && request.resource.data.value.size() <= 500
+        && (!('note' in request.resource.data) || (request.resource.data.note is string && request.resource.data.note.size() <= 300));
       allow read, update, delete: if false;
     }
   }

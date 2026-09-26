@@ -44,6 +44,27 @@ spend time on them unless asked.
    (`refs/skins/cut_from_cells.py`) turns the sheet into the individual `sk_<skin-id>_<frameKey>.png` files
    from there. You don't need to cut anything yourself.
 
+## Cutting algorithm (F4a/F4a2/F4c sheets, F4b1)
+
+The character-sheet workflow (`skinBuildSheet` in `index.html`, "Scarica foglio") draws every frame at
+×4 with a transparent margin, and `<skin-id>_cells.json` records each cell's rect. Turning a filled-in
+sheet back into per-frame PNGs at native resolution — downscaling by exactly 1/4 — is **one algorithm**,
+implemented **twice** (`refs/skins/cut_from_cells.py`'s `box_downscale()` for the offline/Python workflow,
+`index.html`'s `skinBoxDownscale()` for the in-game "Carica costume" import, F4b1) and required to produce
+byte-identical pixels in both places — not "close enough" the way two different libraries' resampling
+(e.g. Pillow's LANCZOS vs. a browser canvas's own scaling) would be.
+
+The algorithm: a premultiplied-alpha box filter. Each output pixel is the average of the source pixels in
+its proportional slice `[floor(ox*w/ow), floor((ox+1)*w/ow))` of the input (the cell, margin included,
+isn't always an exact multiple of 4 even though the base frame inside it always is — a plain "4×4 block"
+box filter breaks on that edge case). Colour channels are weighted by alpha before averaging and divided
+by the summed alpha (so a fully transparent source pixel never bleeds colour into a partially-covered
+output pixel), and every result is rounded "half up" (`int(x+.5)` in Python, `Math.floor(x+.5)` in JS).
+Every intermediate sum is an exact integer well inside a double's precision, so the two languages'
+floating-point division gives the identical result bit-for-bit. A test proving this (`tools/fbstub/test_f4b1.py`,
+"cutter parity") feeds the same synthetic pixels through both implementations and asserts byte-identical
+output. Changing this algorithm in one file without the other breaks that guarantee — change both, together.
+
 ## Orientation rules
 
 - Draw the **right-facing** side view only (`f*`/`al_w*`/`al_r*` etc. as they're named — check

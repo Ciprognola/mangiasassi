@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "developer": "dev1",
+  "date": "2026-09-26",
+  "baseVersion": "V0.2_5",
+  "changes": [
+    {
+      "type": "text",
+      "character": "uomoRoccia",
+      "target": "dialogue.win",
+      "value": "Ciao",
+      "note": "prova v1"
+    }
+  ]
+}
