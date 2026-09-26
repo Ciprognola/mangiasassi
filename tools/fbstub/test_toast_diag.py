@@ -45,7 +45,7 @@ def toast_screens(b, label, view):
     dev_ok(show_toast(p, "Corto"), "Opzioni › Sviluppatore"); wait_gone(p)
     p.evaluate("go('menu')"); p.wait_for_timeout(300)
     # maze: not while playing (held), then over the paused game
-    p.click("[data-tile=new]"); p.wait_for_function("G&&G.state==='play'", timeout=8000)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_function("G&&G.state==='play'", timeout=8000)
     p.evaluate("toast(%s)" % json.dumps(LONG)); p.wait_for_timeout(700)
     check(f"toast ({label}) maze: held back while the run is in play", p.evaluate("!document.querySelector('#toasts .toast')"))
     p.evaluate("G.state='pause'"); p.wait_for_selector("#toasts .toast.on", timeout=3000); p.wait_for_timeout(350)

@@ -7,6 +7,7 @@ import functools, http.server, json, os, sys, threading, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import fbstub
+from gp import pick_maze
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -362,7 +363,7 @@ with sync_playwright() as pw:
 
     # ============================================================ run-end flush (real run, Abbandona)
     ctx, p, errs = page(b, site="dev", local=norm(b, save())); settle(p)
-    p.click("[data-tile=new]"); p.wait_for_timeout(1500)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1500)
     check("a real run starts", p.evaluate("screen") == "game")
     p.click("#ps"); p.wait_for_timeout(300); p.click("#q"); p.wait_for_timeout(300)
     if p.evaluate("!!document.querySelector('#cy')"):
@@ -401,7 +402,7 @@ with sync_playwright() as pw:
     open_account(p)
     check("stable: Account accordion (dev in dev mode) has NO cloud block", not p.evaluate("!!document.querySelector('#clst')||!!document.querySelector('[data-clt]')||!!document.querySelector('#clsy')"))
     p.click("details.acc[data-acc=game] > summary"); p.wait_for_timeout(200); change_diff(p, "hard"); pagehide(p)
-    p.click("#back"); p.wait_for_timeout(200); p.click("[data-tile=new]"); p.wait_for_timeout(1200)
+    p.click("#back"); p.wait_for_timeout(200); p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1200)
     p.click("#ps"); p.wait_for_timeout(300); p.click("#q"); p.wait_for_timeout(900)
     check("stable, flag off (even with the dev test key set): zero Firestore save calls", not p.evaluate("window.__fbs.saveCalls") and p.evaluate("localStorage.getItem('mgs_cloud')===null"), p.evaluate("window.__fbs.saveCalls"))
     check("stable: cloudOn() false", p.evaluate("cloudOn()") is False)
@@ -432,7 +433,7 @@ with sync_playwright() as pw:
 
     # ============================================================ offline boot -> game plays, retry once online
     ctx, p, errs = page(b, site="dev", local=norm(b, save()), offline=True); settle(p)
-    p.click("[data-tile=new]"); p.wait_for_timeout(1200)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1200)
     check("offline boot: a run starts normally", p.evaluate("screen") == "game")
     check("offline: nothing in the cloud, status 'in attesa di rete'", not docs(p) and cl(p)["txt"] == "Cloud: in attesa di rete", cl(p)["txt"])
     p.evaluate("window.__fbs.offline=false;window.dispatchEvent(new Event('online'))"); p.wait_for_timeout(900)
@@ -477,7 +478,7 @@ with sync_playwright() as pw:
     ctx, p, errs = page(b, site="dev", local=norm(b, save())); settle(p)
     p.evaluate("(()=>{const a=JSON.parse(localStorage.getItem('__fbstub_saves'));const d=JSON.parse(a['%s'].data);d.p.sordi=31337;a['%s']={data:JSON.stringify(d),rev:2,ts:Date.now(),ver:'0.4_14'};localStorage.setItem('__fbstub_saves',JSON.stringify(a))})()" % (UID + "_dev", UID + "_dev"))
     p.evaluate("sessionStorage.setItem('__off','1')"); p.reload(); settle(p)
-    p.click("[data-tile=new]"); p.wait_for_timeout(1200)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1200)
     p.evaluate("window.__mark=1;sessionStorage.removeItem('__off');window.__fbs.offline=false;window.dispatchEvent(new Event('online'))"); p.wait_for_timeout(900)
     if p.evaluate("!!document.querySelector('#clpop')"):
         check("mid-run conflict popup freezes the maze (G.state pause)", p.evaluate("G.state") == "pause")
@@ -502,7 +503,7 @@ with sync_playwright() as pw:
     check("setup: device dirty", cl(p)["M"]["dirty"] is True)
     p.evaluate("(()=>{const a=JSON.parse(localStorage.getItem('__fbstub_saves'));const d=JSON.parse(a['%s'].data);d.p.sordi=777;a['%s']={data:JSON.stringify(d),rev:2,ts:Date.now(),ver:'0.4_14'};localStorage.setItem('__fbstub_saves',JSON.stringify(a))})()" % (UID + "_dev", UID + "_dev"))
     p.evaluate("sessionStorage.setItem('__off','1')"); p.reload(); settle(p)
-    p.click("[data-tile=new]"); p.wait_for_timeout(1500)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1500)
     p.evaluate("sessionStorage.removeItem('__off');window.__fbs.offline=false;window.dispatchEvent(new Event('online'))"); p.wait_for_timeout(900)
     check("mid-run: cloud newer + device dirty -> popup, maze frozen", p.evaluate("!!document.querySelector('#clpop')") and p.evaluate("G.state") == "pause")
     p.evaluate("window.dispatchEvent(new Event('mgback'))"); p.wait_for_timeout(300)
@@ -517,12 +518,12 @@ with sync_playwright() as pw:
     ctx, p, errs = page(b, site="dev", local=OLD); settle(p)
     check("old save loads (roccia lvl 5, sordi 300)", p.evaluate("S.p.ch.roccia.lvl") == 5 and p.evaluate("S.p.sordi") == 300)
     check("old save is not 'fresh' -> uploaded at first sync", docs(p).get(UID + "_dev", {}).get("rev") == 1)
-    p.click("[data-tile=new]"); p.wait_for_timeout(1200)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1200)
     check("old save: a run starts", p.evaluate("screen") == "game")
     check("no console errors (old save, dev site)", not errs, errs)
     ctx.close()
     ctx, p, errs = page(b, site="stable", local=OLD, dev=False, toggle=False); settle(p)
-    p.click("[data-tile=new]"); p.wait_for_timeout(1200)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1200)
     check("old save on stable (flag off): loads, run starts, no errors", p.evaluate("S.p.ch.roccia.lvl") == 5 and p.evaluate("screen") == "game" and not errs, errs)
     ctx.close()
 

@@ -4,6 +4,7 @@ import json, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, "..", "screens"))
 import capture as C, fbstub
+from gp import pick_maze
 from playwright.sync_api import sync_playwright
 
 RES = []
@@ -95,7 +96,7 @@ with sync_playwright() as pw:
     check("save untouched by opening/sending", before == after)
     check("no console errors (menu flow)", not errs, errs)
     # 3 maze freeze
-    p.click("[data-tile=new]"); p.wait_for_timeout(3600)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(3600)
     check("icon in maze HUD, tap area", has_bug(p) and hit_ok(p) and p.evaluate("screenId()").startswith("maze-"), p.evaluate("screenId()"))
     snap = "JSON.stringify(G,(k,v)=>k==='grid'||k==='parts'||k==='last'?undefined:v)"
     a = p.evaluate(snap); p.wait_for_timeout(600); check("control: maze state changes while running", a != p.evaluate(snap))
@@ -173,7 +174,7 @@ with sync_playwright() as pw:
         def overlap(sel_a, sel_b):
             return p.evaluate("(()=>{const a=document.querySelector('%s'),b=document.querySelector('%s');if(!a||!b)return null;const x=a.getBoundingClientRect(),y=b.getBoundingClientRect();return !(x.right<=y.left||x.left>=y.right||x.bottom<=y.top||x.top>=y.bottom)})()" % (sel_a, sel_b))
         ov.append(("menu bug/devt", overlap("#bugb", "#devt"))); ov.append(("menu bug/title", overlap("#bugb", ".brand h1")))
-        p.click("[data-tile=new]"); p.wait_for_timeout(1500)
+        p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1500)
         ov.append(("maze bug/pause", overlap("#bugb", "#ps"))); ov.append(("maze bug/wv", overlap("#bugb", "#wv"))); ov.append(("maze bug/lives", overlap("#bugb", "#lv")))
         check(f"no overlaps at {vp['width']}x{vp['height']}", not any(v for _, v in ov), ov)
         p.screenshot(path=os.path.join(os.path.expanduser("~"), f"f6_maze_{vp['width']}.png"))

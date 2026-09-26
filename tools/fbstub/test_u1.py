@@ -84,7 +84,7 @@ with sync_playwright() as pw:
 
     # ------------- forced Ferma encounter at girone 8
     ctx, p, errs = page(b, site="stable", local=norm(b, save()), toggle=False, dev=False)
-    settle(p, 600); p.click("[data-tile=new]"); p.wait_for_function("G&&G.state==='play'", timeout=8000)
+    settle(p, 600); p.click("[data-tile=new]"); pick_maze(p); p.wait_for_function("G&&G.state==='play'", timeout=8000)
     p.evaluate("cancelAnimationFrame(raf);window.__fi=null;faInvite=function(o){window.__fi=o};Math.random=()=>0.99;S.p.fa.enc=0;0")
     res = {}
     for st in (5, 7, 8, 9):

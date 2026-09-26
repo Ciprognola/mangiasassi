@@ -14,9 +14,9 @@ def start(p, hard=False):
     p.evaluate("go('menu')"); p.wait_for_timeout(300)
     if hard:
         p.evaluate("S.p.g5=true;persist();render()"); p.wait_for_timeout(200)
-        p.click("[data-tile=hard]")
+        p.click("[data-tile=hard]"); pick_maze(p)
     else:
-        p.click("[data-tile=new]")
+        p.click("[data-tile=new]"); pick_maze(p)
     p.wait_for_function("G&&G.state==='play'", timeout=8000)
 
 

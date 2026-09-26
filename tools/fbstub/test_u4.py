@@ -67,7 +67,7 @@ with sync_playwright() as pw:
     p.mouse.move(5, 5); p.mouse.down(); p.mouse.up(); p.wait_for_timeout(60)
     check("a pointer press hides the ring", had and p.evaluate(RING) == [])
     # arrows do nothing in the maze
-    p.click("[data-tile=new]"); p.wait_for_function("G&&G.state==='play'", timeout=8000)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_function("G&&G.state==='play'", timeout=8000)
     p.keyboard.press("ArrowLeft"); p.wait_for_timeout(100)
     check("in the maze the arrows still steer (no ring, no interference)", p.evaluate(RING) == [] and p.evaluate("G.pl.next===3||G.pl.dir===3"))
     # ---------------- popup buttons
@@ -103,7 +103,7 @@ with sync_playwright() as pw:
         p.evaluate("window.__pl=0;window.__pa=0;go('%s')" % scr); p.wait_for_timeout(500)
         s = p.evaluate("({want:musicWanted(),pl:window.__pl,pa:window.__pa})")
         check(f"menu music wanted and started on «{scr}»", s["want"] and s["pl"] > 0 and s["pa"] == 0, s)
-    p.evaluate("go('menu')"); p.wait_for_timeout(300); p.click("[data-tile=new]"); p.wait_for_function("G&&G.state==='play'", timeout=8000)
+    p.evaluate("go('menu')"); p.wait_for_timeout(300); p.click("[data-tile=new]"); pick_maze(p); p.wait_for_function("G&&G.state==='play'", timeout=8000)
     p.evaluate("window.__pl=0;window.__pa=0;syncMusic()"); p.wait_for_timeout(300)
     s = p.evaluate("({want:musicWanted(),pl:window.__pl,pa:window.__pa,paused:bgm.paused})")
     check("the maze stays silent (music not wanted, paused)", not s["want"] and s["pa"] > 0 and s["pl"] == 0 and s["paused"], s)

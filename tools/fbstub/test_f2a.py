@@ -5,6 +5,7 @@ import json, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, "..", "screens"))
 import capture as C, fbstub
+from gp import pick_maze
 from playwright.sync_api import sync_playwright
 
 RES = []
@@ -118,7 +119,7 @@ with sync_playwright() as pw:
     open_account_acc(p)
     p.fill("#plu", "norole"); p.fill("#plp", "pw-norole"); p.click("#plk"); p.wait_for_timeout(600)
     check("offline: clear 'sei offline' error on player login attempt", "sei offline" in (p.evaluate(PLE) or ""), p.evaluate(PLE))
-    p.click("#back"); p.click("[data-tile=new]"); p.wait_for_timeout(1200)
+    p.click("#back"); p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1200)
     check("offline: a real run still starts fine", p.evaluate("screen") == "game")
     check("no console errors (offline)", not errs, errs)
     ctx.close()
@@ -168,7 +169,7 @@ with sync_playwright() as pw:
     # ============================================================ smoke
     ctx, p, errs = page(b, dev=False); menu(p)
     check("smoke: menu renders", p.evaluate("screen") == "menu")
-    p.click("[data-tile=new]"); p.wait_for_timeout(1500)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1500)
     check("smoke: a run starts", p.evaluate("screen") == "game")
     check("no console errors (smoke)", not errs, errs)
     ctx.close()

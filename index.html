@@ -1339,7 +1339,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_10";
+const VERSION="0.4.5_11";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -2311,8 +2311,21 @@ function renderMenu(){
   startMenuScene();
   if(!SIM()&&!(G&&G.dev)&&S.p.pop.queue.length)popShow();
 }
+/* ============ SCELTA DEL GIOCO ALLA NUOVA PARTITA (S1, 0.4.5_11) ============
+   Piccolo modulo autonomo. RUN_GAMES = i giochi in cui si puo' fare una partita intera (idx = scheda «game_N» dei Giochi); enabled:false = mostrato come «In arrivo»,
+   non avviabile: FR1 (partita a Ferma Algidone!) deve solo mettere enabled:true e gestire il ramo nel suo startRun. Solo Uomo roccia sceglie:
+   Algidone parte diretto nel labirinto (non puo' giocare il suo stesso gioco). G.game = il gioco della partita in corso ("maze" per le partite gia' salvate). */
+const RUN_GAMES=[{id:"maze",idx:0,name:"Mangiaroccia",enabled:true},{id:"ferma",idx:3,name:"Ferma Algidone!",enabled:false}];
+const runGameOf=id=>RUN_GAMES.find(g=>g.id===id)||RUN_GAMES[0];
+const RUN_START={maze:o=>startGame(false,o)}; // id -> avvio della partita; FR1 aggiunge «ferma»
+function newRun(o){ // «Nuovo gioco» / «Hardcore» (dopo l'eventuale conferma di sovrascrittura)
+  if(charKey()!=="roccia"||RUN_GAMES.length<2)return RUN_START.maze(Object.assign({},o,{game:"maze"}));
+  const m=openModal(`<h3>Che partita fai?</h3><p>Scegli il gioco da cui partire${o&&o.hard?" (Hardcore)":""}.</p><div class="acts" style="flex-direction:column">${RUN_GAMES.map(g=>{const nm=esc((S.ov["game_"+g.idx]||{}).label||g.name);return g.enabled?`<button class="btn" data-rg="${g.id}">${nm}</button>`:`<button class="btn ghost" data-rg="${g.id}" disabled>${nm} · In arrivo</button>`}).join("")}<button class="btn ghost" id="rgx">Indietro</button></div>`);
+  m.querySelector("#rgx").onclick=closeModal;
+  m.querySelectorAll("[data-rg]").forEach(b=>{b.onclick=()=>{const g=runGameOf(b.dataset.rg);if(!g.enabled||!RUN_START[g.id])return;closeModal();RUN_START[g.id](Object.assign({},o,{game:g.id}))}});
+}
 function tileAction(id){
-  if(id==="new"||id==="hard"){const o=id==="hard"?{hard:true}:null; if(S.quick)confirmBox("Nuova partita","Hai un gioco salvato. Vuoi sovrascriverlo?","Sì, nuovo","No",()=>{S.quick=null;persist();startGame(false,o)});else startGame(false,o)}
+  if(id==="new"||id==="hard"){const o=id==="hard"?{hard:true}:null; if(S.quick)confirmBox("Nuova partita","Hai un gioco salvato. Vuoi sovrascriverlo?","Sì, nuovo","No",()=>{S.quick=null;persist();newRun(o)});else newRun(o)}
   else if(id==="cur")startGame(true);
   else if(id==="wish"){go("wish")}
   else if(id==="dev")go("dev");
@@ -3827,8 +3840,8 @@ function devJump(n,mi){
 }
 function startGame(resume,opt){
   cancelAnimationFrame(raf);
-  if(resume&&S.quick){G=JSON.parse(JSON.stringify(S.quick));G.mapi=G.mapi||0;setDims(G.mapi);G.power=G.power>0?G.power:0;G.pu=G.pu||null;G.since=G.since||0;G.open=G.open||8;G.chain=G.chain||0;G.still=false;G.char=G.char||"roccia";G.mapi=G.mapi||0;G.plane=G.plane||0;G.rock=G.rock||0;G.banner=null;G.en.forEach(e=>{e.mode=e.mode||"n";e.gt=e.gt||0;if(G.power<=0&&e.mode==="s")e.mode="n"});G.state="ready";G.t=1.4;G.invuln=Math.max(0,+G.invuln||0);G.anim=0;G.st=null;G.fx=[];G.shake=0;G.burn=0;G.cam=null}
-  else{const M0=pickMap(-1);G={stage:(opt&&opt.stage)||1,score:(opt&&opt.score)||0,lives:opt&&opt.hard?4:3,hard:!!(opt&&opt.hard),grid:freshGrid(M0),parts:[],diff:S.opts.diff||"medium",char:S.p.char||"roccia",mapi:M0,plane:cs().selP,rock:cs().selR};resetActors();ach("dbg_new",{ch:G.char,d:G.diff})}
+  if(resume&&S.quick){G=JSON.parse(JSON.stringify(S.quick));G.mapi=G.mapi||0;setDims(G.mapi);G.power=G.power>0?G.power:0;G.pu=G.pu||null;G.since=G.since||0;G.open=G.open||8;G.chain=G.chain||0;G.still=false;G.char=G.char||"roccia";G.game=G.game||"maze";G.mapi=G.mapi||0;G.plane=G.plane||0;G.rock=G.rock||0;G.banner=null;G.en.forEach(e=>{e.mode=e.mode||"n";e.gt=e.gt||0;if(G.power<=0&&e.mode==="s")e.mode="n"});G.state="ready";G.t=1.4;G.invuln=Math.max(0,+G.invuln||0);G.anim=0;G.st=null;G.fx=[];G.shake=0;G.burn=0;G.cam=null}
+  else{const M0=pickMap(-1);G={game:(opt&&opt.game)||"maze",stage:(opt&&opt.stage)||1,score:(opt&&opt.score)||0,lives:opt&&opt.hard?4:3,hard:!!(opt&&opt.hard),grid:freshGrid(M0),parts:[],diff:S.opts.diff||"medium",char:S.p.char||"roccia",mapi:M0,plane:cs().selP,rock:cs().selR};resetActors();ach("dbg_new",{ch:G.char,d:G.diff})}
   G.parts=[];screen="game";syncMusic();buildGameDOM();
 }
 /* ---- abilita' segrete (dal girone 7): Uomo roccia "Trasformati" ---- */
@@ -3995,7 +4008,7 @@ function pauseMenu(again){
 function quicksave(){
   const c=JSON.parse(JSON.stringify(G));delete c.last;S.quick=c;persist();
 }
-function nextMinigame(){const o=S.ov["game_0"]||{};return{name:o.label||"Mangiaroccia",restart:true}}
+function nextMinigame(){const g=runGameOf(G&&G.game),o=S.ov["game_"+g.idx]||{};return{name:o.label||g.name,restart:true}} // la carta dell'intervallo segue il gioco della partita in corso
 function drawMiniPlaceholder(cv,g){
   const x=cv.getContext("2d");x.imageSmoothingEnabled=false;
   const gr=x.createLinearGradient(0,0,0,150);gr.addColorStop(0,"#23364c");gr.addColorStop(1,"#0f1a28");x.fillStyle=gr;x.fillRect(0,0,240,150);
@@ -4417,7 +4430,7 @@ function finishRun(o){
   while(cc.lvl<100&&cc.exp>=expNeed(cc.lvl)){cc.exp-=expNeed(cc.lvl);cc.lvl++}
   if(cc.lvl>=100)cc.exp=0;
   flushTime();{const cx0={ch:ck,d:G.diff||"hard"};ach("sordi",{...cx0,n:gain});ach("run",{...cx0});ach("score",{...cx0,n:score});ach("level",{...cx0,n:maxLevel()})}
-  const hardRun=!!G.hard;S.quick=null;persist();cloudFlush();G=null;
+  const hardRun=!!G.hard,runGame=G.game||"maze";S.quick=null;persist();cloudFlush();G=null;
   if(o&&o.quiet){go("menu");toast("Partita abbandonata · +"+gain+" sordi");if(cc.lvl>oldL)celebrate(oldL,cc.lvl,showAchQ,ck);else showAchQ();return}
   screen="over";syncMusic();
   shell(`<div class="screen">${bugBtn("fixr")}<div class="center" style="width:100%"><h2 style="font-size:1.6rem;color:var(--alarm);margin:0 0 4px">Partita finita</h2>
@@ -4429,7 +4442,7 @@ function finishRun(o){
    <div class="opt"><span>Esperienza</span><b class="disp">+${xp}</b></div>
    <div class="opt"><span>Record</span><b class="disp">${p.best}</b></div>
    <div class="acts" style="justify-content:center"><button class="btn ghost" id="mn">Menu</button><button class="btn" id="ag">Ancora!</button></div></div><div id="modal"></div></div>`);
-  root.onclick=e=>{if(e.target.closest("#mn"))go("menu");if(e.target.closest("#ag"))startGame(false,hardRun?{hard:true}:null)};
+  root.onclick=e=>{if(e.target.closest("#mn"))go("menu");if(e.target.closest("#ag"))startGame(false,Object.assign({game:runGame},hardRun?{hard:true}:{}))};
   if(cc.lvl>oldL)celebrate(oldL,cc.lvl,showAchQ,ck);else showAchQ();
 }
 function celebrate(a,b,cb,ck){
