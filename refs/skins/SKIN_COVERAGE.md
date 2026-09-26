@@ -2,9 +2,9 @@
 
 Matrice fotogramma x costume, generata da questa build (`tools/fbstub/test_skin_coverage.py`), non scritta a mano: rigenerarla ad ogni chunk che tocca un fotogramma, una posa o un costume (CLAUDE.md §6 regola 11).
 
-Legenda: **ok** = il costume ha quel fotogramma · **manca** = fotogramma reale del foglio (F4a) senza arte per questo costume · **na** = il costume dichiara di non averne bisogno (`SKINS.<id>.na`) · **procedurale — da convertire** = posa disegnata dal codice (es. Cinghiale), non ancora un fotogramma: nessun costume puo' toccarla oggi.
+Legenda: **ok** = il costume ha quel fotogramma · **manca** = fotogramma reale del foglio (F4a) senza arte per questo costume · **na** = il costume dichiara di non averne bisogno (`SKINS.<id>.na`) · **procedurale — da convertire** = posa disegnata dal codice (es. l'icona mangia procedurale di Uomo roccia), non ancora un fotogramma: nessun costume puo' toccarla oggi. Il Cinghiale di Algidone era in questa categoria fino a F4c (0.4_10): ora ha 6 fotogrammi reali (riga «Cinghiale»).
 
-Build: 0.4_9
+Build: 0.4_10
 
 ## Uomo roccia
 
@@ -67,6 +67,9 @@ Build: 0.4_9
 | `alg_eat2` | Ferma Algidone! (lanciatore) | manca |
 | `alg_kick1` | Ferma Algidone! (lanciatore) | manca |
 | `alg_kick2` | Ferma Algidone! (lanciatore) | manca |
-| `ref_boar_lato` | Riferimenti (Cinghiale, lato (solo codice)) | procedurale — da convertire |
-| `ref_boar_su` | Riferimenti (Cinghiale, su (solo codice)) | procedurale — da convertire |
-| `ref_boar_giu` | Riferimenti (Cinghiale, giù (solo codice)) | procedurale — da convertire |
+| `boar_lato0` | Cinghiale | manca |
+| `boar_lato1` | Cinghiale | manca |
+| `boar_su0` | Cinghiale | manca |
+| `boar_su1` | Cinghiale | manca |
+| `boar_giu0` | Cinghiale | manca |
+| `boar_giu1` | Cinghiale | manca |

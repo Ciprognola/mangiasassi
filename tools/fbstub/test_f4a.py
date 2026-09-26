@@ -13,8 +13,29 @@ RES = []
 DEVC = {"role": "master", "acct": "master", "fb": True, "devOn": True}
 ALL_KEYS_ROCCIA = {"f0", "f1", "f2", "f3", "e0", "e1", "fd0", "fd1", "fd2", "fd3", "fd_e0", "fd_e1", "fu0", "fu1", "fu2", "fu3", "fu_e0", "fu_e1"}
 # F4a2: Ferma Algidone! thrower frames (alg_*, in FAIMG) join Algidone's own base frames (al_*, in IMG/SPR2)
+# F4c: Cinghiale's 6 baked frames (boar_*, in IMG, baked at boot by bakeBoarFrames())
 ALL_KEYS_ALGIDONE = ({"al_st"} | {"al_w%d" % i for i in range(8)} | {"al_r%d" % i for i in range(8)} | {"al_d0", "al_d1", "al_d2", "al_d3", "al_d_st"} | {"al_u%d" % i for i in range(6)}
-                     | {"alg_kick%d" % i for i in range(3)} | {"alg_eat%d" % i for i in range(3)} | {"alg_angry%d" % i for i in range(2)} | {"alg_throw%d" % i for i in range(4)} | {"alg_idle%d" % i for i in range(2)})
+                     | {"alg_kick%d" % i for i in range(3)} | {"alg_eat%d" % i for i in range(3)} | {"alg_angry%d" % i for i in range(2)} | {"alg_throw%d" % i for i in range(4)} | {"alg_idle%d" % i for i in range(2)}
+                     | {"boar_lato0", "boar_lato1", "boar_su0", "boar_su1", "boar_giu0", "boar_giu1"})
+# F4c golden hashes: drawBoar's procedural (no-skin) rendering for a spread of (face,anim,moving), computed
+# once from the verified-correct 0.4_10 build (cross-checked pixel-for-pixel against 0.4_9's own drawBoar in
+# this chunk's own testing) -- if a future change to drawBoar/drawBoarBody ever alters these pixels, the
+# "no skin -> unchanged" guarantee (CLAUDE.md, F4c brief) has broken.
+import hashlib
+BOAR_GOLDEN_CASES = [[0, 0, False], [0, 0.2, True], [0, 1.3, True], [1, 0, False], [1, 0.2, True], [1, 1.3, True],
+                      [2, 0, False], [2, 0.2, True], [2, 1.3, True], [3, 0, False], [3, 0.2, True], [3, 1.3, True]]
+BOAR_GOLDEN_HASHES = {
+    "0,0,False": "791e90b6e5446b78", "0,0.2,True": "b0ff46002db1f43c", "0,1.3,True": "516bc32b3aeea95a",
+    "1,0,False": "a09c4e05b4572830", "1,0.2,True": "75a5d771b4db38b0", "1,1.3,True": "8dd2c4ef5666a9c6",
+    "2,0,False": "ba69fef7ce02628a", "2,0.2,True": "6d24d558b57b8626", "2,1.3,True": "9f5009e11a44a0b4",
+    "3,0,False": "c8962c52f9a60f76", "3,0.2,True": "d56e3fd84db67430", "3,1.3,True": "b59fcc6fc346af42",
+}
+BOAR_SNAP_JS = """([face,anim,moving])=>{
+    const c=document.createElement('canvas');c.width=500;c.height=500;
+    const x=c.getContext('2d');x.translate(250,250);x.imageSmoothingEnabled=false;
+    drawBoar(x,0,0,60,{face,anim,moving});
+    return c.toDataURL();
+}"""
 
 
 def check(name, ok, extra=""):
@@ -145,11 +166,17 @@ with sync_playwright() as pw:
         other = frame_keys_used("algidone" if char == "roccia" else "roccia")
         check(char + ": no cross-character keys (nothing from the other character's frame set)", not (real_keys | skip_keys) & other, (real_keys | skip_keys) & other)
         check(char + ": real+skipped keys cover the full documented set", (real_keys | skip_keys) == frame_keys_used(char), (real_keys | skip_keys) ^ frame_keys_used(char))
-        check(char + ": ref cells are grey/'SOLO RIFERIMENTO' entries, never in frames", len(ref_keys) > 0 and not (ref_keys & real_keys))
+        # F4c: Cinghiale's boar refs became real frames, so algidone has zero ref cells left; roccia's 2 eating-icon refs are untouched
+        expect_refs = 0 if char == "algidone" else 2
+        check(char + ": ref cell count matches (roccia keeps its 2 procedural refs; algidone has none left since F4c converted Cinghiale to real frames)", len(ref_keys) == expect_refs and not (ref_keys & real_keys), ref_keys)
         if char == "algidone":
             ferma_keys = {k for k in real_keys if k.startswith("alg_")}
             check("algidone: Ferma Algidone! thrower row present (13 real alg_* frames, alg_kick0 skipped)", len(ferma_keys) == 13 and "alg_kick0" not in real_keys and "alg_kick0" in skip_keys, ferma_keys)
-            check("algidone: no roccia keys leaked into the Ferma row or anywhere else", not real_keys & ALL_KEYS_ROCCIA)
+            boar_keys = {k for k in real_keys if k.startswith("boar_")}
+            check("algidone: Cinghiale row present (6 real boar_* frames: 2 phases x 3 directions)", boar_keys == {"boar_lato0", "boar_lato1", "boar_su0", "boar_su1", "boar_giu0", "boar_giu1"}, boar_keys)
+            boar_dirs = {k: cj["frames"][k]["dir"] for k in boar_keys}
+            check("algidone: Cinghiale frames carry the right per-key direction (mixed-direction row)", boar_dirs == {"boar_lato0": "lato", "boar_lato1": "lato", "boar_su0": "su", "boar_su1": "su", "boar_giu0": "giu", "boar_giu1": "giu"}, boar_dirs)
+            check("algidone: no roccia keys leaked into the Ferma/Cinghiale rows or anywhere else", not real_keys & ALL_KEYS_ROCCIA)
         # base rect in GUIDE == live frame at x4 for every real frame. Both sides are composited onto the
         # same flat grey backdrop before comparing (the GUIDE's own bg colour) with a tolerance of 1/255 per
         # channel: the GUIDE composites in the browser's canvas compositor, the reference composites in PIL,
@@ -183,9 +210,11 @@ with sync_playwright() as pw:
     check("coverage: GEKA covers all 10 of roccia's real frames (0 mancano)", len(roc_cov) == 1 and roc_cov[0]["id"] == "geka" and roc_cov[0]["have"] == roc_cov[0]["total"] == 10 and not roc_cov[0]["missing"], roc_cov)
     p.click("[data-skinchar='algidone']"); p.wait_for_timeout(150)
     alg_cov = p.evaluate("skinCoverage('algidone')")
-    check("coverage: BK is missing exactly the 13 new Ferma thrower frames (grandfathered gap)", len(alg_cov) == 1 and alg_cov[0]["id"] == "bk" and alg_cov[0]["total"] == 40 and alg_cov[0]["have"] == 27 and set(alg_cov[0]["missing"]) == {k for k in ALL_KEYS_ALGIDONE if k.startswith("alg_") and k != "alg_kick0"}, alg_cov)
+    # F4c: Cinghiale's 6 boar_* frames are now real (and missing from BK, grandfathered same as the Ferma thrower's 13) -> 46 total, 19 missing
+    expect_missing = {k for k in ALL_KEYS_ALGIDONE if k.startswith("alg_") and k != "alg_kick0"} | {"boar_lato0", "boar_lato1", "boar_su0", "boar_su1", "boar_giu0", "boar_giu1"}
+    check("coverage: BK is missing exactly the 13 Ferma thrower + 6 Cinghiale frames (grandfathered gap)", len(alg_cov) == 1 and alg_cov[0]["id"] == "bk" and alg_cov[0]["total"] == 46 and alg_cov[0]["have"] == 27 and set(alg_cov[0]["missing"]) == expect_missing, alg_cov)
     txt = p.evaluate("document.body.innerText")
-    check("coverage: the accordion body actually shows the BK line with a frame count", "Costume BK" in txt and "27/40" in txt)
+    check("coverage: the accordion body actually shows the BK line with a frame count", "Costume BK" in txt and "27/46" in txt)
     check("no console errors (coverage)", not errs, errs)
     ctx.close()
     # ------------------------------------------------------------ thrower skin hook (F4a2 2): DEV_SKIN_TEST overlay/replace change the thrower;
@@ -218,6 +247,53 @@ with sync_playwright() as pw:
     p.evaluate("DEV_SKIN_TEST={char:'roccia',mode:'replace'}"); roccia_test_shot = p.evaluate(snap); p.evaluate("DEV_SKIN_TEST=null")
     check("thrower: roccia's own DEV_SKIN_TEST does not touch the (algidone) thrower", roccia_test_shot == base_shot)
     check("no console errors (thrower hook)", not errs, errs)
+    ctx.close()
+    # ------------------------------------------------------------ Cinghiale skin hook (F4c): golden-hash regression on the
+    # no-skin procedural path (must stay pixel-identical to 0.4_9 forever), BK equipped still unaffected (grandfathered,
+    # no boar art yet), DEV_SKIN_TEST overlay/replace visibly change every one of the 6 baked frames (3 directions x 2 phases)
+    ctx, p, errs = page(b); menu(p)
+    golden_ok = True; golden_bad = None
+    for case in BOAR_GOLDEN_CASES:
+        d = p.evaluate(BOAR_SNAP_JS, case)
+        h = hashlib.sha256(d.encode()).hexdigest()[:16]
+        if BOAR_GOLDEN_HASHES[",".join(str(v) for v in case)] != h:
+            golden_ok = False; golden_bad = case
+    check("Cinghiale: no-skin procedural rendering matches the 0.4_9 golden hashes for every (face,anim,moving) sampled", golden_ok, golden_bad)
+    p.evaluate("S.p.ch.algidone.skin='bk'")
+    bk_ok = True; bk_bad = None
+    for case in BOAR_GOLDEN_CASES:
+        d = p.evaluate(BOAR_SNAP_JS, case)
+        h = hashlib.sha256(d.encode()).hexdigest()[:16]
+        if BOAR_GOLDEN_HASHES[",".join(str(v) for v in case)] != h:
+            bk_ok = False; bk_bad = case
+    p.evaluate("S.p.ch.algidone.skin=null")
+    check("Cinghiale: BK equipped (no boar_* art yet) still renders via the procedural path, unaffected", bk_ok, bk_bad)
+    diffs = []
+    for dirname, faces in (("lato", (1, 3)), ("su", (0,)), ("giu", (2,))):
+        for face in faces:
+            base = p.evaluate(BOAR_SNAP_JS, [face, 0.2, True])
+            p.evaluate("DEV_SKIN_TEST={char:'algidone',mode:'overlay'}"); ov = p.evaluate(BOAR_SNAP_JS, [face, 0.2, True])
+            p.evaluate("DEV_SKIN_TEST={char:'algidone',mode:'replace'}"); rep = p.evaluate(BOAR_SNAP_JS, [face, 0.2, True])
+            p.evaluate("DEV_SKIN_TEST=null"); restored = p.evaluate(BOAR_SNAP_JS, [face, 0.2, True])
+            if not (base != ov and base != rep and ov != rep and restored == base):
+                diffs.append((dirname, face))
+    check("Cinghiale: DEV_SKIN_TEST overlay/replace visibly change every direction (incl. mirrored lato) and restore cleanly", not diffs, diffs)
+    check("no console errors (Cinghiale skin hook)", not errs, errs)
+    ctx.close()
+    # ------------------------------------------------------------ a real run where Cinghiale is activated (girone 7 dev jump,
+    # the ability button, real d-pad movement -- not just isolated drawBoar() calls)
+    ctx, p, errs = page(b); menu(p)
+    p.evaluate("S.p.char='algidone'")
+    p.evaluate("go('opt')"); p.wait_for_timeout(250); p.click("[data-otab=dev]"); p.wait_for_timeout(150)
+    p.click("details.acc:has(#jg7) > summary"); p.wait_for_timeout(150); p.click("#jg7"); p.wait_for_timeout(1800)
+    check("real run: algidone maze started at girone 7 (ability unlocked)", p.evaluate("screen") == "game" and p.evaluate("G&&G.char") == "algidone" and p.evaluate("typeof abilOn==='function'&&abilOn()"))
+    p.click("#pz"); p.wait_for_timeout(500)
+    check("real run: Cinghiale actually activates (G.st.boar)", p.evaluate("!!(G.st&&G.st.boar)"))
+    for d in (0, 1, 2, 3):
+        p.click("[data-d='%d']" % d); p.wait_for_timeout(400)
+    p.wait_for_timeout(800)
+    check("real run: still alive, no crash after moving in every direction while transformed", p.evaluate("screen") == "game")
+    check("no console errors (real Cinghiale run)", not errs, errs)
     ctx.close()
     # ------------------------------------------------------------ real Ferma run from the Giochi card (not a dev button)
     ctx, p, errs = page(b); menu(p)

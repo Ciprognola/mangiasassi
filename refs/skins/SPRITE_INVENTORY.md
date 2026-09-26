@@ -6,14 +6,15 @@ from the current build (`index.html`) to `refs/skins/base/<char>/<key>.png` — 
 artist draws skin overlays on top of. See `README.md` in this folder for the artist-facing how-to,
 including the `overlay`/`replace` render modes added in K1b.
 
-**Status as of F4a2**: the overlay/replace hook is wired into every bitmap draw-path listed below (via
-`drawFace`, `drawEat`, `drawAlg`, the handful of call sites that draw `al_st` directly, and — since F4a2 —
-the Ferma Algidone! thrower's `FAIMG.alg_*` draw call), and two real skins ship through it (`SKINS.geka`,
-`SKINS.bk`). All three procedural places in the maze are **settled — no skin needed** (owner decision,
-2026-09-24): the two eating icons draw the item being eaten, not the character; the Acciaio visual effect
-sits on top of whatever `drawTinted` already rendered, so it already applies to a costumed character
-automatically. See the "Procedural" table below. Cinghiale (also in that table) is **not settled** the same
-way — F4a2 investigated making it real frames (report only; a decision is pending, tracked as chunk F4c).
+**Status as of F4c**: the overlay/replace hook is wired into every bitmap draw-path listed below (via
+`drawFace`, `drawEat`, `drawAlg`, the handful of call sites that draw `al_st` directly, the Ferma Algidone!
+thrower's `FAIMG.alg_*` draw call since F4a2, and Cinghiale's `drawBoar` since F4c), and two real skins ship
+through it (`SKINS.geka`, `SKINS.bk`). Two of the three procedural places in the maze stay **settled — no
+skin needed** (owner decision, 2026-09-24): the two eating icons draw the item being eaten, not the
+character; the Acciaio visual effect sits on top of whatever `drawTinted` already rendered, so it already
+applies to a costumed character automatically. Cinghiale (the third) is **no longer purely procedural**: F4c
+(2026-09-26) gave it 6 baked base frames + a real skin hook, while keeping the body's own drawing code as the
+always-available fallback. See the "Procedural" table below for all three.
 Every real bitmap frame this file lists, across every character, is exported on the F4a sheet
 (`refs/skins/SKIN_COVERAGE.md` tracks per-skin coverage against it); CLAUDE.md §6 rule 11 requires keeping
 both current whenever a frame, pose or animation changes.
@@ -68,7 +69,7 @@ Every Algidone key is used somewhere — no dead frames in `SPR2`.
 
 | What | Function | Skin status |
 |---|---|---|
-| Cinghiale (boar transformation) | `drawBoar()` | **Skin hidden while transformed, still true (§10.9 K1b decision) — but "not pending" no longer holds.** 100% code-drawn pixel art (rects/ellipses/triangles, 3 direction variants, no `IMG` reference at all). F4a2 (2026-09-26) investigated converting it to real frames so it *could* be skinned (report only, no code); a decision (chunk F4c) is pending, tracked in CLAUDE.md §10.3/§10.4. Rendered as reference cells (grey, "SOLO RIFERIMENTO") on Algidone's F4a sheet and as "procedurale — da convertire" rows in `SKIN_COVERAGE.md` until then. |
+| Cinghiale (boar transformation) | `drawBoarBody()`, hook in `drawBoar()` | **The §10.9 K1b decision (the player's own humanoid costume, e.g. BK, never shows through while transformed) still holds — that's a different question from "can the boar itself be skinned", settled separately by F4c (2026-09-26).** The body's own drawing (rects/ellipses/triangles, 3 direction variants) moved into `drawBoarBody()`, unchanged pixel-for-pixel; it's still the code-drawn fallback whenever no skin/frame applies. 6 base frames (`boar_lato0-1`, `boar_su0-1`, `boar_giu0-1`: 2 leg-swing phases x 3 directions) are baked once at boot (`bakeBoarFrames()`) into `IMG[]` and are now real cells on Algidone's F4a sheet (row "Cinghiale", no more reference cells). `drawBoar()` picks a frame by direction + leg phase and, via `activeSkin("algidone",key,base)`: **replace** draws the skin frame instead of the procedural body; **overlay** draws the procedural body then the skin frame on top; no skin/missing frame → procedural only, verified byte-identical to before F4c. Effects (stress bar, stun stars, wall-smash dust, the shared ability bar) stay procedural, untouched. BK ships with no Cinghiale art yet (grandfathered gap, CLAUDE.md §8). |
 | Up/down eating icon | `drawFaceEatFX()` (roccia) | **Settled — no skin needed.** A small rock icon fades in/shrinks near the mouth while eating up/down — it draws the **rock being eaten**, not the character, so there's nothing on the character for a skin to touch here. Reuses the item's own art (`rockFrames`/`IMG.rock`) regardless of an equipped skin, by design. |
 | Any-direction eating icon (Algidone) | inline in `drawAlg()` | **Settled — no skin needed.** Same reasoning: it draws the **snack being eaten** (`snackFrames`), not the character. |
 | Acciaio visual effect (ring + diagonal sweep highlight) | inline in the maze `draw()` around `drawTinted(...)` | **Settled — no skin needed.** It's a pure vector effect (colour/alpha only) drawn *on top of* whatever `drawTinted` already rendered — since the skin is part of that rendered character (confirmed in K1b/K2), the ring and sweep already sit over a costumed character automatically. Nothing further to build. |
@@ -82,7 +83,7 @@ Every Algidone key is used somewhere — no dead frames in `SPR2`.
    - Down: roccia `fu0,fu3` (walk) + procedural rock icon while eating; Algidone `al_d_st` (idle) / `al_d0-3` (walk)
    - Algidone power-up "rolling": `al_r0-6`, **side art only** — there's no dedicated up/down roll art, so Algidone always shows the side-view roll sprite while the power-up is active even if facing up/down (existing behaviour, not new)
 2. **Maze gameplay, Acciaio (steel ability)** — same frames as #1, drawn through `fn` (=`drawHero`) inside `drawTinted()`. `drawTinted` renders `fn` to an offscreen canvas *then* tints the whole buffer blue via `source-atop` compositing — so **whatever the overlay hook draws inside `drawHero`/`drawFace`/`drawAlg` automatically inherits the steel tint for free**, no special-casing needed in K1b. Matches the §10.9 decision (skin stays on, gets the steel look).
-3. **Maze gameplay, Cinghiale (boar ability)** — `drawBoar()`, entirely separate, no character frames at all. Matches the §10.9 decision (skin hidden).
+3. **Maze gameplay, Cinghiale (boar ability)** — `drawBoar()`/`drawBoarBody()`. The humanoid costume never shows through (§10.9 decision, unchanged); since F4c the boar itself has 6 real frames (`boar_lato0-1`/`boar_su0-1`/`boar_giu0-1`) with their own skin hook, separate from the character's own frame set.
 4. **Maze gameplay, power-up reversal tint / lava burn tint** — same `drawTinted(fn,...)` pattern as #2, same frames, same automatic-inherit behaviour.
 5. **Maze gameplay, death spin** — fixed frame, side view only, rotated/scaled procedurally: roccia `f2` (frame index 2, via `drawFace`), Algidone via `drawAlg` with `moving:false` (→ `al_st`).
 6. **Home menu scene** (`startMenuScene`/`drawScene`, the animated character idling/eating on the main menu) — side view only: roccia frames cycling `0/1/2` (idle/open/chew) + `e0/e1` while biting; Algidone `al_st`/`al_w0`.
@@ -119,7 +120,9 @@ Every Algidone key is used somewhere — no dead frames in `SPR2`.
   no change.
 - Acciaio's tint (`drawTinted`) needs **no special handling** — confirmed by test: it tints whatever the
   hook draws, since the hook lives inside `drawHero`'s own callees.
-- Cinghiale (`drawBoar`) needs **no hook at all** — it never calls into the low-level draw functions.
+- Cinghiale (`drawBoar`) needed **no hook at all** through K1b-K3 — true until F4c (2026-09-26) gave it its
+  own hook (`activeSkin`/`drawSkinLayer` called directly inside `drawBoar`, not via `drawFace`/`drawEat`/
+  `drawAlg`), once it got real base frames to skin.
 - `drawMiniPlaceholder`'s hardcoded-to-roccia icon (#11) was **left as-is, not fixed** — reported to the
   owner and **confirmed intentional**: it's the "Mangiaroccia" brand icon for the mini-game card, not a
   per-character portrait. Settled, not open.

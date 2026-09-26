@@ -36,8 +36,9 @@ def build_md(data, version):
              "(CLAUDE.md §6 regola 11).", "",
              "Legenda: **ok** = il costume ha quel fotogramma · **manca** = fotogramma reale del foglio (F4a) "
              "senza arte per questo costume · **na** = il costume dichiara di non averne bisogno (`SKINS.<id>.na`) "
-             "· **procedurale — da convertire** = posa disegnata dal codice (es. Cinghiale), non ancora un "
-             "fotogramma: nessun costume puo' toccarla oggi.", "",
+             "· **procedurale — da convertire** = posa disegnata dal codice (es. l'icona mangia procedurale di "
+             "Uomo roccia), non ancora un fotogramma: nessun costume puo' toccarla oggi. Il Cinghiale di Algidone "
+             "era in questa categoria fino a F4c (0.4_10): ora ha 6 fotogrammi reali (riga «Cinghiale»).", "",
              "Build: " + version, ""]
     for ch in data:
         lines.append("## " + ch["name"])
@@ -80,7 +81,7 @@ with sync_playwright() as pw:
         for(const ch of ["roccia","algidone"]){
             if(ch==="algidone")await ensureFA();
             const def=SKIN_DEF[ch];
-            const real=def.sets.flatMap(s=>s.keys.map(k=>({key:k,set:s.label})));
+            const real=def.sets.flatMap(s=>s.keys.map(kd=>{const k=Array.isArray(kd)?kd[0]:kd;return{key:k,set:s.label}}));
             const refs=(def.refs||[]).map(r=>({key:r.key,label:r.label}));
             const skins=Object.keys(SKINS).filter(id=>SKINS[id].char===ch).map(id=>({
                 id, name:SKINS[id].name||id, na:SKINS[id].na||[], frames:Object.keys(SKINS[id].frames)
@@ -109,10 +110,14 @@ check("GEKA covers every real roccia frame (all 'ok', matches 10/10 in the accor
 bk = next(s for s in alg["skins"] if s["id"] == "bk")
 ferma_keys = [f["key"] for f in alg["real"] if f["key"].startswith("alg_")]
 check("BK is missing every Ferma thrower frame (grandfathered gap, §8)", len(ferma_keys) == 13 and all(k not in bk["frames"] for k in ferma_keys))
-check("Cinghiale refs present for algidone (procedural, 3 poses)", len(alg["refs"]) == 3)
+boar_keys = [f["key"] for f in alg["real"] if f["key"].startswith("boar_")]
+check("Cinghiale is 6 real frames now (F4c), not procedural refs; BK is missing all of them too (grandfathered)", len(boar_keys) == 6 and all(k not in bk["frames"] for k in boar_keys))
+check("algidone has zero ref cells left (Cinghiale was the only one, converted to real frames by F4c)", len(alg["refs"]) == 0)
+check("roccia still has its 2 procedural refs (the eating icons, untouched by F4c)", len(roc["refs"]) == 2)
 with open(OUT, encoding="utf-8") as f:
     content = f.read()
-check("SKIN_COVERAGE.md contains the procedural legend for Cinghiale rows", "procedurale — da convertire" in content and "Cinghiale" in content)
+check("SKIN_COVERAGE.md still carries the procedural legend (for roccia's eating-icon refs)", "procedurale — da convertire" in content)
+check("SKIN_COVERAGE.md lists the Cinghiale row as real frames (boar_lato0 etc.), not a ref", "`boar_lato0`" in content and "Cinghiale" in content)
 
 print(sum(RES), "/", len(RES), "passed")
 sys.exit(0 if all(RES) else 1)
