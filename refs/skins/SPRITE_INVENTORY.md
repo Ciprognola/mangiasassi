@@ -6,12 +6,17 @@ from the current build (`index.html`) to `refs/skins/base/<char>/<key>.png` — 
 artist draws skin overlays on top of. See `README.md` in this folder for the artist-facing how-to,
 including the `overlay`/`replace` render modes added in K1b.
 
-**Status as of K3**: the overlay/replace hook is wired into every bitmap draw-path listed below (via
-`drawFace`, `drawEat`, `drawAlg` and the handful of call sites that draw `al_st` directly), and two real
-skins ship through it (`SKINS.geka`, `SKINS.bk`). All three procedural places are **settled — no skin
-needed** (owner decision, 2026-09-24): the two eating icons draw the item being eaten, not the character;
-the Acciaio visual effect sits on top of whatever `drawTinted` already rendered, so it already applies to a
-costumed character automatically. See the "Procedural" table below.
+**Status as of F4a2**: the overlay/replace hook is wired into every bitmap draw-path listed below (via
+`drawFace`, `drawEat`, `drawAlg`, the handful of call sites that draw `al_st` directly, and — since F4a2 —
+the Ferma Algidone! thrower's `FAIMG.alg_*` draw call), and two real skins ship through it (`SKINS.geka`,
+`SKINS.bk`). All three procedural places in the maze are **settled — no skin needed** (owner decision,
+2026-09-24): the two eating icons draw the item being eaten, not the character; the Acciaio visual effect
+sits on top of whatever `drawTinted` already rendered, so it already applies to a costumed character
+automatically. See the "Procedural" table below. Cinghiale (also in that table) is **not settled** the same
+way — F4a2 investigated making it real frames (report only; a decision is pending, tracked as chunk F4c).
+Every real bitmap frame this file lists, across every character, is exported on the F4a sheet
+(`refs/skins/SKIN_COVERAGE.md` tracks per-skin coverage against it); CLAUDE.md §6 rule 11 requires keeping
+both current whenever a frame, pose or animation changes.
 
 **Never crossed**: every location below only ever shows the *current* character. Nothing here reads or
 mixes assets between Uomo roccia and Algidone.
@@ -63,7 +68,7 @@ Every Algidone key is used somewhere — no dead frames in `SPR2`.
 
 | What | Function | Skin status |
 |---|---|---|
-| Cinghiale (boar transformation) | `drawBoar()` | **Settled, not pending.** 100% code-drawn pixel art (rects/ellipses/triangles), no `IMG` reference at all. Per §10.9 K1b decision: skin is hidden entirely while transformed — no overlay, by design, not an open question. |
+| Cinghiale (boar transformation) | `drawBoar()` | **Skin hidden while transformed, still true (§10.9 K1b decision) — but "not pending" no longer holds.** 100% code-drawn pixel art (rects/ellipses/triangles, 3 direction variants, no `IMG` reference at all). F4a2 (2026-09-26) investigated converting it to real frames so it *could* be skinned (report only, no code); a decision (chunk F4c) is pending, tracked in CLAUDE.md §10.3/§10.4. Rendered as reference cells (grey, "SOLO RIFERIMENTO") on Algidone's F4a sheet and as "procedurale — da convertire" rows in `SKIN_COVERAGE.md` until then. |
 | Up/down eating icon | `drawFaceEatFX()` (roccia) | **Settled — no skin needed.** A small rock icon fades in/shrinks near the mouth while eating up/down — it draws the **rock being eaten**, not the character, so there's nothing on the character for a skin to touch here. Reuses the item's own art (`rockFrames`/`IMG.rock`) regardless of an equipped skin, by design. |
 | Any-direction eating icon (Algidone) | inline in `drawAlg()` | **Settled — no skin needed.** Same reasoning: it draws the **snack being eaten** (`snackFrames`), not the character. |
 | Acciaio visual effect (ring + diagonal sweep highlight) | inline in the maze `draw()` around `drawTinted(...)` | **Settled — no skin needed.** It's a pure vector effect (colour/alpha only) drawn *on top of* whatever `drawTinted` already rendered — since the skin is part of that rendered character (confirmed in K1b/K2), the ring and sweep already sit over a costumed character automatically. Nothing further to build. |
@@ -92,7 +97,9 @@ Every Algidone key is used somewhere — no dead frames in `SPR2`.
 15. **Professor mini-game — kick-out walk/flash phase** (`prSceneKick`, before the toss) — same as #14: only the professor (`PRIMG.walk`) is drawn. The player doesn't appear until the toss/splash phase, which is #13.
 16. **Professor battle screen** (`pbActor`, the actual Gen-3-style fight) — draws the player's chosen **Rocciamon asset** (a rock or snack sprite via `rockFrames`/`snackFrames`), **not** the human character's body. Out of scope for character skins — belongs to the separate, not-yet-built "squadra rocciamon" customisation slot (§10.5/§8), a different feature.
 17. **Career modal** (`careerModal`, the level/rank popup opened from a character card) — **text only, no character art at all.** The visual portrait is on the surrounding card (#7), not inside this modal.
-18. **Algidone's mini-game ("Coccia") climber** — **not built yet** (M-chunks are all `todo`). Will need its own frame set and a skin-overlay hook when M1/M2 land; flagged here so K1b's hook design doesn't need to special-case it now, but M-chunks should reuse the same `skinImg()` helper once the climber sprite exists.
+18. **Ferma Algidone! (built, M0-M9 all done)** — corrected 2026-09-26 (F4a2), superseding the "not built yet" note this item used to carry: that referred to an earlier, different plan (Algidone as the climber) and never matched what actually shipped.
+    - **Climber (Uomo roccia, the played character)** — `faDrawPlayer` draws it through the ordinary `drawFace()` call with roccia's own `f0,f1,f2` (side) and `fd0-2`/`fu0,fu3` (up/down) frames — the exact same bitmaps as the maze walk cycle, no separate frame set. **Already skin-hooked** (via `drawFace` → `drawSkinned`), confirmed in code; a costume equipped for Uomo roccia already shows on the climber with zero extra work. These frames are on the F4a sheet already (§#1 above); their `used` list credits Ferma next to the maze usage.
+    - **Thrower (Algidone, the NPC, never played)** — `faAlgFrame`/`faAlgPose` pick a `FAIMG.alg_*` bitmap (14 keys: `alg_idle0-1`, `alg_angry0-1`, `alg_throw0-3`, `alg_eat0-2`, `alg_kick0-2`; `alg_kick0` is dead code, never referenced). Drawn in `faDraw`'s Algidone NPC block. **As of F4a2**: these 13 real frames (`alg_kick0` skipped) are on Algidone's F4a sheet (row "Ferma Algidone! (lanciatore)") and the draw call now goes through `drawSkinned(c,"algidone",pose.key,im,...)` — the thrower wears Algidone's own equipped skin, whoever is climbing. `loadSkinImgs()`'s base-image check accepts `FAIMG[fk]` too (not just `IMG[fk]`), and `ensureFA()` re-runs `loadSkinImgs()` once `FAIMG` is populated (Ferma's assets lazy-load, unlike the always-loaded `SPR`/`SPR2`). BK ships with no art for these keys yet (grandfathered gap, CLAUDE.md §8 "Skin art owed", not blocking).
 19. **Character customisation page** (C1, §10.5) — **not built yet.** Will need a live skin-preview canvas; expected to reuse the same static-portrait pattern as #7/#8/#9/#10/#13, but no code exists yet to hook into.
 
 ## K1b implementation notes (done)
