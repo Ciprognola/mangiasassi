@@ -285,7 +285,11 @@ label.f{display:block;font-size:.85rem;color:var(--mute);margin:10px 0 4px}
 input[type=text],input[type=password],textarea{width:100%;background:#0f1824;border:2px solid var(--steel);border-radius:10px;color:var(--ink);padding:10px;font:inherit}
 input[type=range]{width:100%;accent-color:var(--runway)}
 input[type=color]{width:100%;height:42px;border:0;background:none;padding:0}
-.toast{position:absolute;left:16px;right:16px;bottom:22px;background:var(--ink);color:#111;border-radius:12px;padding:11px 14px;font-weight:700;text-align:center;z-index:20;box-shadow:0 5px 0 rgba(0,0,0,.4)}
+#toasts{position:fixed;left:0;top:0;width:0;height:0;z-index:60;pointer-events:none}
+.toast{position:fixed;transform:translate(-50%,-8px);opacity:0;transition:opacity .22s ease,transform .22s ease;pointer-events:none;background:var(--ink);color:#111;border-radius:12px;padding:10px 14px;font-weight:700;font-size:.95rem;line-height:1.25;text-align:center;box-shadow:0 5px 0 rgba(0,0,0,.4);width:max-content}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.toast.cmp{font-size:.8rem;padding:6px 10px;border-radius:9px}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
 
 .opt{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--paper);border-radius:12px;padding:12px;margin-bottom:9px}
 .opt small{display:block;color:var(--mute)}
@@ -452,6 +456,38 @@ if(IS_DEVSITE){try{if(localStorage.getItem(SAVE_KEY)===null){
 const mem={};
 const store={get(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return mem[k]||null}},
   set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){mem[k]=v}}};
+/* ============ DIAGNOSTICA (modulo autonomo, solo per gli sviluppatori) ============
+   Registro circolare delle ultime 200 voci {t,screen,kind,msg}, salvato in localStorage (max ~50 KB, le piu' vecchie cadono) cosi' sopravvive alle ricariche.
+   Mai uid, email, token o password: i messaggi passano da DIAG.clean() (email e stringhe lunghe vengono coperte) e i punti di aggancio scrivono solo tipo/ruolo. */
+const DIAG=(()=>{
+  const KEY=IS_DEVSITE?"mgs_diag_dev":"mgs_diag",MAXN=200,MAXB=50000;
+  let buf=[],tm=0,lastScreen="";
+  try{const v=JSON.parse(localStorage.getItem(KEY)||"[]");if(Array.isArray(v))buf=v.filter(e=>e&&typeof e==="object"&&typeof e.msg==="string").slice(-MAXN)}catch(e){}
+  const clean=x=>String(x==null?"":x).replace(/[^\s@]+@[^\s@]+/g,"<mail>").replace(/[A-Za-z0-9_\-]{28,}/g,"<id>").replace(/\s+/g," ").slice(0,300);
+  function flush(){
+    clearTimeout(tm);tm=0;
+    try{let s=JSON.stringify(buf);while(s.length>MAXB&&buf.length>1){buf.splice(0,Math.max(1,Math.ceil(buf.length/10)));s=JSON.stringify(buf)}localStorage.setItem(KEY,s)}catch(e){}
+  }
+  function log(kind,msg){
+    let sc="?";try{sc=screen}catch(e){}
+    buf.push({t:Date.now(),screen:sc,kind:String(kind).slice(0,20),msg:clean(msg)});
+    if(buf.length>MAXN)buf.splice(0,buf.length-MAXN);
+    if(!tm)tm=setTimeout(flush,400);
+  }
+  const z=n=>String(n).padStart(2,"0");
+  const line=e=>{const d=new Date(e.t);return z(d.getHours())+":"+z(d.getMinutes())+":"+z(d.getSeconds())+" ["+e.screen+"] "+e.kind+" "+e.msg};
+  addEventListener("error",e=>log("error",(e.message||"errore")+(e.lineno?" @"+e.lineno:"")));
+  addEventListener("unhandledrejection",e=>log("promise",(e.reason&&e.reason.message)||e.reason));
+  for(const k of["error","warn"]){const o=console[k];console[k]=function(){try{log("console."+k,[].map.call(arguments,a=>a&&a.message?a.message:(typeof a==="object"?"[oggetto]":a)).join(" "))}catch(e){}return o.apply(console,arguments)}}
+  addEventListener("pagehide",flush);
+  document.addEventListener("visibilitychange",()=>{if(document.hidden)flush()});
+  return{log,flush,clean,
+    screen(sc){if(sc!==lastScreen){lastScreen=sc;log("screen",sc)}},
+    all:()=>buf.slice(),last:n=>buf.slice(-n).map(line),
+    text:()=>buf.slice().reverse().map(line).join("\n"),
+    clear(){buf=[];flush()}};
+})();
+DIAG.log("boot",(IS_DEVSITE?"dev ":"stabile ")+"sito");
 const DEF_TILES=[
  {id:"new",label:"Nuovo gioco",color:"#f2c230",scale:1},
  {id:"cur",label:"Gioco corrente",color:"#ff8a3d",scale:1},
@@ -522,7 +558,9 @@ function fbLoad(){
     try{
       const [A,Au,Fs]=await Promise.race([Promise.all([import(FB_BASE+"firebase-app.js"),import(FB_BASE+"firebase-auth.js"),import(FB_BASE+"firebase-firestore.js")]),to]);
       const app=A.initializeApp(FB_CFG,IS_DEVSITE?"mgs_dev":"mgs");
-      return{A,Au,Fs,app,auth:Au.getAuth(app),db:Fs.getFirestore(app)};
+      const auth=Au.getAuth(app);
+      try{if(Au.onAuthStateChanged)Au.onAuthStateChanged(auth,u=>DIAG.log("auth","stato: "+(u?"connesso":"non connesso")))}catch(e){}
+      return{A,Au,Fs,app,auth,db:Fs.getFirestore(app)};
     }finally{clearTimeout(tm)}
   })();
   _fb.catch(()=>{_fb=null});
@@ -572,12 +610,13 @@ async function fbLogout(){
 async function fbVerify(){ // controllo in background della sessione in cache: nessun utente o ruolo tolto -> fuori; senza rete resta valida
   try{
     const fb=await fbLoad();await fb.auth.authStateReady();
-    const u=fb.auth.currentUser;if(!u)return fbDrop();
-    const r=await fbRoleOf(fb,u);if(!r)return fbDrop();
+    const u=fb.auth.currentUser;if(!u){DIAG.log("auth","verifica: nessun utente -> sessione sviluppatore chiusa");return fbDrop()}
+    const r=await fbRoleOf(fb,u);if(!r){DIAG.log("auth","verifica: ruolo assente -> sessione chiusa");return fbDrop()}
+    DIAG.log("auth","verifica: ruolo "+(r==="master"?"master":"dev"));
     bugFlush();editFlush();cloudStart();
     const nr=r==="master"?"master":"dev1";
     if(nr!==role||r!==acct){if(role==="master"&&nr!=="master")simOff();role=nr;acct=r;persistDev();if(["opt"].includes(screen))render()}
-  }catch(e){}
+  }catch(e){DIAG.log("auth","verifica: errore "+((e&&e.code)||(e&&e.message)||"?")+" (la sessione resta)")}
 }
 if(role)setTimeout(fbVerify,0);
 /* login giocatore (F2a): stessa sessione Firebase di F1 (stesso account, stessa mappatura email
@@ -600,7 +639,7 @@ async function plLogout(){
 async function plVerify(){ // controllo in background come fbVerify: l'utente sparisce -> fuori; senza rete resta valida
   try{
     const fb=await fbLoad();await fb.auth.authStateReady();
-    const u=fb.auth.currentUser;
+    const u=fb.auth.currentUser;DIAG.log("auth","verifica giocatore: "+(u?"sessione ok":"nessun utente"));
     if(!u&&playerAcct){cloudReset();playerAcct=null;persistPlayer();if(screen==="opt")render()}
     else if(u&&playerAcct)cloudStart();
   }catch(e){}
@@ -697,7 +736,7 @@ function cloudStatText(){
   if(s==="net"||!(M&&M.ts))return"Cloud: in attesa di rete";
   return"Cloud: sincronizzato alle "+cloudHM(M.ts);
 }
-function cloudStat(s){CL.status=s;const el=document.getElementById("clst");if(el)el.textContent=cloudStatText()}
+function cloudStat(s){DIAG.log("cloud","stato "+s);CL.status=s;const el=document.getElementById("clst");if(el)el.textContent=cloudStatText()}
 function cloudBlocked(){ // SIM / Sblocca tutto, partite dev (salti di girone e mappe), prove del professore e di Ferma: mai caricare
   if(SIM())return true;
   try{
@@ -718,7 +757,7 @@ async function cloudGet(uid){
   return d.exists()?cloudDoc(d.data()||{}):null;
 }
 const cloudDenied=e=>/permission-denied|unauthenticated/.test((e&&e.code)||"");
-function cloudFail(e){if(cloudDenied(e)){CL.stop=true;cloudStat("na")}else cloudStat("net")}
+function cloudFail(e){DIAG.log("cloud","errore "+((e&&e.code)||(e&&e.message)||"?"));if(cloudDenied(e)){CL.stop=true;cloudStat("na")}else cloudStat("net")}
 async function cloudUpload(uid,base,L){ // {ok,rev} | {conflict:C} | {ver} | {big}
   if(L.pay.length>CLOUD_MAX)return{big:true};
   const fb=await fbLoad(),ref=cloudRef(fb,uid);
@@ -734,6 +773,7 @@ async function cloudUpload(uid,base,L){ // {ok,rev} | {conflict:C} | {ver} | {bi
 async function cloudUp(uid,base,L){
   if(cloudBlocked()){cloudArm();return}
   const r=await cloudUpload(uid,base,L);
+  DIAG.log("cloud","upload: "+(r.ok?"ok":r.conflict?"conflitto":r.ver?"build piu' vecchia":r.big?"troppo grande":"?"));
   if(r.ok){cmSet({uid,rev:r.rev,sum:L.sum,dirty:cloudLocal().sum!==L.sum,ts:Date.now()});CL.ok=true;cloudStat("ok")}
   else if(r.big)cloudStat("big");
   else if(r.ver)cloudStat("ver");
@@ -811,7 +851,9 @@ function cloudBackup(data,from,summary){ // false se la copia non e' finita davv
 const CLOUD_RESUME="mgs_resume";
 function cloudReload(msg){
   CLOUD_LOCK=true;
-  try{if(screen!=="splash")sessionStorage.setItem(CLOUD_RESUME,JSON.stringify({s:screen==="cust"?"wish":screen,tab:optTab,acc:optOpen.gen,acd:optOpen.dev,toast:msg}))}catch(e){}
+  const sc=document.querySelector(".scroll,#roadwrap");
+  try{if(screen!=="splash")sessionStorage.setItem(CLOUD_RESUME,JSON.stringify({s:screen==="cust"?"wish":screen,tab:optTab,acc:optOpen.gen,acd:optOpen.dev,y:sc?Math.round(sc.scrollTop):0,toast:msg}))}catch(e){}
+  DIAG.log("reload",msg);DIAG.flush();
   location.reload();
 }
 function cloudResumeBoot(){ // all'avvio: se la ricarica l'ha chiesta il gioco stesso, si rientra nella schermata di prima
@@ -819,30 +861,34 @@ function cloudResumeBoot(){ // all'avvio: se la ricarica l'ha chiesta il gioco s
   if(!r||!["menu","opt","wish","ach","road"].includes(r.s))return false;
   started=true;
   if(r.s==="opt"){optTab=r.tab==="dev"?"dev":"gen";optOpen.gen=r.acc||null;optOpen.dev=r.acd||null}
-  go(r.s);if(r.toast)toast(r.toast);
+  go(r.s);
+  if(r.y){const sc=document.querySelector(".scroll,#roadwrap");if(sc)sc.scrollTop=r.y}
+  DIAG.log("resume","torno a "+r.s);
+  if(r.toast)toast(r.toast);
   return true;
 }
 function cloudApply(C,uid,lsum){CL.pend={C,uid,lsum};cloudPendCheck()}
 function cloudPendCheck(){if(CL.pend&&cloudCanApply())setTimeout(cloudApplyNow,0)}
 function cloudApplyNow(){
-  const P=CL.pend;if(!P||!cloudCanApply()||CLOUD_LOCK)return;CL.pend=null;
+  const P=CL.pend;if(!P||!cloudCanApply()||CLOUD_LOCK)return;CL.pend=null;DIAG.log("cloud","applico la copia del cloud");
   const L=cloudLocal();
   if(P.lsum!=null&&L.sum!==P.lsum)return cloudSync(); // applicazione automatica ma il dispositivo e' cambiato nel frattempo: si decide di nuovo
-  if(!cloudBackup(L.raw||"{}","device",cloudSummary(cloudReal(L.obj),cloudLw()))||!cloudWrite(P.C.data,L.obj)){cloudStat("space");toast("Spazio insufficiente: salvataggio del cloud non caricato");return}
+  if(!cloudBackup(L.raw||"{}","device",cloudSummary(cloudReal(L.obj),cloudLw()))||!cloudWrite(P.C.data,L.obj)){DIAG.log("cloud","apply: scrittura NON riuscita (spazio)");cloudStat("space");toast("Spazio insufficiente: salvataggio del cloud non caricato");return}
   cmSet({uid:P.uid,rev:P.C.rev,sum:cloudSumOf(P.C.data),dirty:false,ts:Date.now()});
   cloudReload("Salvataggio del cloud caricato");
 }
 function cloudRestore(){ // solo sito /dev/: scambia backup e salvataggio attuale, poi dirty
-  const b=store.get(CLOUDBAK_KEY);if(!b||!b.data||!cloudCanApply())return;
+  const b=store.get(CLOUDBAK_KEY);if(!b||!b.data||!cloudCanApply()){DIAG.log("cloud","restore: rifiutato (backup "+(b&&b.data?"ok":"assente")+", schermata "+screen+")");return}
+  DIAG.log("cloud","restore: avvio");
   const L=cloudLocal();
-  if(!cloudBackup(L.raw||"{}","device",cloudSummary(cloudReal(L.obj),cloudLw()))||!cloudWrite(b.data,L.obj)){toast("Spazio insufficiente: backup non ripristinato");return}
+  if(!cloudBackup(L.raw||"{}","device",cloudSummary(cloudReal(L.obj),cloudLw()))||!cloudWrite(b.data,L.obj)){DIAG.log("cloud","restore: scrittura NON riuscita (spazio)");toast("Spazio insufficiente: backup non ripristinato");return}
   const M=cm();if(M){M.dirty=true;cmSet(M)}
   cloudReload("Backup ripristinato");
 }
 function cloudConflict(C,uid){
   const L=cloudLocal();
   if(cloudSumOf(C.data)===L.sum){cmSet({uid,rev:C.rev,sum:L.sum,dirty:false,ts:Date.now()});CL.ok=true;return cloudStat("ok")} // stesso contenuto: nulla da scegliere
-  CL.ok=false;CL.conf={C,uid};cloudConfShow();
+  DIAG.log("cloud","conflitto: due salvataggi diversi");CL.ok=false;CL.conf={C,uid};cloudConfShow();
 }
 function cloudConfShow(){
   const X=CL.conf;if(!X||document.getElementById("clpop"))return;
@@ -867,6 +913,11 @@ function cloudReset(){ // logout: si dimentica l'ultima copia sincronizzata; sal
   try{localStorage.removeItem(CLOUD_KEY)}catch(e){}delete mem[CLOUD_KEY];
 }
 function cloudWipe(){cloudReset();for(const k of[CLOUDBAK_KEY,LASTSAVE_KEY]){try{localStorage.removeItem(k)}catch(e){}delete mem[k]}}
+function optRefreshAccount(){ // solo il corpo dell'accordion «Account»: niente rifacimento dell'intera pagina, scorrimento e sezione aperta restano
+  const b=optTab==="gen"&&screen==="opt"?document.querySelector("details.acc[data-acc=account] .accb"):null;
+  if(!b)return render();
+  b.innerHTML=plAccountHTML()+cloudAccHTML();
+}
 function cloudTestSet(on){ // interruttore di prova del sito /dev/
   if(on)store.set(CLOUDTEST_KEY,true);else{try{localStorage.removeItem(CLOUDTEST_KEY)}catch(e){}delete mem[CLOUDTEST_KEY]}
   clearTimeout(CL.deb);CL.deb=0;CL.status=null;
@@ -1187,8 +1238,9 @@ function bugFreeze(){
   return null;
 }
 function bugInfo(){
-  return{screen:screenId(),version:VERSION,char:charKey(),ua:(navigator.userAgent||"").slice(0,300),
-    meta:{acct:acct||null,site:IS_DEVSITE?"dev":"stable",girone:(G&&G.stage)||null,diff:(G&&G.diff)||S.opts.diff||"medium",viewport:innerWidth+"x"+innerHeight}};
+  const meta={acct:acct||null,site:IS_DEVSITE?"dev":"stable",girone:(G&&G.stage)||null,diff:(G&&G.diff)||S.opts.diff||"medium",viewport:innerWidth+"x"+innerHeight};
+  if(role)meta.diag=DIAG.last(30); // solo le segnalazioni degli sviluppatori: mai in quelle dei giocatori
+  return{screen:screenId(),version:VERSION,char:charKey(),ua:(navigator.userAgent||"").slice(0,300),meta};
 }
 function bugOpen(){
   if(!canReport())return;
@@ -1239,7 +1291,7 @@ async function bugFlush(){ // svuota la coda: alla verifica della sessione, quan
   }}finally{bugFlushing=false}
 }
 addEventListener("online",()=>bugFlush());
-document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("#bugb");if(b){e.stopPropagation();e.preventDefault();bugOpen()}},true);
+document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest("#bugb");if(b){e.stopPropagation();e.preventDefault();DIAG.log("bug","tocco sull'icona (canReport="+canReport()+")");bugOpen();DIAG.log("bug",document.getElementById("bgt")?"popup aperto":"popup NON aperto")}},true);
 addEventListener("keydown",e=>{if(!BUG)return;e.stopImmediatePropagation();if(e.key==="Escape"){e.preventDefault();BUG.close()}},true); // popup aperto: nessun tasto arriva al gioco
 addEventListener("keyup",e=>{if(BUG)e.stopImmediatePropagation()},true);
 let screen="menu", tab="planes";
@@ -1265,7 +1317,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_2";
+const VERSION="0.4.5_3";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -1896,9 +1948,56 @@ function contrast(hex){const n=parseInt(hex.slice(1),16),r=n>>16,g=(n>>8)&255,b=
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 /* ============ UI HELPERS ============ */
-function toast(msg){
-  const t=document.createElement("div");t.className="toast";t.textContent=msg;root.appendChild(t);setTimeout(()=>t.remove(),2300);
-}
+/* ============ TOAST (modulo autonomo, un solo meccanismo per i messaggi brevi) ============
+   Vive fuori da #root (un render() non lo cancella), un messaggio alla volta (coda), dissolvenza, mai cattura tocchi.
+   Posizione uguale su telefono e desktop: in alto al centro, sotto la barra in alto (e l'area sicura); se li' coprirebbe un pulsante
+   si sposta sulla fascia della barra, tra i suoi comandi. Durata 2,5 s minimo, piu' lunga per i testi lunghi, 5 s massimo.
+   Nelle schermate di gioco resta in coda finche' la partita e' in corso (TOAST.hold) e compare solo a gioco fermo/in pausa/finito. */
+const TOAST={q:[],cur:null,tm:0,poll:0,
+  hold(){ // true = si aspetta (partita in corso: labirinto o Ferma Algidone! in gioco)
+    try{if(screen==="game"&&G&&G.state==="play")return true;if(screen==="fa"&&FA&&FA.state==="play"&&!FA.paused)return true}catch(e){}
+    return false;
+  },
+  dur:m=>Math.min(5000,Math.max(2500,1500+String(m).length*45)),
+  add(msg){msg=String(msg==null?"":msg);if(!msg)return;if(TOAST.q[TOAST.q.length-1]===msg||(TOAST.cur&&TOAST.cur.msg===msg&&TOAST.q.length===0))return;TOAST.q.push(msg);TOAST.pump()},
+  pump(){
+    if(TOAST.cur||!TOAST.q.length)return;
+    if(TOAST.hold()){if(!TOAST.poll)TOAST.poll=setInterval(()=>{if(!TOAST.hold()){clearInterval(TOAST.poll);TOAST.poll=0;TOAST.pump()}},400);return}
+    TOAST.show(TOAST.q.shift());
+  },
+  show(msg){
+    let host=document.getElementById("toasts");
+    if(!host){host=document.createElement("div");host.id="toasts";document.body.appendChild(host)}
+    const el=document.createElement("div");el.className="toast";el.textContent=msg;
+    if(["game","fa","bj","pr"].includes(screen))el.classList.add("cmp");
+    host.appendChild(el);TOAST.place(el);
+    TOAST.cur={el,msg};
+    requestAnimationFrame(()=>el.classList.add("on"));
+    TOAST.tm=setTimeout(()=>{el.classList.remove("on");setTimeout(()=>{el.remove();TOAST.cur=null;TOAST.pump()},260)},TOAST.dur(msg));
+  },
+  place(el){
+    const root=document.getElementById("root"),vw=innerWidth,rr=root?root.getBoundingClientRect():{left:0,width:vw},cxm=rr.left+rr.width/2;
+    const sel="button,summary,input,select,textarea,a,[data-tile],.card,.rtile,[role=button]";
+    const ctl=[...document.querySelectorAll(sel)].filter(e=>!e.closest("#toasts")).map(e=>({e,r:e.getBoundingClientRect()})).filter(o=>o.r.width>2&&o.r.height>2&&o.r.bottom>0&&o.r.top<innerHeight&&getComputedStyle(o.e).visibility!=="hidden");
+    const over=r=>ctl.reduce((a,o)=>{const w=Math.min(r.right,o.r.right)-Math.max(r.left,o.r.left),h=Math.min(r.bottom,o.r.bottom)-Math.max(r.top,o.r.top);return w>0&&h>0?a+w*h:a},0);
+    const bar=root&&[...root.querySelectorAll(".hud,.top,.brand")].find(b=>b.getBoundingClientRect().height>10),br=bar?bar.getBoundingClientRect():null;
+    const maxW=Math.min(420,vw-24);
+    const put=(top,mid,w)=>{el.style.maxWidth=w+"px";el.style.left=mid+"px";el.style.top=top+"px";return el.getBoundingClientRect()};
+    el.style.top="calc(env(safe-area-inset-top,0px) + 8px)";const safeTop=el.getBoundingClientRect().top;
+    const cands=[];
+    cands.push(()=>put(br?br.bottom+6:safeTop,cxm,maxW));
+    if(br){cands.push(()=>{ // fascia della barra: solo lo spazio tra i comandi a sinistra e a destra
+      let L=br.left+6,R=br.right-6;
+      for(const o of ctl){if(o.r.bottom<br.top||o.r.top>br.bottom)continue;const c=(o.r.left+o.r.right)/2;if(c<cxm)L=Math.max(L,o.r.right+8);else R=Math.min(R,o.r.left-8)}
+      if(R-L<140)return put(br.bottom+6,cxm,maxW);
+      el.classList.add("cmp");const h=el.getBoundingClientRect().height;
+      return put(br.top+Math.max(0,(br.height-h)/2),(L+R)/2,Math.min(maxW,R-L));
+    })}
+    const gp=["game","fa","bj","pr"].includes(screen);let best=null,bs=1e12;
+    for(const c of cands){el.classList.toggle("cmp",gp);const r=c(),sc=over(r);if(sc<bs){bs=sc;best=c}if(sc<4)break}
+    el.classList.toggle("cmp",gp);best();
+  }};
+function toast(msg){TOAST.add(msg)}
 function openModal(html){
   closeModal();const m=document.createElement("div");m.className="ov";m.innerHTML=`<div class="box">${html}</div>`;modalEl().appendChild(m);return m;
 }
@@ -2358,7 +2457,7 @@ function bindOpt(){
     if(t.closest("#plo")){plLogout();return render()}
     if(t.closest("#cpw"))return fbChangePw();
     if(t.closest("#clsy")){cloudSync(true);return}
-    const ct=t.closest("[data-clt]");if(ct&&IS_DEVSITE){cloudTestSet(ct.dataset.clt==="1");return render()}
+    const ct=t.closest("[data-clt]");if(ct&&IS_DEVSITE){cloudTestSet(ct.dataset.clt==="1");return optRefreshAccount()}
     if(t.closest("#clrb"))return confirmBox("Ripristina backup","Il salvataggio attuale e il backup si scambiano di posto, poi il gioco si ricarica.","Ripristina","Annulla",cloudRestore);
     const mu=t.closest("[data-mus]");if(mu){S.opts.music=mu.dataset.mus==="1";persist();syncMusic();return render()}
     const sn=t.closest("[data-snd]");if(sn){S.opts.sound=sn.dataset.snd==="1";persist();return render()}
@@ -2741,6 +2840,18 @@ function gamDevHTML(){
    ${m?`<div class="opt" style="flex-direction:column;align-items:stretch"><div>Musica El Gamblador<small>Carica un .mp3 (max 12 MB) per sostituire la traccia del tavolo</small></div><input type="file" id="gmf" accept="audio/mpeg,.mp3" style="margin-top:8px;color:var(--ink)"><div class="err" id="gme"></div><div class="acts"><button class="btn red sm" id="gmr">Ripristina originale</button></div></div>`:""}`;
   return {mini,audio};
 }
+function diagHTML(){
+  const a=DIAG.all().reverse();
+  return `<div class="opt" style="flex-direction:column;align-items:stretch"><div>Registro di diagnostica<small>${a.length} voci (max 200), le più recenti in alto. Nessun dato personale. «Copia» lo mette negli appunti.</small></div>
+   <div class="acts"><button class="btn sm" id="dgc">Copia</button><button class="btn ghost sm" id="dgx">Svuota</button></div>
+   <pre id="dgl" style="margin:8px 0 0;max-height:260px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:.68rem;line-height:1.3;background:#0f1824;border-radius:8px;padding:8px">${esc(DIAG.text()||"(vuoto)")}</pre></div>`;
+}
+function diagCopy(){
+  const t=DIAG.text();
+  const ok=()=>toast("Diagnostica copiata");
+  const fb=()=>{try{const ta=document.createElement("textarea");ta.value=t;ta.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();ok()}catch(e){toast("Copia non riuscita")}};
+  try{navigator.clipboard.writeText(t).then(ok,fb)}catch(e){fb()}
+}
 function devRows(){
   const m=isMaster(),g=gamDevHTML();
   const account=`<div class="opt"><div>Connesso come ${esc(acct||"?")}<small>Ruolo: ${m?"master developer":"sviluppatore"}</small></div><button class="btn red sm" id="lo">Esci</button></div>
@@ -2775,7 +2886,7 @@ function devRows(){
      <div class="acts"><button class="btn ghost sm" data-popprev="asset">Asset</button><button class="btn ghost sm" data-popprev="char">Personaggio</button><button class="btn ghost sm" data-popprev="game">Minigioco</button><button class="btn ghost sm" data-popprev="milestone">Traguardo</button><button class="btn ghost sm" data-popprev="ach">Obiettivo</button></div></div>`;
   const exp=`<div class="opt"><div>Esporta modifiche<small>Crea uno zip con solo ciò che hai cambiato, pronto da caricare su GitHub</small></div><button class="btn sm" id="xopen">Prepara</button></div>
    <div class="opt"><div>Ripristina build originale<small>Cancella le modifiche locali di testi e schede</small></div><button class="btn red sm" id="rs">Ripristina</button></div>`;
-  return optAcc("account","Account",account)+optAcc("test","Strumenti di test",test)+optAcc("audio","Audio e testi",audio)+optAcc("obj","Anteprime",obj)+optAcc("exp","Consegna",exp)+optAcc("skins","Costumi",skinToolHTML());
+  return optAcc("account","Account",account)+optAcc("test","Strumenti di test",test)+optAcc("audio","Audio e testi",audio)+optAcc("obj","Anteprime",obj)+optAcc("exp","Consegna",exp)+optAcc("skins","Costumi",skinToolHTML())+optAcc("diag","Diagnostica",diagHTML());
 }
 function bindDev(){
   root.onchange=async e=>{
@@ -2804,6 +2915,8 @@ function bindDev(){
     const t=e.target;
     if(t.closest("#back"))return go("menu");
     if(t.closest("#xopen"))return exportDialog();
+    if(t.closest("#dgc"))return diagCopy();
+    if(t.closest("#dgx")){DIAG.clear();const b=document.querySelector("details.acc[data-acc=diag] .accb");if(b)b.innerHTML=diagHTML();return toast("Diagnostica svuotata")}
     if(t.closest("#lo")){fbLogout();return go("menu")}
     if(t.closest("#cpw")){return fbChangePw()}
     const sm=t.closest("[data-sim]");if(sm&&isMaster()){if(sm.dataset.sim==="1")simOn();else simOff();toast(S.sim?"Simulazione attiva":"Dati reali ripristinati");return render()}
@@ -7135,7 +7248,7 @@ async function prBattleStart(){
 
 /* ============ ROUTER ============ */
 function render(){
-  lpSync();cloudPendCheck();
+  DIAG.screen(screen);lpSync();cloudPendCheck();
   cancelAnimationFrame(raf);cancelAnimationFrame(menuRaf);cancelAnimationFrame(custRaf);setTimeout(syncMusic,0);
   if(screen!=="sad")clearInterval(sadTimer);
   if(screen!=="pr")prCleanup();

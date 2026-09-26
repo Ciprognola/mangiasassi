@@ -89,7 +89,7 @@ with sync_playwright() as pw:
     if bugs:
         d = bugs[0]
         check("field values", d["uid"] == "uid_master" and d["text"] == "il menu ha un problema" and d["screen"] == "menu-home-roccia" and d["version"] == p.evaluate("VERSION") and d["char"] == "roccia" and d["ts"] == {"__ts": True} and 0 < len(d["ua"]) <= 300, d)
-        check("meta", set(d["meta"]) == {"acct", "site", "girone", "diff", "viewport"} and d["meta"]["site"] == "stable" and d["meta"]["viewport"] == "390x844" and d["meta"]["acct"] == "master", d["meta"])
+        check("meta", set(d["meta"]) == {"acct", "site", "girone", "diff", "viewport", "diag"} and d["meta"]["site"] == "stable" and d["meta"]["viewport"] == "390x844" and d["meta"]["acct"] == "master" and isinstance(d["meta"]["diag"], list) and 0 < len(d["meta"]["diag"]) <= 30, d["meta"])
     check("popup closed + success toast", not p.evaluate("!!document.querySelector('#bgt')") and "inviata" in p.evaluate("document.body.innerText"))
     after = p.evaluate("localStorage.getItem('mgs_v1_dev')||localStorage.getItem('mgs_v1')")
     check("save untouched by opening/sending", before == after)
