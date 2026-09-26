@@ -431,6 +431,8 @@ what's an accepted, named gap versus a blocker. `wait-assets` until the owner (o
   Ferma thrower row above — BK shipped with no Cinghiale art before either rule or these frames existed, not
   a merge blocker. 19 keys total owed for BK today (13 + 6).
 
+- **Palette/art for snacks 4–9** (not a skin; decided 2026-09-27 with U2): snacks 4–9 have no art or colours and are drawn as the base burger everywhere (pellets, eating, battle). Rocks 4–9 now take their battle-type colour (0.4.5_8); snacks stay as they are until the owner supplies a palette or art. `wait-assets`.
+
 ### Costumi da assegnare (F4b2, §5 procedure)
 A skin submission approved and hardcoded into `SKINS` is **not** automatically given to any player — someone
 has to decide how it's unlocked (a career milestone, a roadmap tile reward, a shop item, …), which is a
@@ -657,4 +659,4 @@ Stage is per ghost. Scared (`s`) or eaten (`g`) ghosts never use abilities. Each
 (log [Q] answers here, with the chunk and date)
 
 - 2026-09-27 · P1b (0.4.5_5): owner feedback — the maze respawn blinking is replaced by a 5 s aura in the power-up colour (was 2 s blinking); the aura is the timer; §10.1 and §2 updated.
-- 2026-09-27 · U2 (not built) [Q open]: only rocks 0–3 and snacks 0–3 have distinct art/colours; rocks 4–9 and snacks 4–9 are drawn as the base rock / burger everywhere (pellets, eating, battle for snacks; measured: eat frame == pellet for all 10 rocks and 10 snacks). Extending the eaten-stone recolour to "every rock/snack" needs colours/art that don't exist. Waiting for the owner's decision (see report).
+- 2026-09-27 · U2 (0.4.5_8) [Q answered]: rocks 4–9 get colours from their existing battle-type colours (`PB_TCOL`, same formula as `pbRockTint`), applied to pellets, side/up/down eating and the menu bite; snacks 4–9 stay as they are and "palette/art for snacks 4–9" goes on the §8 art-owed list. No other new art.

@@ -395,9 +395,21 @@ function scaleUp2(b,k){const h=b.length,w=b[0].length,o=Array.from({length:h*k},
 const ROCKFR={},EATVAR={};
 function pxCanvas(px){const h=px.length,w=px[0].length,c=document.createElement("canvas");c.width=w;c.height=h;const x=c.getContext("2d");
   for(let y=0;y<h;y++)for(let i=0;i<w;i++){const p=px[y][i];if(p){x.fillStyle="rgb("+(p[0]|0)+","+(p[1]|0)+","+(p[2]|0)+")";x.fillRect(i,y,1,1)}}return c}
+/* rocce 4-9 (senza arte propria, 0.4.5_8): il colore viene dal tipo di battaglia della roccia (PB_TCOL, lo stesso della schermata di lotta) applicato all'arte di base, con la stessa formula di pbRockTint.
+   rockKind(i) = tipo d'arte per pellet, mangiata e scena del menu: 1-3 arte propria, 4-9 tinta dal tipo, 0 = roccia di base. Snack e rocce 0-3: invariati. Solo Uomo roccia (le rocce sono la sua biblioteca) */
+const rockKind=i=>artRock(i)||((i>=4&&i<ROCKS.length)?i:0);
+const rockTintF=hex=>hx(hex).map(v=>.5+.75*v/255),_rkT={};
+function rockTintOf(k){ // fattori [r,g,b] della roccia k>=4
+  if(_rkT[k])return _rkT[k];
+  const raw=pbRaw("roccia","rock",k,pbName("roccia","rock",k));
+  return _rkT[k]=rockTintF(PB_TCOL[raw.types[1]||raw.types[0]]||"#8a8f96");
+}
 function rockFrames(k){
   if(!k)return[IMG.rock,IMG.r1,IMG.r2,IMG.r1];
-  if(!ROCKFR[k]){const f=rockFramesPx(k).map(pxCanvas);ROCKFR[k]=[f[0],f[1],f[2],f[1]]}
+  if(!ROCKFR[k]){
+    if(k>=4){const t=rockTintOf(k),f=[IMG.rock,IMG.r1,IMG.r2].map(im=>tintRock(im,t));ROCKFR[k]=[f[0],f[1],f[2],f[1]]}
+    else{const f=rockFramesPx(k).map(pxCanvas);ROCKFR[k]=[f[0],f[1],f[2],f[1]]}
+  }
   return ROCKFR[k];
 }
 const eatKey=(prefix,frame)=>prefix==="f"?("e"+frame):(prefix+"_e"+frame);
@@ -405,12 +417,14 @@ function eatVar(k,frame,prefix){
   prefix=prefix||"f";
   const key=k+"_"+prefix+"_"+frame;if(EATVAR[key])return EATVAR[key];
   const src=IMG[eatKey(prefix,frame)],c=document.createElement("canvas");c.width=src.width;c.height=src.height;const x=c.getContext("2d");x.drawImage(src,0,0);
-  const d=x.getImageData(0,0,c.width,c.height),a=d.data,nm=RKINDS[k];
+  const d=x.getImageData(0,0,c.width,c.height),a=d.data,nm=RKINDS[k],tf=k>=4?rockTintOf(k):null;
   for(let i=0;i<a.length;i+=4){if(a[i+3]===0)continue;const r=a[i],g=a[i+1],b=a[i+2],lum=(r+g+b)/3;
-    if(Math.max(r,g,b)-Math.min(r,g,b)<=16&&lum>=58&&lum<=215){const col=rampAt(nm,(lum-70)/120);a[i]=col[0];a[i+1]=col[1];a[i+2]=col[2]}}
+    if(Math.max(r,g,b)-Math.min(r,g,b)<=16&&lum>=58&&lum<=215){
+      if(tf){a[i]=Math.min(255,r*tf[0]);a[i+1]=Math.min(255,g*tf[1]);a[i+2]=Math.min(255,b*tf[2])} // rocce 4-9: stessa tinta del pellet
+      else{const col=rampAt(nm,(lum-70)/120);a[i]=col[0];a[i+1]=col[1];a[i+2]=col[2]}}}
   x.putImageData(d,0,0);return EATVAR[key]=c;
 }
-const eatImg=(frame,prefix)=>{prefix=prefix||"f";const k=(typeof G!=="undefined"&&G&&(G.char||"roccia")==="roccia")?artRock(G.rock):0;return k?eatVar(k,frame,prefix):IMG[eatKey(prefix,frame)]};
+const eatImg=(frame,prefix)=>{prefix=prefix||"f";const k=(typeof G!=="undefined"&&G&&(G.char||"roccia")==="roccia")?rockKind(G.rock):0;return k?eatVar(k,frame,prefix):IMG[eatKey(prefix,frame)]};
 const GYM_OLD=["Manubrio","Kettlebell","Bilanciere","Panca piana","Tapis roulant","Cyclette","Rower","Multipower","Lat machine","Leg press","Chest press","Pulley","Ellittica","Step","Corda","Sacco","Palla medica","Fitball","Elastico","Trx","Ab wheel","Bosu","Sbarra","Parallele","Anelli"];
 const GYM=["Manubrio","Bilanciere","Dischi","Lat machine","Lombar machine","Kettlebell"].concat(GYM_OLD.filter(n=>!["Manubrio","Kettlebell","Bilanciere","Lat machine"].includes(n))).slice(0,25);
 const SNACKS=Array.from({length:10},(_,i)=>["Burger classico","Gelato Algida","Tiramisù","Mc Crispy"][i]||"Snack "+(i+1));
@@ -1315,7 +1329,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_7";
+const VERSION="0.4.5_8";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -1817,7 +1831,7 @@ function drawFaceEatFX(ctx,cx,cy,w,dir,eat){
   // effect, instead of the mis-scaled dedicated fu/fd eat crops.
   const T=.26,pr=1-Math.min(1,eat/T),dh=w*IMG.f0.height/IMG.f0.width;
   const bs=dh*.34*(1-.6*pr),my=dir===0?-dh*.56:dh*.42; // dir0 (up/"fd"): rock enters from the top; dir2 (down/"fu"): from the collar
-  const r=(typeof G!=="undefined"&&G&&(G.char||"roccia")==="roccia")?rockFrames(artRock(G.rock))[0]:IMG.rock;
+  const r=(typeof G!=="undefined"&&G&&(G.char||"roccia")==="roccia")?rockFrames(rockKind(G.rock))[0]:IMG.rock;
   ctx.save();ctx.translate(cx,cy);ctx.globalAlpha=Math.max(0,Math.min(1,pr*5)*(1-pr*pr));ctx.imageSmoothingEnabled=false;
   ctx.drawImage(r,-bs/2,my-bs/2,bs,bs*r.height/r.width);
   ctx.restore();
@@ -2047,7 +2061,7 @@ function sceneGeo(ck,W,H){
 }
 function sceneSpawn(M,W){
   const side=Math.random()<.62?1:-1,alg=M.geo.alg,sel=cs().selR;
-  M.k=alg?artSnack(sel):artRock(sel);
+  M.k=alg?artSnack(sel):rockKind(sel);
   M.item={x:side>0?W+18:-18,y:M.geo.my,t:0,side};
   if(M.face!==side||M.front){M.phase="turn";M.newFace=side;M.turnT=0;M.turned=false}else M.phase="fly";
 }
@@ -2070,7 +2084,7 @@ function stepScene(M,dt,W){
    case"chew":{
      M.t+=dt;M.ct+=dt;
      if(M.ct>.09){M.ct=0;const s=M.face,px=g.cx+s*(g.alg?g.mw+6:g.mo-4),py=(g.alg?g.my:g.my)+2;
-       let col=CRUMB_SN[M.k]||"#d99a3b";if(!g.alg){col=M.k?"rgb("+rampAt(RKINDS[M.k],.55).map(v=>v|0).join(",")+")":"#8a8f96"}
+       let col=CRUMB_SN[M.k]||"#d99a3b";if(!g.alg){col=M.k>=4?"rgb("+[138,143,150].map((v,j)=>Math.min(255,v*rockTintOf(M.k)[j])|0).join(",")+")":M.k?"rgb("+rampAt(RKINDS[M.k],.55).map(v=>v|0).join(",")+")":"#8a8f96"}
        M.parts.push({x:px,y:py,vx:s*(10+Math.random()*30),vy:-20-Math.random()*30,l:.5,c:col})}
      if(M.t>(g.alg?.85:1.25)){M.phase="swallow";M.t=0}
      break}
@@ -4242,7 +4256,7 @@ function draw(){
   }
   ambient(ctx,c,TH,tm);
   // pellets
-  const ALG=gcar()==="algidone",RF=rockFrames(ALG?0:artRock(G.rock));ctx.imageSmoothingEnabled=false;
+  const ALG=gcar()==="algidone",RF=rockFrames(ALG?0:rockKind(G.rock));ctx.imageSmoothingEnabled=false;
   for(let y=vy0;y<vy1;y++)for(let x=vx0;x<vx1;x++){
     if(G.grid[y][x]!==".")continue;
     ctx.fillStyle="rgba(0,0,0,.25)";ctx.beginPath();ctx.ellipse(x*c+c/2,y*c+c*.72,c*.13,c*.04,0,0,7);ctx.fill();
@@ -6721,8 +6735,7 @@ const PB_ALL=Object.assign({},PB_MSG,PB_UI);
 const _pbSp={},_pbSil=new WeakMap(),_pbRk={};
 function pbRockTint(hex){
   if(_pbRk[hex])return _pbRk[hex];
-  const c=hx(hex),f=v=>.5+.75*v/255;
-  return _pbRk[hex]=tintRock(IMG.rock,[f(c[0]),f(c[1]),f(c[2])]);
+  return _pbRk[hex]=tintRock(IMG.rock,rockTintF(hex));
 }
 function pbSpriteCv(m){
   const key=m.ck+"|"+m.kind+"|"+m.idx+"|"+m.types.join("");if(_pbSp[key])return _pbSp[key];
