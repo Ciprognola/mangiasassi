@@ -4,7 +4,7 @@ Matrice fotogramma x costume, generata da questa build (`tools/fbstub/test_skin_
 
 Legenda: **ok** = il costume ha quel fotogramma · **manca** = fotogramma reale del foglio (F4a) senza arte per questo costume · **na** = il costume dichiara di non averne bisogno (`SKINS.<id>.na`) · **procedurale — da convertire** = posa disegnata dal codice (es. l'icona mangia procedurale di Uomo roccia), non ancora un fotogramma: nessun costume puo' toccarla oggi. Il Cinghiale di Algidone era in questa categoria fino a F4c (0.4_10): ora ha 6 fotogrammi reali (riga «Cinghiale»).
 
-Build: 0.4_10
+Build: 0.4_11
 
 ## Uomo roccia
 
