@@ -3,7 +3,7 @@
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
 ## SESSION HANDOFF
-0.4.5 released (tag `v0.4.5`), main and dev merged. REQ and B1 moved to the 0.5 backlog (§8), no owner assets yet. Next: **0.5** — plan arrives from Claude chat; nothing to build until then. Dev-branch builds are now `0.4.5_N`, next is `0.4.5_1`. Sessions may run as Claude Code cloud sessions: then the brief starts with a cloud preamble; follow it.
+0.5 plan in §10. P1a built (0.4.5_1), awaiting the owner's phone test. Next: P1b. Dev-branch builds are `0.4.5_N`. Sessions may run as Claude Code cloud sessions: then the brief starts with a cloud preamble; follow it.
 
 ---
 

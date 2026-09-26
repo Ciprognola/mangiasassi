@@ -1949,6 +1949,13 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Checks before this release: all test suites green except the known `test_f1` "Esc closes the login" (root-caused, not fixed — 0.5 backlog); `node --check` + smoke test; a save made on the tagged `v0.4` build still loads here with progress, achievements, extras, texts/colours and no console errors; `refs/skins/SKIN_COVERAGE.md` regenerated — every remaining `manca` is one of the grandfathered BK gaps (13 Ferma thrower + 6 Cinghiale frames), nothing new.
 - Not tested: real devices, the live Pages deploy after this release.
 
+## 0.4.5_1 — 2026-09-26 — P1a (0.5 plan)
+- **Login Esc bug**: after a failed dev/player login attempt the focus returns to the password field (the disabled button had dropped it to `<body>`), so Esc closes the popup again (`loginModal`, `plLoginGo`). `test_f1` «Esc closes the login» is green again (34/34).
+- **Cloud-conflict cards at 390 px**: below 480 px the two cards stack in one column and the title/date stay on one line (CSS only). New check in `test_f2b`.
+- **`test_f4b1` waits**: the 12 fixed waits after «Carica costume» are replaced by `import_go()` = click + wait for `skinImpBusy===false` (59/59). `test_f2b`: the «newer build» fixture uses ver `0.9` instead of a hardcoded `0.4.5_1` (which is now the current build).
+- Docs: CLAUDE.md §10 replaced by the 0.5 plan (separate commit).
+- Not tested: real phone, real Android back/keyboard.
+
 ## infra — 2026-09-26
 
 - `.github/workflows/tag-release.yml` — tags a release and publishes its GitHub Release on push to `main`, replacing the manual tagging step from the 0.4.5 release (Claude Code cloud sessions get an HTTP 403 pushing tags with their own git credentials; a workflow's `contents: write` token can). No-op unless the root `VERSION` file is a bare release version (digits and dots only); finds the newest first-parent commit on `main` whose message is exactly `Release <version>`, tags it `v<version>` (skipped if the tag already exists) and creates a GitHub Release from that version's `CHANGELOG.md` section (skipped if the release already exists) — idempotent, safe to rerun or to fire manually.

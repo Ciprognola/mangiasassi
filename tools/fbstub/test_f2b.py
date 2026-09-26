@@ -259,6 +259,8 @@ with sync_playwright() as pw:
     txt = p.evaluate("document.querySelector('#clpop')&&document.querySelector('#clpop').innerText") or ""
     check("first sync, different progress -> popup «Due salvataggi diversi»", "Due salvataggi diversi" in txt and "Nel cloud" in txt and "Su questo dispositivo" in txt, txt[:200].replace(chr(10), " | "))
     check("popup cards: levels of both characters + sordi + date", all(x in txt for x in ["Liv. 22", "Liv. 3", "90 sordi", "Liv. 14", "Liv. 8", "4200 sordi", "Salvato il"]), txt.replace(chr(10), " | ")[:300])
+    wr = p.evaluate("[...document.querySelectorAll('#clpop .clcard b, #clpop .clcard small')].map(e=>Math.round(e.getBoundingClientRect().height)<=Math.round(parseFloat(getComputedStyle(e).lineHeight)||parseFloat(getComputedStyle(e).fontSize)*1.4)+2)")
+    check("conflict cards at 390 px: title and date each on one line", len(wr) == 4 and all(wr), wr)
     check("screenId() = cloud-conflict", p.evaluate("screenId()") == "cloud-conflict")
     p.keyboard.press("Enter"); p.wait_for_timeout(200)
     check("popup blocks keys (Enter does nothing)", p.evaluate("!!document.querySelector('#clpop')"))
@@ -447,7 +449,7 @@ with sync_playwright() as pw:
     ctx.close()
 
     # ============================================================ newer ver in the cloud -> never applied, never overwritten
-    ctx, p, errs = page(b, site="dev", cloud={UID + "_dev": cdoc(norm(b, save(r=40)), rev=9, ver="0.4.5_1")}); settle(p)
+    ctx, p, errs = page(b, site="dev", cloud={UID + "_dev": cdoc(norm(b, save(r=40)), rev=9, ver="0.9")}); settle(p)
     c = cl(p)
     check("cloud copy from a newer build -> not applied (local still fresh), no write", p.evaluate("S.p.ch.roccia.lvl") == 1 and docs(p)[UID + "_dev"]["rev"] == 9 and c["status"] == "ver", c)
     check("status «Aggiorna il gioco per sincronizzare» in the Account accordion", open_account(p) and p.evaluate("document.querySelector('#clst').textContent") == "Aggiorna il gioco per sincronizzare")
