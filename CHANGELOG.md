@@ -1949,6 +1949,12 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Checks before this release: all test suites green except the known `test_f1` "Esc closes the login" (root-caused, not fixed — 0.5 backlog); `node --check` + smoke test; a save made on the tagged `v0.4` build still loads here with progress, achievements, extras, texts/colours and no console errors; `refs/skins/SKIN_COVERAGE.md` regenerated — every remaining `manca` is one of the grandfathered BK gaps (13 Ferma thrower + 6 Cinghiale frames), nothing new.
 - Not tested: real devices, the live Pages deploy after this release.
 
+## 0.4.5_7 — 2026-09-27 — El Gamblador portrait from the table sprites
+- Owner feedback: his picture still looked like the presentation sprite (`BJSPR.pres`). Available dealer frames in `BJSPR`: `idle` ×6 (108×113, cigarette, hands on the table), `dealP` ×7, `dealS` ×4, `shuffle` ×3, `collect` ×4, `check` ×3, `win` ×2, `lose` ×2, `expr` ×7 (94×~110 close-ups: neutral/smile/talk/raise/serious/annoyed/tired), `pres` (the poster), `chips` ×5, `back`, `shoe`, `discard`, `ashtray`. **Picked `idle[0]`** (the idle pose as at the table, with the cigarette, sunglasses on his head, bow tie), cropped to the upper 84 rows (face, bow tie, vest; `GAMB_CROP`) so it reads at card size.
+- `gambImg()` now returns that crop (canvas, `null` until loaded) and `gambDraw(x)` paints it; used by the Giochi card, the unlock popup (`char:gam`) and the Negozio › Giocatore card. The old two-playing-cards branch of the Giochi card is removed. No new art.
+- Tests: `test_u1` (27 checks) compares all three canvases to the reference crop and to `BJSPR.pres`.
+- Not tested: real phone.
+
 ## 0.4.5_6 — 2026-09-27 — U1
 - **«Mr. Stone»**: page `<title>`, error overlay, `<noscript>`, menu `<h1>`, splash `<h1>` and splash popup `<h3>` (the only player-visible uses of the old title). Repo, URL, file names, storage keys and identifiers unchanged; the texts stay editable by long-press as before.
 - **Giochi**: existing but still locked games (G2 El Gamblador, G3 Rocciamon, G4 Ferma Algidone!) show «???» + **«non sbloccato»**; «In arrivo» stays only for things that don't exist yet (G5/G6 cards, «Altri giochi in arrivo», Personalizza items, «Altri personaggi»). Unlocked cards unchanged.

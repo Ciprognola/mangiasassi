@@ -11,6 +11,10 @@ INK = """(sel)=>{const c=document.querySelector(sel);if(!c)return -1;const d=c.g
 CARDS = "[...document.querySelectorAll('.grid .card')].map(c=>({name:c.querySelector('.nm').innerText,st:(c.querySelector('.st')||{}).innerText||'',locked:c.classList.contains('locked')}))"
 
 
+REFJS = """(()=>{const r=document.createElement('canvas');r.width=r.height=96;gambDraw(r.getContext('2d'));return r.toDataURL()})()"""
+PRESJS = """new Promise(res=>{const im=new Image();im.onload=()=>{const r=document.createElement('canvas');r.width=r.height=96;const x=r.getContext('2d'),q=Math.min(92/im.naturalWidth,92/im.naturalHeight);x.imageSmoothingEnabled=true;x.drawImage(im,48-im.naturalWidth*q/2,94-im.naturalHeight*q,im.naturalWidth*q,im.naturalHeight*q);res(r.toDataURL())};im.src=BJSPR.pres})"""
+
+
 def games_tab(p):
     p.evaluate("tab='games';go('wish')"); p.wait_for_timeout(700)
 
@@ -55,6 +59,13 @@ with sync_playwright() as pw:
     check("Giochi: El Gamblador's card shows his name", "Gamblador" in cs[1]["name"], cs[1])
     ink = p.evaluate("(%s)('.grid .card:nth-child(2) canvas')" % INK)
     check("Giochi: El Gamblador's card is drawn with his presentation picture (much more ink than the two playing cards it used to show)", ink > 3000, ink)
+    ref = p.evaluate(REFJS); pres = p.evaluate(PRESJS)
+    card = p.evaluate("document.querySelector('.grid .card:nth-child(2) canvas').toDataURL()")
+    check("Giochi card draws the dealer's idle frame from the blackjack sprites (not BJSPR.pres)", card == ref and card != pres and len(ref) > 2500)
+    p.evaluate("tab='player';go('wish')"); p.wait_for_timeout(700)
+    neg = p.evaluate("(()=>{const c=document.querySelector('canvas[data-draw^=\"gamb\"]');return c&&c.toDataURL()})()")
+    check("Negozio › Giocatore card draws the same dealer frame (not BJSPR.pres)", neg == ref and neg != pres, bool(neg))
+    check("the crop is the idle_0 frame of BJSPR (108x84 crop of a 108x113 frame)", p.evaluate("[gambImg().width,gambImg().height,_gpi.src===BJSPR.idle[0]]") == [108, 84, True])
     check("no console errors (unlocked cards)", not errs, errs); ctx.close()
 
     # unlock popup for char:gam
@@ -64,6 +75,8 @@ with sync_playwright() as pw:
     p.evaluate("S.p.pop.queue=[{type:'char',items:[{key:'gam',name:'El Gamblador'}]}];go('menu')"); p.wait_for_selector("#popg", timeout=5000); p.wait_for_timeout(800)
     has = p.evaluate("!!document.querySelector('#modal canvas[data-draw^=\"gamb\"]')"); ink = p.evaluate("(%s)('#modal canvas[data-draw^=\"gamb\"]')" % INK)
     check("unlock popup for El Gamblador shows his picture", has and ink > 3000, (has, ink))
+    pop = p.evaluate("document.querySelector('#modal canvas[data-draw^=\"gamb\"]').toDataURL()")
+    check("unlock popup draws the dealer's idle frame (not BJSPR.pres)", pop == p.evaluate(REFJS) and pop != p.evaluate(PRESJS))
     p.click("#popd"); p.wait_for_timeout(300)
     p.evaluate("S.p.pop.queue=[{type:'game',items:[{idx:2,name:'Rocciamon'}]}];go('menu')"); p.wait_for_selector("#popg", timeout=5000)
     check("other popups unchanged (no gamb picture on a «game» popup)", not p.evaluate("!!document.querySelector('#modal canvas[data-draw^=\"gamb\"]')"))

@@ -1315,7 +1315,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_6";
+const VERSION="0.4.5_7";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -1899,7 +1899,15 @@ function drawHero(ctx,X,Y,yy,c,o){
     else drawEat(ctx,X,yy,c*1.5,o.eat>.13?0:1,flip,null,prefix);
   }else drawFace(ctx,X,yy,c*1.5,fr,flip,prefix);
 }
-let _gi=null;function gambImg(){if(!_gi){_gi=new Image();_gi.onload=()=>{if(screen==="wish"||document.querySelector('canvas[data-draw^="gamb"]'))paintCanvases()};_gi.src=BJSPR.pres}return _gi}
+/* ritratto di El Gamblador (Giochi, popup di sblocco, Negozio): un fotogramma del blackjack, l'«idle» del tavolo con la sigaretta (BJSPR.idle[0], 108x113), ritagliato a mezzo busto (viso, papillon, gilet). Nessuna arte nuova */
+const GAMB_CROP={x:0,y:0,w:108,h:84};
+let _gp=null,_gpi=null;
+function gambImg(){ // canvas del ritaglio, o null finche' il fotogramma non e' caricato (poi ridisegna le carte)
+  if(_gp)return _gp;
+  if(!_gpi){_gpi=new Image();_gpi.onload=()=>{const c=document.createElement("canvas");c.width=GAMB_CROP.w;c.height=GAMB_CROP.h;c.getContext("2d").drawImage(_gpi,GAMB_CROP.x,GAMB_CROP.y,GAMB_CROP.w,GAMB_CROP.h,0,0,GAMB_CROP.w,GAMB_CROP.h);_gp=c;if(screen==="wish"||document.querySelector('canvas[data-draw^="gamb"],canvas[data-draw^="game:1"]'))paintCanvases()};_gpi.src=BJSPR.idle[0]}
+  return null;
+}
+function gambDraw(x){const im=gambImg();if(!im)return;const q=Math.min(92/im.width,92/im.height);x.imageSmoothingEnabled=true;x.drawImage(im,48-im.width*q/2,94-im.height*q,im.width*q,im.height*q)}
 let _pri=false;function profImg(){if(!_pri){_pri=true;prLoadImgs().then(()=>{if(screen==="wish")paintCanvases()})}return(PRIMG.blink&&PRIMG.blink[0])||null}
 let faIconTried=false;
 function faIconDraw(x,s){
@@ -1919,12 +1927,11 @@ function paintCanvases(){
       if(alg){const q=artSnack(+i);if(q)x.globalAlpha=1;const b=snackFrames(q)[0],sc=78/Math.max(b.width,b.height);x.drawImage(b,48-b.width*sc/2*s,48-b.height*sc/2*s,b.width*sc*s,b.height*sc*s)}
       else{const q=artRock(+i);if(q)x.globalAlpha=1;const r=q?rockFrames(q)[0]:(+i===0?IMG.rock:rockCv[0]);x.drawImage(r,48-r.width*s,48-r.height*s,r.width*2*s,r.height*2*s)}
     }
-    else if(k==="gamb"){const im=gambImg();if(im.complete&&im.naturalWidth){const q=Math.min(92/im.naturalWidth,92/im.naturalHeight);x.imageSmoothingEnabled=true;x.drawImage(im,48-im.naturalWidth*q/2,94-im.naturalHeight*q,im.naturalWidth*q,im.naturalHeight*q)}}
+    else if(k==="gamb")gambDraw(x)
     else if(k==="prof"){const im=profImg();if(im&&im.complete&&im.naturalWidth){const q=Math.min(92/im.naturalWidth,92/im.naturalHeight);x.imageSmoothingEnabled=true;x.drawImage(im,48-im.naturalWidth*q/2,94-im.naturalHeight*q,im.naturalWidth*q,im.naturalHeight*q)}}
     else if(k==="game"){
       if(+i===0){drawFace(x,36,50,66*s,2,false);const r=IMG.rock;x.drawImage(r,60,54,r.width*.85,r.height*.85)}
-      else if(+i===1&&(SIM()||(S.p.gam&&S.p.gam.seen))){const im=gambImg();if(im.complete&&im.naturalWidth){const q=Math.min(92/im.naturalWidth,92/im.naturalHeight);x.imageSmoothingEnabled=true;x.drawImage(im,48-im.naturalWidth*q/2,94-im.naturalHeight*q,im.naturalWidth*q,im.naturalHeight*q)}}
-      else if(false){const a=cardCv(1,0),b2=cardCv(13,1);x.save();x.translate(38,52);x.rotate(-.18);x.drawImage(a,-20*s,-28*s,40*s,56*s);x.restore();x.save();x.translate(58,50);x.rotate(.16);x.drawImage(b2,-20*s,-28*s,40*s,56*s);x.restore()}
+      else if(+i===1&&(SIM()||(S.p.gam&&S.p.gam.seen)))gambDraw(x)
       else if(+i===2&&(SIM()||(S.p.pr&&S.p.pr.seen))){const im=profImg();if(im&&im.complete&&im.naturalWidth){const q=Math.min(92/im.naturalWidth,92/im.naturalHeight);x.imageSmoothingEnabled=true;x.drawImage(im,48-im.naturalWidth*q/2,94-im.naturalHeight*q,im.naturalWidth*q,im.naturalHeight*q)}}
       else if(+i===3&&(SIM()||S.p.fa.seen||faInvShow))faIconDraw(x,s); // Ferma Algidone!: fa_alg_idle0 come nel gioco (specchiato, x0.6)
       else{x.globalAlpha=.6;x.fillStyle="#7c8896";x.font="56px Bungee,Impact,sans-serif";x.textAlign="center";x.fillText("?",48,68)}
