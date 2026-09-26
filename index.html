@@ -480,6 +480,13 @@ let role=null,acct=null,devOn=false; // role: null | 'dev1' (dev1...dev5) | 'mas
 if(_devSaved.fb===true&&_devSaved.role){role=_devSaved.role==="master"?"master":"dev1";acct=_devSaved.acct||null;devOn=!!_devSaved.devOn} // sessione Firebase: modalita' sviluppatore subito, verifica in background
 else if(_devSaved.role||_devSaved.devOn){try{localStorage.removeItem(DEV_KEY)}catch(e){}delete mem[DEV_KEY]} // resto del vecchio login locale: serve il login con Firebase
 const persistDev=()=>{if(!role){try{localStorage.removeItem(DEV_KEY)}catch(e){}delete mem[DEV_KEY];return}store.set(DEV_KEY,{role,acct,fb:true,devOn})};
+/* sessione giocatore (F2a): stessa idea della sessione sviluppatore sopra ma senza ruolo -- un
+   account che ha superato il login ma NON ha un ruolo in devs/{uid}. Mai Sblocca tutto/SIM/dev UI. */
+const PLAYER_KEY=IS_DEVSITE?"mgs_player_dev":"mgs_player";
+const _playerSaved=store.get(PLAYER_KEY)||{};
+let playerAcct=null; // nome utente dell'account giocatore connesso, o null
+if(_playerSaved.fb===true&&_playerSaved.acct)playerAcct=_playerSaved.acct;
+const persistPlayer=()=>{if(!playerAcct){try{localStorage.removeItem(PLAYER_KEY)}catch(e){}delete mem[PLAYER_KEY];return}store.set(PLAYER_KEY,{acct:playerAcct,fb:true})};
 const isMaster=()=>role==="master";
 const devUI=()=>!!role&&devOn;
 const SIM=()=>!!S.sim;
@@ -566,6 +573,51 @@ async function fbVerify(){ // controllo in background della sessione in cache: n
   }catch(e){}
 }
 if(role)setTimeout(fbVerify,0);
+/* login giocatore (F2a): stessa sessione Firebase di F1 (stesso account, stessa mappatura email
+   <utente>@mangiasassi.invalid). Il ruolo (devs/{uid}) decide l'esito, come oggi per gli sviluppatori:
+   un ruolo trovato -> e' uno sviluppatore, stessa sessione di F1 (nessun cambiamento per lui); nessun
+   ruolo -> sessione giocatore (mai Sblocca tutto/SIM/dev UI). L'ingresso segreto a 5 tocchi resta
+   invariato e separato: questo e' il solo modo con cui un giocatore normale puo' accedere. */
+async function plLogin(user,pass){
+  let fb;try{fb=await fbLoad()}catch(e){throw new Error(fbErr(e))}
+  let cred;try{cred=await fb.Au.signInWithEmailAndPassword(fb.auth,user+FB_DOM,pass)}catch(e){throw new Error(fbErr(e))}
+  let r=null;try{r=await fbRoleOf(fb,cred.user)}catch(e){}
+  if(r){role=r==="master"?"master":"dev1";acct=r;persistDev()}
+  else{playerAcct=user;persistPlayer()}
+  return r;
+}
+async function plLogout(){
+  const fb=_fb;playerAcct=null;persistPlayer();
+  if(!role){try{const f=await(fb||fbLoad());await f.Au.signOut(f.auth)}catch(e){}}
+}
+async function plVerify(){ // controllo in background come fbVerify: l'utente sparisce -> fuori; senza rete resta valida
+  try{
+    const fb=await fbLoad();await fb.auth.authStateReady();
+    const u=fb.auth.currentUser;
+    if(!u&&playerAcct){playerAcct=null;persistPlayer();if(screen==="opt")render()}
+  }catch(e){}
+}
+if(playerAcct)setTimeout(plVerify,0);
+async function plLoginGo(){
+  const er=$("#ple"),k=$("#plk"),u=($("#plu").value||"").trim().toLowerCase(),p=$("#plp").value;
+  if(!u||!p){er.textContent="Inserisci utente e password.";return}
+  if(u.includes("@")){er.textContent="Scrivi solo il nome utente, senza @.";return}
+  k.disabled=true;er.textContent="Accesso in corso…";
+  try{await plLogin(u,p);toast("Accesso effettuato");render()}
+  catch(e){er.textContent=e.message||"Accesso non riuscito.";k.disabled=false}
+}
+/* corpo dell'accordion «Account» (Opzioni -> Generali): F1's «Cambia password» e' riusata cosi'
+   com'e' (stessi id #cpo/#cpn/#cpr/#cpe/#cpw, mai in pagina insieme a quella della scheda
+   Sviluppatore, quindi nessuno scontro), fbChangePw() non viene toccata. */
+function plAccountHTML(){
+  if(playerAcct)return`<div class="opt"><div>Connesso come ${esc(playerAcct)}<small>Account giocatore</small></div><button class="btn red sm" id="plo">Esci</button></div>
+   <div class="opt" style="flex-direction:column;align-items:stretch"><div>Cambia password<small>Minimo 6 caratteri. Serve la password attuale.</small></div>
+     <input type="password" id="cpo" placeholder="Password attuale" autocomplete="off" style="margin-top:8px"><input type="password" id="cpn" placeholder="Nuova password" autocomplete="off" style="margin-top:6px"><input type="password" id="cpr" placeholder="Ripeti la nuova password" autocomplete="off" style="margin-top:6px">
+     <div class="err" id="cpe"></div><div class="acts"><button class="btn sm" id="cpw">Cambia</button></div></div>`;
+  return`<label class="f">Utente</label><input type="text" id="plu" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"><label class="f">Password</label><input type="password" id="plp" autocomplete="off">
+   <div class="err" id="ple"></div><div class="acts" style="margin-top:8px"><button class="btn sm" id="plk">Entra</button></div>
+   <small style="display:block;margin-top:6px;color:var(--mute)">Accedi con l'account che ti ha dato El Cipro.</small>`;
+}
 
 /* ============ MODIFICA TESTI CON PRESSIONE LUNGA (F5) ============
    Solo con dev mode attiva + sessione Firebase (lpEnabled): tenere premuto 3 s su un testo (DOM o testo disegnato nel canvas) apre il popup di modifica
@@ -774,8 +826,9 @@ lpSync();
    Icona nella barra in alto di ogni schermata (solo sviluppatori con la sessione Firebase; i giocatori quando BUG_PLAYERS sara' true, 0.5).
    Tocco = il gioco si ferma come nella sua pausa ma senza il menu di pausa, popup con il testo, "Indietro" riprende esattamente da dove era.
    Invio: Firestore `bugs` (campi ammessi da firestore.rules); senza rete la segnalazione va in una coda locale (max 20) e parte appena si e' online. */
-const BUG_PLAYERS=false; // 0.5: si attiva insieme al login dei giocatori (F2)
-const bugPlayerSession=()=>null; // aggancio per F2: sessione Firebase di un giocatore (oggi non esiste)
+const BUG_PLAYERS=false; // 0.5: si attiva insieme al login dei giocatori (gia' costruito in F2a, dietro questo flag)
+const PLAYER_LOGIN=false; // F2a: quando false l'Account giocatore si vede solo con dev mode attiva (per poterlo provare); i giocatori non vedono nulla
+const bugPlayerSession=()=>!!playerAcct;
 const canReport=()=>!!role||(BUG_PLAYERS&&!!bugPlayerSession());
 const BUG_SVG='<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><ellipse cx="12" cy="14" rx="4" ry="5.5" stroke="none"/><circle cx="12" cy="7" r="2.2" stroke="none"/><path fill="none" d="M9.5 5 8 3M14.5 5 16 3M8 11 4.5 9.5M8 14.5H4M8.5 18 5 20M16 11l3.5-1.5M16 14.5h4M15.5 18l3.5 2"/></svg>';
 const bugBtn=cls=>canReport()?`<button class="bugb ${cls||""}" id="bugb" aria-label="Segnala un bug">${BUG_SVG}</button>`:"";
@@ -851,7 +904,7 @@ function screenId(){
   }
   return"unknown:"+screen;
 }
-const SCREEN_IDS=new Set(["splash-question","sad-countdown","bye-goodbye","menu-home-roccia","menu-home-algidone","career-modal-roccia","career-modal-algidone","opt-generali","opt-generali-audio","opt-generali-screen","opt-generali-game","opt-generali-data","opt-login-modal","dev-tab","dev-acc-account","dev-acc-test","dev-acc-audio","dev-acc-obj","dev-acc-exp","dev-acc-skins","export-dialog","wish-enemies-roccia","wish-enemies-algidone","wish-items-roccia","wish-items-algidone","wish-giocatore-locked","wish-giocatore-unlocked","wish-giochi-locked","wish-giochi-unlocked","ach-gen","ach-roc","ach-alg","ach-gio","ach-min","road-top-current","gift-closed","gift-opened","popup-milestone","cust-roccia","cust-algidone","maze-intro-roccia","maze-play-roccia","maze-steel-roccia","maze-water-roccia","maze-fire-roccia","maze-ice-roccia","maze-forest-roccia","maze-fire-algidone","maze-acciaio-roccia","maze-cinghiale-algidone","maze-over","bj-invite","bj-dealer-line","bj-table-hand","bj-result","bj-menu-again","bj-raise-stake","pr-choice-menu","pr-dialogue-question","pr-dialogue-yes","pr-throwout-street","pb-command","pb-move-panel","pb-win-ending","pb-win-question","fa-invite","fa-intro-floor1","fa-intro-floor2","fa-intro-floor3","fa-floor1-play","fa-floor2-play","fa-floor3-play","fa-pause","fa-game-over","fa-floor-win-panel","fa-final-panel","bug-popup","dev-textedit-popup"]);
+const SCREEN_IDS=new Set(["splash-question","sad-countdown","bye-goodbye","menu-home-roccia","menu-home-algidone","career-modal-roccia","career-modal-algidone","opt-generali","opt-generali-audio","opt-generali-screen","opt-generali-game","opt-generali-account","opt-generali-data","opt-login-modal","dev-tab","dev-acc-account","dev-acc-test","dev-acc-audio","dev-acc-obj","dev-acc-exp","dev-acc-skins","export-dialog","wish-enemies-roccia","wish-enemies-algidone","wish-items-roccia","wish-items-algidone","wish-giocatore-locked","wish-giocatore-unlocked","wish-giochi-locked","wish-giochi-unlocked","ach-gen","ach-roc","ach-alg","ach-gio","ach-min","road-top-current","gift-closed","gift-opened","popup-milestone","cust-roccia","cust-algidone","maze-intro-roccia","maze-play-roccia","maze-steel-roccia","maze-water-roccia","maze-fire-roccia","maze-ice-roccia","maze-forest-roccia","maze-fire-algidone","maze-acciaio-roccia","maze-cinghiale-algidone","maze-over","bj-invite","bj-dealer-line","bj-table-hand","bj-result","bj-menu-again","bj-raise-stake","pr-choice-menu","pr-dialogue-question","pr-dialogue-yes","pr-throwout-street","pb-command","pb-move-panel","pb-win-ending","pb-win-question","fa-invite","fa-intro-floor1","fa-intro-floor2","fa-intro-floor3","fa-floor1-play","fa-floor2-play","fa-floor3-play","fa-pause","fa-game-over","fa-floor-win-panel","fa-final-panel","bug-popup","dev-textedit-popup"]);
 
 /* congelamento del gioco mentre il popup e' aperto: come la pausa di ciascun gioco, senza il suo menu. Restituisce la funzione che riprende. */
 let _pnBase=null,_pnOff=0,_pnFz=null;
@@ -948,7 +1001,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4_12";
+const VERSION="0.4_13";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -2023,7 +2076,8 @@ function renderOpt(){
      <div class="seg" style="margin-top:8px">${["easy","medium","hard"].map(k=>`<button data-diff="${k}" class="${(S.opts.diff||"medium")===k?"on":""}" style="flex:1">${DIFF[k].n}</button>`).join("")}</div><small style="color:var(--mute);margin-top:6px">Vale dalla prossima partita.</small></div>`;
   const pData=`<div class="opt"><div>Cancella dati locali<small>Progressi, sordi, acquisti, modifiche dev e musica caricata</small></div><button class="btn red sm" id="wipe">Cancella</button></div>`;
   const ver=`<div class="opt"><div id="ver">Build locale<small>Versione ${VERSION}</small></div></div>`;
-  const body=optTab==="dev"&&devUI()?devRows():optAcc("audio","Audio",pAudio)+optAcc("screen","Schermo",pScreen)+optAcc("game","Gioco",pGame)+optAcc("data","Dati",pData,"danger")+ver;
+  const showAccount=PLAYER_LOGIN||(devOn&&!!role);
+  const body=optTab==="dev"&&devUI()?devRows():optAcc("audio","Audio",pAudio)+optAcc("screen","Schermo",pScreen)+optAcc("game","Gioco",pGame)+(showAccount?optAcc("account","Account",plAccountHTML()):"")+optAcc("data","Dati",pData,"danger")+ver;
   shell(`<div class="screen"><div class="top"><button class="btn ghost sm" id="back">‹</button><h2>Opzioni</h2>${bugBtn()}</div><div class="scroll" style="flex:1;min-height:0">${tabs}${body}</div></div>`);
 }
 function bindOpt(){
@@ -2036,6 +2090,9 @@ function bindOpt(){
     if(t.closest("#fsc")){if(window.MGApp)return toast("Nell'app sei già a schermo intero");try{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}catch(x){toast("Schermo intero non disponibile")}return}
     const df=t.closest("[data-diff]");if(df){S.opts.diff=df.dataset.diff;persist();return render()}
     if(t.closest("#wipe"))return confirmBox("Ma che sei gojo?","Vuoi DAVVERO cancellare tutti i dati locali? Progressi, sordi, acquisti, modifiche dev e musica caricata andranno persi.","Sì, deo caro","Noneee",wipeData);
+    if(t.closest("#plk"))return plLoginGo();
+    if(t.closest("#plo")){plLogout();return render()}
+    if(t.closest("#cpw"))return fbChangePw();
     const mu=t.closest("[data-mus]");if(mu){S.opts.music=mu.dataset.mus==="1";persist();syncMusic();return render()}
     const sn=t.closest("[data-snd]");if(sn){S.opts.sound=sn.dataset.snd==="1";persist();return render()}
     const f=t.closest("[data-fs]");if(f){pendingFs=+f.dataset.fs;document.documentElement.style.setProperty("--fs",pendingFs);return render()}
@@ -2049,6 +2106,7 @@ function bindOpt(){
 async function wipeData(){
   try{localStorage.removeItem(SAVE_KEY)}catch(e){}
   try{localStorage.removeItem(DEV_KEY)}catch(e){}
+  try{localStorage.removeItem(PLAYER_KEY)}catch(e){}
   try{localStorage.removeItem(EDITQ_KEY);localStorage.removeItem(EDITSENT_KEY)}catch(e){}
   for(const k in mem)delete mem[k];
   try{await IDB.del("menuMusic")}catch(e){}
@@ -2059,7 +2117,7 @@ async function wipeData(){
   for(const id of Object.keys(BJ_LINES)){try{await IDB.del("snd_vo_"+id)}catch(e){}}
   try{await IDB.del("musicGam")}catch(e){}bgmGam=null;
   try{if(window.caches){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}}catch(e){}
-  S=JSON.parse(JSON.stringify(DEF));role=null;acct=null;devOn=false;SKIN_IMPORT_PV=null;pendingFs=null;tab="planes";applyFs();persist();
+  S=JSON.parse(JSON.stringify(DEF));role=null;acct=null;devOn=false;playerAcct=null;SKIN_IMPORT_PV=null;pendingFs=null;tab="planes";applyFs();persist();
   await initMusic();await loadSounds();toast("Dati locali cancellati");go("menu");
 }
 function loginModal(){

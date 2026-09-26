@@ -48,9 +48,23 @@ def popup(p):
     return p.evaluate("!!document.querySelector('#lpv')")
 
 
+def launch_browser(pw):
+    """Some sandboxes preinstall a Chromium revision older than this pip playwright expects; fall
+    back to whatever chrome-linux/chrome is actually on disk before giving up (see test_f4a.py)."""
+    try:
+        return pw.chromium.launch()
+    except Exception:
+        import glob, os
+        base = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "")
+        cands = glob.glob(os.path.join(base, "chromium-*", "chrome-linux", "chrome")) if base else []
+        if cands:
+            return pw.chromium.launch(executable_path=cands[0])
+        raise
+
+
 srv = C.serve()
 with sync_playwright() as pw:
-    b = pw.chromium.launch()
+    b = launch_browser(pw)
     # ------------------------------------------------------------ enabled only for a logged-in dev with dev mode on
     ctx, p, errs = page(b, dev=False); menu(p)
     native = "[native code]"

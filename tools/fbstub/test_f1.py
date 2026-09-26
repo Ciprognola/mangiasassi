@@ -41,9 +41,23 @@ def login(p, user, pw):
 
 STATE = "({role:role,acct:acct,devOn:devOn,sim:S.sim,cache:localStorage.getItem('mgs_dev')})"
 ERR = "document.querySelector('#le').innerText"
+def launch_browser(pw):
+    """Some sandboxes preinstall a Chromium revision older than this pip playwright expects; fall
+    back to whatever chrome-linux/chrome is actually on disk before giving up (see test_f4a.py)."""
+    try:
+        return pw.chromium.launch()
+    except Exception:
+        import glob, os
+        base = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "")
+        cands = glob.glob(os.path.join(base, "chromium-*", "chrome-linux", "chrome")) if base else []
+        if cands:
+            return pw.chromium.launch(executable_path=cands[0])
+        raise
+
+
 srv = C.serve()
 with sync_playwright() as pw:
-    b = pw.chromium.launch()
+    b = launch_browser(pw)
     # 1 master login (username is trimmed and lowercased)
     ctx, p, errs = page(b); open_menu(p); login(p, "Master ", "pw-master")
     s = p.evaluate(STATE); check("login master", s["role"] == "master" and s["acct"] == "master" and s["devOn"], s)

@@ -166,6 +166,10 @@ def sc_options(b, only):
 def sc_options_dev(b, only):
     c = new_cap(b, only, dev=True)
     enter_menu(c); go_tile(c, "opt")
+    # F2a: with a dev session the Generali tab also shows the Account accordion (PLAYER_LOGIN is off,
+    # so this is the only way to reach it today) -- capture it before switching to Sviluppatore
+    c.click("details.acc[data-acc=account] > summary", 300)
+    c.shot("opt-generali-account")
     c.click("[data-otab=dev]", 400)
     c.shot("dev-tab")
     accs = c.ev("[...document.querySelectorAll('details.acc')].map(d=>d.dataset.acc)")
@@ -550,6 +554,21 @@ def optimize():
     return tot
 
 
+def launch_browser(pw):
+    """Some sandboxes preinstall a Chromium revision older than this pip playwright expects; fall
+    back to whatever chrome-linux/chrome is actually on disk before giving up (see tools/fbstub/test_f4a.py)."""
+    args = ["--autoplay-policy=no-user-gesture-required", "--disable-dev-shm-usage"]
+    try:
+        return pw.chromium.launch(args=args)
+    except Exception:
+        import glob
+        base = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "")
+        cands = glob.glob(os.path.join(base, "chromium-*", "chrome-linux", "chrome")) if base else []
+        if cands:
+            return pw.chromium.launch(executable_path=cands[0], args=args)
+        raise
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", nargs="*", default=[])
@@ -558,7 +577,7 @@ def main():
     a = ap.parse_args()
     srv = serve()
     with sync_playwright() as pw:
-        b = pw.chromium.launch(args=["--autoplay-policy=no-user-gesture-required", "--disable-dev-shm-usage"])
+        b = launch_browser(pw)
         for sc in SCENARIOS:
             if a.sc and not any(x in sc.__name__ for x in a.sc):
                 continue
