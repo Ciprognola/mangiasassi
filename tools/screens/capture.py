@@ -538,7 +538,19 @@ def sc_bug(b, only):
     c.close()
 
 
-SCENARIOS = [sc_splash_menu, sc_career, sc_options, sc_options_dev, sc_wish, sc_achievements, sc_road, sc_popups, sc_cust, sc_export, sc_maze, sc_bj, sc_pr, sc_prkick, sc_fa, sc_bug]
+def sc_cloud(b, only):
+    """Cloud save conflict popup (F2b). CLOUD_SAVE is off and this script serves the stable root, so the popup is opened
+    directly with a made-up cloud copy (levels 22/3, 90 sordi) against the seeded mid-game save; no Firebase call is made."""
+    c = new_cap(b, only, dev=True)
+    enter_menu(c)
+    cloud = json.dumps(json.dumps({"p": {"sordi": 90, "ch": {"roccia": {"lvl": 22}, "algidone": {"lvl": 3}}}}))
+    c.ev("(()=>{CL.conf={C:{data:%s,rev:2,ver:VERSION,ts:Date.now()-86400000},uid:'uid_master'};cloudConfShow()})()" % cloud)
+    c.shot("cloud-conflict", 300)
+    c.p.keyboard.press("Escape"); time.sleep(0.3)
+    c.close()
+
+
+SCENARIOS = [sc_splash_menu, sc_career, sc_options, sc_options_dev, sc_wish, sc_achievements, sc_road, sc_popups, sc_cust, sc_export, sc_maze, sc_bj, sc_pr, sc_prkick, sc_fa, sc_bug, sc_cloud]
 
 
 def optimize():

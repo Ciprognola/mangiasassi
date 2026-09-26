@@ -9,8 +9,15 @@ service cloud.firestore {
       allow read: if signedIn() && request.auth.uid == uid;
       allow write: if false;
     }
-    match /saves/{uid} {
-      allow read, write: if signedIn() && request.auth.uid == uid;
+    match /saves/{docId} {
+      function mine() { return request.auth != null && (docId == request.auth.uid || docId == request.auth.uid + '_dev'); }
+      function ok() { return request.resource.data.keys().hasOnly(['data','rev','ts','ver'])
+        && request.resource.data.data is string && request.resource.data.data.size() <= 900000
+        && request.resource.data.ver is string && request.resource.data.ts == request.time; }
+      allow read: if mine();
+      allow create: if mine() && ok() && request.resource.data.rev == 1;
+      allow update: if mine() && ok() && request.resource.data.rev == resource.data.rev + 1;
+      allow delete: if false;
     }
     match /bugs/{id} {
       allow create: if isDev()

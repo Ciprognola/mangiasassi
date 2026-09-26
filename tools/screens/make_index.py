@@ -37,6 +37,7 @@ META = {
     "bye-goodbye": ("Quitta → Sì, esco in the Android app (`MGApp`, screen `bye`)", "`bye`", "`render` (bye branch)", "Bug icon shown for logged-in devs"),
     "dev-textedit-popup": ("Logged-in dev, dev mode on: hold a text 3 s (F5)", "modal", "`lpOpen`, `lpKnown`, `lpDomTarget`, `lpCanvasHit`", "Live preview for known keys; other texts are proposals with a locator"),
     "bug-popup": ("Logged-in dev: tap the bug icon in any top bar (F6a)", "modal", "`bugOpen`, `bugFreeze`, `bugSubmit`, `screenId`", "Freezes the game like its pause (no pause menu); Indietro resumes"),
+    "cloud-conflict": ("Cloud save on (F2b; today only the dev site test toggle): the device and the cloud copy both have different progress", "modal", "`cloudSyncRun`, `cloudConflict`, `cloudConfShow`", "Freezes the game like the bug popup; Esc = Decidi dopo. Captured by opening it directly (the flag is off on the stable root)"),
     "export-dialog": ("Opzioni → Sviluppatore → Oggetti/Esporta accordion → Esporta modifiche", "modal", "`exportDialog`, `exportBuild`", ""),
     "maze-intro": ("Home → Nuovo gioco", "`game`, `G.state=\"ready\"`", "`startGame`, `buildGameDOM`, `draw`", "Girone intro card (\"Pronti?\")"),
     "maze-play": ("Home → Nuovo gioco, ~3 s", "`game`", "`startGame`, `update`, `draw`", "Random map theme"),

@@ -230,6 +230,11 @@ html{-webkit-text-size-adjust:100%}
 .prs .bugb.prt{right:150px}
 .bugbox textarea{min-height:120px;resize:none;font-size:.95rem}
 .bugbox .cnt{display:block;text-align:right;color:var(--mute);margin-top:4px}
+.clcards{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 4px}
+.clcard{display:flex;flex-direction:column;gap:4px;background:#0f1824;border-radius:12px;padding:10px 8px;font-size:.85rem}
+.clcard b{color:var(--runway)}
+.clcard small{color:var(--mute);font-size:.7rem}
+.clcard .btn{margin-top:6px}
 .btn[disabled]{opacity:.4;pointer-events:none}
 .btn.sm{padding:7px 11px;font-size:.75rem}
 .tabs{display:flex;gap:6px;margin-bottom:12px}
@@ -471,7 +476,8 @@ delete S.creds; // F1: le vecchie credenziali locali (password in chiaro) non es
    seedPopSeen() (chiamata al primo giro sul menu, quando tutte le funzioni sono pronte) lo consuma. */
 if(!_hadPop&&_hadSave)S.p.pop.needsSeed=true;
 S.p.road=Object.assign({claimed:{}},S.p.road||{});
-const persist=()=>store.set(SAVE_KEY,S);
+let CLOUD_LOCK=false; // F2b: true mentre si ricarica dopo aver scritto una copia del cloud/backup (nessun persist deve sovrascriverla)
+const persist=()=>{if(CLOUD_LOCK)return;store.set(SAVE_KEY,S);cloudOnPersist()};
 /* sessione sviluppatore: sopravvive alla chiusura dell'app finché non si esce
    manualmente (bottone logout) o non si cancellano i dati locali -- prima
    restava solo in memoria e si perdeva a ogni riapertura */
@@ -543,7 +549,7 @@ async function fbLogin(user,pass){
   if(!r){try{await fb.Au.signOut(fb.auth)}catch(x){}throw new Error("Account senza ruolo.")}
   return r;
 }
-function fbDrop(){simOff();role=null;acct=null;devOn=false;SKIN_IMPORT_PV=null;persistDev();lpSync();if(["menu","opt","wish","ach","road"].includes(screen))render()}
+function fbDrop(){cloudReset();simOff();role=null;acct=null;devOn=false;SKIN_IMPORT_PV=null;persistDev();lpSync();if(["menu","opt","wish","ach","road"].includes(screen))render()}
 async function fbChangePw(){
   const er=$("#cpe"),o=$("#cpo").value,n=$("#cpn").value,r=$("#cpr").value;
   if(!o||!n||!r){er.textContent="Compila tutti i campi.";return}
@@ -567,7 +573,7 @@ async function fbVerify(){ // controllo in background della sessione in cache: n
     const fb=await fbLoad();await fb.auth.authStateReady();
     const u=fb.auth.currentUser;if(!u)return fbDrop();
     const r=await fbRoleOf(fb,u);if(!r)return fbDrop();
-    bugFlush();editFlush();
+    bugFlush();editFlush();cloudStart();
     const nr=r==="master"?"master":"dev1";
     if(nr!==role||r!==acct){if(role==="master"&&nr!=="master")simOff();role=nr;acct=r;persistDev();if(["opt"].includes(screen))render()}
   }catch(e){}
@@ -587,14 +593,15 @@ async function plLogin(user,pass){
   return r;
 }
 async function plLogout(){
-  const fb=_fb;playerAcct=null;persistPlayer();
+  const fb=_fb;cloudReset();playerAcct=null;persistPlayer();
   if(!role){try{const f=await(fb||fbLoad());await f.Au.signOut(f.auth)}catch(e){}}
 }
 async function plVerify(){ // controllo in background come fbVerify: l'utente sparisce -> fuori; senza rete resta valida
   try{
     const fb=await fbLoad();await fb.auth.authStateReady();
     const u=fb.auth.currentUser;
-    if(!u&&playerAcct){playerAcct=null;persistPlayer();if(screen==="opt")render()}
+    if(!u&&playerAcct){cloudReset();playerAcct=null;persistPlayer();if(screen==="opt")render()}
+    else if(u&&playerAcct)cloudStart();
   }catch(e){}
 }
 if(playerAcct)setTimeout(plVerify,0);
@@ -603,7 +610,7 @@ async function plLoginGo(){
   if(!u||!p){er.textContent="Inserisci utente e password.";return}
   if(u.includes("@")){er.textContent="Scrivi solo il nome utente, senza @.";return}
   k.disabled=true;er.textContent="Accesso in corso…";
-  try{await plLogin(u,p);toast("Accesso effettuato");render()}
+  try{await plLogin(u,p);toast("Accesso effettuato");render();cloudStart(true)}
   catch(e){er.textContent=e.message||"Accesso non riuscito.";k.disabled=false}
 }
 /* corpo dell'accordion «Account» (Opzioni -> Generali): F1's «Cambia password» e' riusata cosi'
@@ -617,6 +624,241 @@ function plAccountHTML(){
   return`<label class="f">Utente</label><input type="text" id="plu" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"><label class="f">Password</label><input type="password" id="plp" autocomplete="off">
    <div class="err" id="ple"></div><div class="acts" style="margin-top:8px"><button class="btn sm" id="plk">Entra</button></div>
    <small style="display:block;margin-top:6px;color:var(--mute)">Accedi con l'account che ti ha dato El Cipro.</small>`;
+}
+
+/* ============ SALVATAGGIO CLOUD (F2b, flag off) ============
+   Una copia del salvataggio in Firestore saves/{uid} (saves/{uid}_dev sul sito /dev/), campi data/rev/ts/ver come firestore.rules.
+   Si carica la stringa che persist() ha scritto (mai lo stato vivo S), senza i campi solo-dev; SIM/Sblocca tutto, partite dev e prove non caricano mai.
+   Ogni invio e' una transazione che confronta rev con quello dell'ultima copia sincronizzata (mgs_cloud); due copie diverse -> popup «Due salvataggi diversi».
+   Applicare una copia = la locale va nel backup (mgs_v1_cloudbak), scrittura, ricarica: solo dal menu (a partita in corso si aspetta il ritorno al menu).
+   Senza rete resta dirty e si riprova al prossimo evento; permesso negato -> fermo fino al prossimo avvio/login. Il gioco non aspetta mai il cloud. */
+const CLOUD_KEY=IS_DEVSITE?"mgs_cloud_dev":"mgs_cloud",CLOUDBAK_KEY=IS_DEVSITE?"mgs_v1_cloudbak_dev":"mgs_v1_cloudbak",CLOUDTEST_KEY="mgs_cloudtest_dev",LASTSAVE_KEY=IS_DEVSITE?"mgs_v1_ts_dev":"mgs_v1_ts";
+const CLOUD_MAX=900000,CLOUD_DEB=30000,CLOUD_FLUSH=10000;
+const CLOUD_DEVONLY=["tiles","ov","extra","gtext"],CLOUD_SIMF=["sim","realP","realQuick","realAch"]; // modifiche dev (sezioni, nomi/colori/scale, oggetti extra, testi) e copia di simulazione: mai nel cloud
+const CL={run:null,deb:0,lastFlush:0,ok:false,stop:false,later:false,status:null,pend:null,conf:null,wait:0};
+const cloudTest=()=>IS_DEVSITE&&store.get(CLOUDTEST_KEY)===true;
+const cloudSession=()=>!!(role&&acct)||!!playerAcct; // una sessione Firebase (sviluppatore o giocatore)
+const cloudOn=()=>cloudSession()&&(CLOUD_SAVE||cloudTest());
+const cm=()=>{const m=store.get(CLOUD_KEY);return m&&m.uid?m:null};
+const cmSet=m=>store.set(CLOUD_KEY,m);
+const cloudLw=()=>{try{return +localStorage.getItem(LASTSAVE_KEY)||null}catch(e){return null}};
+function cloudCanon(v){ // JSON con le chiavi in ordine: stesso contenuto = stessa stringa su ogni dispositivo
+  if(Array.isArray(v))return"["+v.map(cloudCanon).join(",")+"]";
+  if(v&&typeof v==="object")return"{"+Object.keys(v).sort().map(k=>JSON.stringify(k)+":"+cloudCanon(v[k])).join(",")+"}";
+  return v===undefined?"null":JSON.stringify(v);
+}
+function cloudReal(o){ // i dati veri: con la SIM attiva sono quelli messi da parte in realP (come al caricamento)
+  o=Object.assign({},o||{});
+  if(o.sim&&o.realP){o.p=o.realP;o.quick=o.realQuick||null;if(o.realAch)o.ach=o.realAch}
+  for(const k of CLOUD_SIMF)delete o[k];
+  return o;
+}
+function cloudStrip(o){o=cloudReal(o);for(const k of CLOUD_DEVONLY)delete o[k];return o}
+const cloudSum=s=>lpHash(s)+"."+s.length.toString(36);
+const cloudParse=s=>{try{return JSON.parse(s)||{}}catch(e){return{}}};
+function cloudLocal(){ // il salvataggio scritto da persist(): raw, oggetto, copia per il cloud e il suo hash
+  let raw=null;try{raw=localStorage.getItem(SAVE_KEY)}catch(e){}
+  if(raw==null&&mem[SAVE_KEY])raw=JSON.stringify(mem[SAVE_KEY]);
+  const obj=raw?cloudParse(raw):{},pay=cloudCanon(cloudStrip(obj));
+  return{raw,obj,pay,sum:cloudSum(pay)};
+}
+const cloudSumOf=data=>cloudSum(cloudCanon(cloudStrip(cloudParse(data))));
+function saveIsFresh(o){ // nessun progresso: livelli/exp/gironi, sordi, oggetti e costumi posseduti, obiettivi ai valori di DEF
+  o=cloudStrip(o===undefined?cloudLocal().obj:o);
+  const p=o.p||{},d=CHDEF(),eq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+  if((p.sordi||0)!==0)return false;
+  if(o.ach&&o.ach.done&&Object.keys(o.ach.done).length)return false;
+  if(!p.ch){if((p.lvl||1)!==1||(p.exp||0)!==0||(p.ownP&&!eq(p.ownP,d.ownP)))return false} // salvataggio di prima dei due personaggi
+  for(const k of Object.keys(CHARS)){const c=(p.ch||{})[k];if(!c)continue;
+    if((c.lvl||1)!==d.lvl||(c.exp||0)!==d.exp||(c.gir||0)!==d.gir)return false;
+    if(!eq(c.ownP||d.ownP,d.ownP)||!eq(c.ownR||d.ownR,d.ownR)||(c.skins||[]).length)return false}
+  return true;
+}
+function verCmp(a,b){ // prima la base numerica (0.4 < 0.4.5), poi la build _N: 0.4_14 < 0.4.5 < 0.4.5_1
+  const pa=v=>{const m=String(v||"0").split("_");return{b:m[0].split(".").map(n=>parseInt(n,10)||0),n:parseInt(m[1]||"0",10)||0}};
+  const x=pa(a),y=pa(b);
+  for(let i=0;i<Math.max(x.b.length,y.b.length);i++){const d=(x.b[i]||0)-(y.b[i]||0);if(d)return d<0?-1:1}
+  return x.n===y.n?0:x.n<y.n?-1:1;
+}
+const cloudZ=n=>String(n).padStart(2,"0");
+const cloudHM=ms=>{const d=new Date(ms);return cloudZ(d.getHours())+":"+cloudZ(d.getMinutes())};
+const cloudDay=ms=>{const d=new Date(ms);return cloudZ(d.getDate())+"/"+cloudZ(d.getMonth()+1)+"/"+d.getFullYear()};
+const cloudDate=ms=>ms?"Salvato il "+cloudDay(ms)+" alle "+cloudHM(ms):"Data sconosciuta";
+function cloudSummary(o,d){const p=(o&&o.p)||{},ch=p.ch||{};return{r:(ch.roccia&&ch.roccia.lvl)||p.lvl||1,a:(ch.algidone&&ch.algidone.lvl)||1,s:p.sordi||0,d:d||null}}
+function cloudStatText(){
+  if(!cloudOn())return"Cloud: disattivato";
+  const s=CL.status,M=cm();
+  if(s==="big")return"Salvataggio troppo grande per il cloud";
+  if(s==="ver")return"Aggiorna il gioco per sincronizzare";
+  if(s==="na")return"Cloud: non disponibile";
+  if(s==="later")return"Cloud: in attesa della tua scelta";
+  if(s==="net"||!(M&&M.ts))return"Cloud: in attesa di rete";
+  return"Cloud: sincronizzato alle "+cloudHM(M.ts);
+}
+function cloudStat(s){CL.status=s;const el=document.getElementById("clst");if(el)el.textContent=cloudStatText()}
+function cloudBlocked(){ // SIM / Sblocca tutto, partite dev (salti di girone e mappe), prove del professore e di Ferma: mai caricare
+  if(SIM())return true;
+  try{
+    if(G&&G.dev&&["game","over","bj","pr","fa"].includes(screen))return true;
+    if(screen==="pr"&&PR&&PR.test)return true;
+    if(screen==="fa"&&FA&&(FA.test||(FA.enc&&FA.enc.dev)))return true;
+  }catch(e){return true}
+  return false;
+}
+const cloudCanApply=()=>["menu","opt","wish","ach","road","cust","splash"].includes(screen);
+async function cloudUid(){const fb=await fbLoad();await fb.auth.authStateReady();const u=fb.auth.currentUser;return u?u.uid:null}
+const cloudRef=(fb,uid)=>fb.Fs.doc(fb.db,"saves",IS_DEVSITE?uid+"_dev":uid);
+const cloudTs=t=>t&&typeof t.toMillis==="function"?t.toMillis():(typeof t==="number"?t:null);
+const cloudDoc=x=>({data:String(x.data||""),rev:x.rev|0,ver:String(x.ver||""),ts:cloudTs(x.ts)});
+async function cloudGet(uid){
+  const fb=await fbLoad();
+  const d=await Promise.race([fb.Fs.getDoc(cloudRef(fb,uid)),bugTimeout(12000)]);
+  return d.exists()?cloudDoc(d.data()||{}):null;
+}
+const cloudDenied=e=>/permission-denied|unauthenticated/.test((e&&e.code)||"");
+function cloudFail(e){if(cloudDenied(e)){CL.stop=true;cloudStat("na")}else cloudStat("net")}
+async function cloudUpload(uid,base,L){ // {ok,rev} | {conflict:C} | {ver} | {big}
+  if(L.pay.length>CLOUD_MAX)return{big:true};
+  const fb=await fbLoad(),ref=cloudRef(fb,uid);
+  return Promise.race([fb.Fs.runTransaction(fb.db,async tx=>{
+    const d=await tx.get(ref),x=d.exists()?d.data()||{}:null;
+    if(x&&verCmp(x.ver,VERSION)>0)return{ver:true};
+    if(x&&(x.rev|0)!==base)return{conflict:cloudDoc(x)};
+    const rev=x?(x.rev|0)+1:1;
+    tx.set(ref,{data:L.pay,rev,ts:fb.Fs.serverTimestamp(),ver:VERSION});
+    return{ok:true,rev};
+  }),bugTimeout(15000)]);
+}
+async function cloudUp(uid,base,L){
+  if(cloudBlocked()){cloudArm();return}
+  const r=await cloudUpload(uid,base,L);
+  if(r.ok){cmSet({uid,rev:r.rev,sum:L.sum,dirty:cloudLocal().sum!==L.sum,ts:Date.now()});CL.ok=true;cloudStat("ok")}
+  else if(r.big)cloudStat("big");
+  else if(r.ver)cloudStat("ver");
+  else if(r.conflict)cloudConflict(r.conflict,uid);
+}
+function cloudArm(){if(CL.deb||!cloudOn())return;CL.deb=setTimeout(()=>{CL.deb=0;cloudPush()},CLOUD_DEB)}
+function cloudDone(){CL.run=null;const M=cm();if(M&&M.dirty&&cloudOn())cloudArm()}
+async function cloudSyncRun(){
+  const uid=await cloudUid();if(!uid)return;
+  const C=await cloudGet(uid);
+  if(C&&verCmp(C.ver,VERSION)>0)return cloudStat("ver"); // copia di una build piu' nuova: mai applicata, mai sovrascritta
+  const L=cloudLocal(),M=cm(),ok=()=>{cmSet({uid,rev:C?C.rev:0,sum:L.sum,dirty:false,ts:Date.now()});CL.ok=true;cloudStat("ok")};
+  if(!M||M.uid!==uid){ // primo sync su questo dispositivo con questo account
+    if(!C)return saveIsFresh(L.obj)?ok():cloudUp(uid,0,L);
+    if(saveIsFresh(L.obj))return cloudApply(C,uid,L.sum);
+    if(cloudSumOf(C.data)===L.sum)return ok();
+    return cloudConflict(C,uid);
+  }
+  const dirty=M.dirty&&L.sum!==M.sum;
+  if(!C)return saveIsFresh(L.obj)&&!dirty?ok():cloudUp(uid,0,L);
+  if(C.rev===M.rev)return dirty?cloudUp(uid,M.rev,L):ok();
+  if(C.rev>M.rev&&!dirty)return cloudApply(C,uid,L.sum);
+  return cloudConflict(C,uid); // cloud piu' nuovo e dispositivo cambiato, o rev inatteso
+}
+function cloudSync(manual){ // dopo il login, all'avvio dopo fbVerify/plVerify, «Sincronizza ora», tornati online
+  if(!cloudOn()||CL.stop||(CL.later&&!manual)||CL.conf)return Promise.resolve();
+  if(manual)CL.later=false;
+  if(CL.run)return CL.run;
+  if(navigator.onLine===false){cloudStat("net");return Promise.resolve()}
+  CL.run=cloudSyncRun().catch(cloudFail).finally(cloudDone);
+  return CL.run;
+}
+function cloudStart(login){if(login){CL.stop=false;CL.later=false}return cloudSync()}
+function cloudPush(){ // carica il salvataggio se e' cambiato dall'ultima copia sincronizzata
+  if(!cloudOn()||CL.stop||CL.later||CL.conf||CL.run)return;
+  if(cloudBlocked())return cloudArm();
+  const M=cm();if(!CL.ok||!M)return cloudSync();
+  const L=cloudLocal();
+  if(!(M.dirty&&L.sum!==M.sum)){if(M.dirty){M.dirty=false;cmSet(M)}return}
+  if(navigator.onLine===false)return cloudStat("net");
+  CL.run=(async()=>{
+    const uid=await cloudUid();if(!uid)return;
+    if(uid!==M.uid)return cloudSyncRun();
+    return cloudUp(uid,M.rev,cloudLocal());
+  })().catch(cloudFail).finally(cloudDone);
+}
+function cloudFlush(){ // fine partita, scheda nascosta/chiusa: subito, ma non piu' di una volta ogni 10 s (dirty garantisce il tentativo successivo)
+  if(!cloudOn()||CL.stop||CL.later||cloudBlocked())return;
+  const M=cm();if(!M||!M.dirty)return;
+  const now=Date.now();if(now-CL.lastFlush<CLOUD_FLUSH)return cloudArm();
+  CL.lastFlush=now;if(CL.deb){clearTimeout(CL.deb);CL.deb=0}
+  cloudPush();
+}
+function cloudOnPersist(){ // da persist(): segna dirty se il salvataggio vero e' diverso dall'ultima copia sincronizzata
+  try{
+    if(SIM())return;
+    try{localStorage.setItem(LASTSAVE_KEY,String(Date.now()))}catch(e){}
+    const M=cm();if(!M)return;
+    if(!M.dirty&&cloudLocal().sum!==M.sum){M.dirty=true;cmSet(M)}
+    if(M.dirty&&cloudOn())cloudArm();
+  }catch(e){}
+}
+function cloudWrite(data,cur){ // scrive una copia come salvataggio locale, tenendo i campi solo-dev di questo dispositivo
+  const o=cloudReal(cloudParse(data));
+  for(const k of CLOUD_DEVONLY){if(cur&&k in cur)o[k]=cur[k];else delete o[k]}
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(o))}catch(e){mem[SAVE_KEY]=o}
+}
+const cloudBackup=(data,from,summary)=>store.set(CLOUDBAK_KEY,{data,from,ts:Date.now(),summary});
+function cloudApply(C,uid,lsum){CL.pend={C,uid,lsum};cloudPendCheck()}
+function cloudPendCheck(){if(CL.pend&&cloudCanApply())setTimeout(cloudApplyNow,0)}
+function cloudApplyNow(){
+  const P=CL.pend;if(!P||!cloudCanApply()||CLOUD_LOCK)return;CL.pend=null;
+  const L=cloudLocal();
+  if(P.lsum!=null&&L.sum!==P.lsum)return cloudSync(); // applicazione automatica ma il dispositivo e' cambiato nel frattempo: si decide di nuovo
+  cloudBackup(L.raw||"{}","device",cloudSummary(cloudReal(L.obj),cloudLw()));
+  cloudWrite(P.C.data,L.obj);
+  cmSet({uid:P.uid,rev:P.C.rev,sum:cloudSumOf(P.C.data),dirty:false,ts:Date.now()});
+  CLOUD_LOCK=true;location.reload();
+}
+function cloudRestore(){ // solo sito /dev/: scambia backup e salvataggio attuale, poi dirty
+  const b=store.get(CLOUDBAK_KEY);if(!b||!b.data||!cloudCanApply())return;
+  const L=cloudLocal();
+  cloudBackup(L.raw||"{}","device",cloudSummary(cloudReal(L.obj),cloudLw()));
+  cloudWrite(b.data,L.obj);
+  const M=cm();if(M){M.dirty=true;cmSet(M)}
+  CLOUD_LOCK=true;location.reload();
+}
+function cloudConflict(C,uid){
+  const L=cloudLocal();
+  if(cloudSumOf(C.data)===L.sum){cmSet({uid,rev:C.rev,sum:L.sum,dirty:false,ts:Date.now()});CL.ok=true;return cloudStat("ok")} // stesso contenuto: nulla da scegliere
+  CL.ok=false;CL.conf={C,uid};cloudConfShow();
+}
+function cloudConfShow(){
+  const X=CL.conf;if(!X||document.getElementById("clpop"))return;
+  const md=modalEl();
+  if(BUG||(md&&md.firstChild&&screen!=="splash")){clearTimeout(CL.wait);CL.wait=setTimeout(cloudConfShow,1000);return} // un altro popup aperto: si aspetta
+  const L=cloudLocal(),sc=cloudSummary(cloudReal(cloudParse(X.C.data)),X.C.ts),sd=cloudSummary(cloudReal(L.obj),cloudLw());
+  const card=(t,s,id)=>`<div class="clcard"><b>${t}</b><span>${esc(CHARS.roccia.name)} · Liv. ${s.r}</span><span>${esc(CHARS.algidone.name)} · Liv. ${s.a}</span><span>${s.s} sordi</span><small>${cloudDate(s.d)}</small><button class="btn sm" id="${id}">Usa questo</button></div>`;
+  const resume=bugFreeze();
+  const m=openModal(`<div id="clpop" data-nolp><h3>Due salvataggi diversi</h3><div class="clcards">${card("Nel cloud",sc,"clc")}${card("Su questo dispositivo",sd,"cld")}</div><div class="acts"><button class="btn ghost" id="cll">Decidi dopo</button></div></div>`);
+  const close=()=>{CL.conf=null;closeModal();const b=BUG;BUG=null;if(b&&b.resume)b.resume();if(screen==="splash")render()};
+  const later=()=>{close();CL.later=true;cloudStat("later")}; // niente sync fino al prossimo avvio, il gioco va avanti in locale
+  BUG={resume,close:later}; // come il popup del bug: gioco fermo, nessun tasto arriva al gioco, Esc = Decidi dopo
+  m.querySelector("#cll").onclick=later;
+  m.querySelector("#clc").onclick=()=>{close();if(!cloudCanApply())toast("Il salvataggio del cloud arriva quando torni al menu");cloudApply(X.C,X.uid,null)} // scelta esplicita: si applica al menu anche se nel frattempo si e' giocato (quei progressi vanno nel backup);
+  m.querySelector("#cld").onclick=()=>{close();cloudBackup(X.C.data,"cloud",sc);
+    const go_=()=>{if(CL.run)return;CL.run=cloudUp(X.uid,X.C.rev,cloudLocal()).catch(cloudFail).finally(cloudDone)};
+    if(CL.run)CL.run.finally(()=>setTimeout(go_,0));else go_()};
+}
+function cloudReset(){ // logout: si dimentica l'ultima copia sincronizzata; salvataggio locale e backup restano
+  clearTimeout(CL.deb);clearTimeout(CL.wait);CL.deb=0;CL.ok=false;CL.pend=null;CL.status=null;
+  if(CL.conf&&document.getElementById("clpop")&&BUG)BUG.close();CL.conf=null;CL.later=false;
+  try{localStorage.removeItem(CLOUD_KEY)}catch(e){}delete mem[CLOUD_KEY];
+}
+function cloudWipe(){cloudReset();for(const k of[CLOUDBAK_KEY,LASTSAVE_KEY]){try{localStorage.removeItem(k)}catch(e){}delete mem[k]}}
+function cloudTestSet(on){ // interruttore di prova del sito /dev/
+  if(on)store.set(CLOUDTEST_KEY,true);else{try{localStorage.removeItem(CLOUDTEST_KEY)}catch(e){}delete mem[CLOUDTEST_KEY]}
+  clearTimeout(CL.deb);CL.deb=0;CL.status=null;
+  if(on)cloudStart(true);
+}
+addEventListener("online",()=>{if(CL.ok)cloudPush();else cloudSync()});
+function cloudAccHTML(){ // aggiunte all'accordion «Account» (solo con una sessione)
+  if(!cloudSession()||(!CLOUD_SAVE&&!IS_DEVSITE))return""; // sito stabile con il flag spento: interfaccia invariata
+  const on=cloudOn(),t=cloudTest(),b=IS_DEVSITE?store.get(CLOUDBAK_KEY):null;
+  return`<div class="opt"><div>Salvataggio cloud<small id="clst">${esc(cloudStatText())}</small></div><button class="btn sm" id="clsy" ${on?"":"disabled"}>Sincronizza ora</button></div>`
+   +(IS_DEVSITE?`<div class="opt" style="flex-direction:column;align-items:stretch"><div>Salvataggio cloud (test)<small>Solo sul sito di prova: usa saves/{uid}_dev.</small></div><div class="seg" style="margin-top:8px"><button data-clt="1" class="${t?"on":""}" style="flex:1">Attivo</button><button data-clt="0" class="${t?"":"on"}" style="flex:1">Spento</button></div></div>`:"")
+   +(IS_DEVSITE&&b&&b.data?`<div class="opt"><div>Ripristina backup<small>${b.from==="cloud"?"Copia del cloud":"Copia di questo dispositivo"} · ${cloudDay(b.ts)} ${cloudHM(b.ts)}</small></div><button class="btn sm" id="clrb">Ripristina</button></div>`:"");
 }
 
 /* ============ MODIFICA TESTI CON PRESSIONE LUNGA (F5) ============
@@ -827,6 +1069,7 @@ lpSync();
    Tocco = il gioco si ferma come nella sua pausa ma senza il menu di pausa, popup con il testo, "Indietro" riprende esattamente da dove era.
    Invio: Firestore `bugs` (campi ammessi da firestore.rules); senza rete la segnalazione va in una coda locale (max 20) e parte appena si e' online. */
 const BUG_PLAYERS=false; // 0.5: si attiva insieme al login dei giocatori (gia' costruito in F2a, dietro questo flag)
+const CLOUD_SAVE=false; // F2b: salvataggio cloud per tutti (0.5). Finche' e' false: sito stabile nessuna chiamata, sul sito /dev/ si prova con «Salvataggio cloud (test)»
 const PLAYER_LOGIN=false; // F2a: quando false l'Account giocatore si vede solo con dev mode attiva (per poterlo provare); i giocatori non vedono nulla
 const bugPlayerSession=()=>!!playerAcct;
 const canReport=()=>!!role||(BUG_PLAYERS&&!!bugPlayerSession());
@@ -845,6 +1088,7 @@ function screenId(){
     if(mt==="Esporta modifiche")return"export-dialog";
     if(md.querySelector("#popg"))return"popup-milestone";
     if(mt==="Hai un insetto?")return"bug-popup";
+    if(mt==="Due salvataggi diversi")return"cloud-conflict";
     if(mt==="Modifica testo")return"dev-textedit-popup";
     if(md.querySelector("#giftbox,#giftreveal"))return md.querySelector("#giftreveal:not([hidden])")?"gift-opened":"gift-closed";
     if(md.querySelector("#fai-yes"))return"fa-invite";
@@ -904,7 +1148,7 @@ function screenId(){
   }
   return"unknown:"+screen;
 }
-const SCREEN_IDS=new Set(["splash-question","sad-countdown","bye-goodbye","menu-home-roccia","menu-home-algidone","career-modal-roccia","career-modal-algidone","opt-generali","opt-generali-audio","opt-generali-screen","opt-generali-game","opt-generali-account","opt-generali-data","opt-login-modal","dev-tab","dev-acc-account","dev-acc-test","dev-acc-audio","dev-acc-obj","dev-acc-exp","dev-acc-skins","export-dialog","wish-enemies-roccia","wish-enemies-algidone","wish-items-roccia","wish-items-algidone","wish-giocatore-locked","wish-giocatore-unlocked","wish-giochi-locked","wish-giochi-unlocked","ach-gen","ach-roc","ach-alg","ach-gio","ach-min","road-top-current","gift-closed","gift-opened","popup-milestone","cust-roccia","cust-algidone","maze-intro-roccia","maze-play-roccia","maze-steel-roccia","maze-water-roccia","maze-fire-roccia","maze-ice-roccia","maze-forest-roccia","maze-fire-algidone","maze-acciaio-roccia","maze-cinghiale-algidone","maze-over","bj-invite","bj-dealer-line","bj-table-hand","bj-result","bj-menu-again","bj-raise-stake","pr-choice-menu","pr-dialogue-question","pr-dialogue-yes","pr-throwout-street","pb-command","pb-move-panel","pb-win-ending","pb-win-question","fa-invite","fa-intro-floor1","fa-intro-floor2","fa-intro-floor3","fa-floor1-play","fa-floor2-play","fa-floor3-play","fa-pause","fa-game-over","fa-floor-win-panel","fa-final-panel","bug-popup","dev-textedit-popup"]);
+const SCREEN_IDS=new Set(["splash-question","sad-countdown","bye-goodbye","menu-home-roccia","menu-home-algidone","career-modal-roccia","career-modal-algidone","opt-generali","opt-generali-audio","opt-generali-screen","opt-generali-game","opt-generali-account","opt-generali-data","opt-login-modal","dev-tab","dev-acc-account","dev-acc-test","dev-acc-audio","dev-acc-obj","dev-acc-exp","dev-acc-skins","export-dialog","wish-enemies-roccia","wish-enemies-algidone","wish-items-roccia","wish-items-algidone","wish-giocatore-locked","wish-giocatore-unlocked","wish-giochi-locked","wish-giochi-unlocked","ach-gen","ach-roc","ach-alg","ach-gio","ach-min","road-top-current","gift-closed","gift-opened","popup-milestone","cust-roccia","cust-algidone","maze-intro-roccia","maze-play-roccia","maze-steel-roccia","maze-water-roccia","maze-fire-roccia","maze-ice-roccia","maze-forest-roccia","maze-fire-algidone","maze-acciaio-roccia","maze-cinghiale-algidone","maze-over","bj-invite","bj-dealer-line","bj-table-hand","bj-result","bj-menu-again","bj-raise-stake","pr-choice-menu","pr-dialogue-question","pr-dialogue-yes","pr-throwout-street","pb-command","pb-move-panel","pb-win-ending","pb-win-question","fa-invite","fa-intro-floor1","fa-intro-floor2","fa-intro-floor3","fa-floor1-play","fa-floor2-play","fa-floor3-play","fa-pause","fa-game-over","fa-floor-win-panel","fa-final-panel","bug-popup","dev-textedit-popup","cloud-conflict"]);
 
 /* congelamento del gioco mentre il popup e' aperto: come la pausa di ciascun gioco, senza il suo menu. Restituisce la funzione che riprende. */
 let _pnBase=null,_pnOff=0,_pnFz=null;
@@ -1001,7 +1245,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4_13";
+const VERSION="0.4_14";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -2076,8 +2320,8 @@ function renderOpt(){
      <div class="seg" style="margin-top:8px">${["easy","medium","hard"].map(k=>`<button data-diff="${k}" class="${(S.opts.diff||"medium")===k?"on":""}" style="flex:1">${DIFF[k].n}</button>`).join("")}</div><small style="color:var(--mute);margin-top:6px">Vale dalla prossima partita.</small></div>`;
   const pData=`<div class="opt"><div>Cancella dati locali<small>Progressi, sordi, acquisti, modifiche dev e musica caricata</small></div><button class="btn red sm" id="wipe">Cancella</button></div>`;
   const ver=`<div class="opt"><div id="ver">Build locale<small>Versione ${VERSION}</small></div></div>`;
-  const showAccount=PLAYER_LOGIN||(devOn&&!!role);
-  const body=optTab==="dev"&&devUI()?devRows():optAcc("audio","Audio",pAudio)+optAcc("screen","Schermo",pScreen)+optAcc("game","Gioco",pGame)+(showAccount?optAcc("account","Account",plAccountHTML()):"")+optAcc("data","Dati",pData,"danger")+ver;
+  const showAccount=PLAYER_LOGIN||(devOn&&!!role)||(IS_DEVSITE&&!!playerAcct); // F2b: sul sito /dev/ anche un giocatore connesso vede l'Account
+  const body=optTab==="dev"&&devUI()?devRows():optAcc("audio","Audio",pAudio)+optAcc("screen","Schermo",pScreen)+optAcc("game","Gioco",pGame)+(showAccount?optAcc("account","Account",plAccountHTML()+cloudAccHTML()):"")+optAcc("data","Dati",pData,"danger")+ver;
   shell(`<div class="screen"><div class="top"><button class="btn ghost sm" id="back">‹</button><h2>Opzioni</h2>${bugBtn()}</div><div class="scroll" style="flex:1;min-height:0">${tabs}${body}</div></div>`);
 }
 function bindOpt(){
@@ -2093,6 +2337,9 @@ function bindOpt(){
     if(t.closest("#plk"))return plLoginGo();
     if(t.closest("#plo")){plLogout();return render()}
     if(t.closest("#cpw"))return fbChangePw();
+    if(t.closest("#clsy")){cloudSync(true);return}
+    const ct=t.closest("[data-clt]");if(ct&&IS_DEVSITE){cloudTestSet(ct.dataset.clt==="1");return render()}
+    if(t.closest("#clrb"))return confirmBox("Ripristina backup","Il salvataggio attuale e il backup si scambiano di posto, poi il gioco si ricarica.","Ripristina","Annulla",cloudRestore);
     const mu=t.closest("[data-mus]");if(mu){S.opts.music=mu.dataset.mus==="1";persist();syncMusic();return render()}
     const sn=t.closest("[data-snd]");if(sn){S.opts.sound=sn.dataset.snd==="1";persist();return render()}
     const f=t.closest("[data-fs]");if(f){pendingFs=+f.dataset.fs;document.documentElement.style.setProperty("--fs",pendingFs);return render()}
@@ -2108,6 +2355,7 @@ async function wipeData(){
   try{localStorage.removeItem(DEV_KEY)}catch(e){}
   try{localStorage.removeItem(PLAYER_KEY)}catch(e){}
   try{localStorage.removeItem(EDITQ_KEY);localStorage.removeItem(EDITSENT_KEY)}catch(e){}
+  cloudWipe();
   for(const k in mem)delete mem[k];
   try{await IDB.del("menuMusic")}catch(e){}
   for(const c of Object.keys(CHARS))for(const s of SLOTS){try{await IDB.del("snd_"+c+"_"+s)}catch(e){}}
@@ -2134,7 +2382,7 @@ function loginModal(){
     k.disabled=true;er.textContent="Accesso in corso…";
     try{
       const r=await fbLogin(u,p);
-      role=r==="master"?"master":"dev1";acct=r;devOn=true;persistDev();closeModal();toast("Dev mode attiva");go("menu");bugFlush();editFlush();
+      role=r==="master"?"master":"dev1";acct=r;devOn=true;persistDev();closeModal();toast("Dev mode attiva");go("menu");bugFlush();editFlush();cloudStart(true);
     }catch(e){er.textContent=e.message||"Accesso non riuscito.";k.disabled=false}
   };
   m.querySelector("#lk").onclick=go_;
@@ -3088,6 +3336,7 @@ function bindAch(){
 }
 addEventListener("pagehide",()=>{try{flushTime();persist()}catch(e){}});
 document.addEventListener("visibilitychange",()=>{if(document.hidden){try{flushTime();persist()}catch(e){}}});
+addEventListener("pagehide",()=>cloudFlush());document.addEventListener("visibilitychange",()=>{if(document.hidden)cloudFlush()}); // F2b: dopo il persist qui sopra
 
 /* ============ ROADMAP (§10.4 R-chunks) ============
    50 tessere a percorso a serpentina, una per girone. Tutte le tessere sono GLOBALI, non legate al
@@ -3933,7 +4182,7 @@ function finishRun(o){
   while(cc.lvl<100&&cc.exp>=expNeed(cc.lvl)){cc.exp-=expNeed(cc.lvl);cc.lvl++}
   if(cc.lvl>=100)cc.exp=0;
   flushTime();{const cx0={ch:ck,d:G.diff||"hard"};ach("sordi",{...cx0,n:gain});ach("run",{...cx0});ach("score",{...cx0,n:score});ach("level",{...cx0,n:maxLevel()})}
-  const hardRun=!!G.hard;S.quick=null;persist();G=null;
+  const hardRun=!!G.hard;S.quick=null;persist();cloudFlush();G=null;
   if(o&&o.quiet){go("menu");toast("Partita abbandonata · +"+gain+" sordi");if(cc.lvl>oldL)celebrate(oldL,cc.lvl,showAchQ);else showAchQ();return}
   screen="over";syncMusic();
   shell(`<div class="screen">${bugBtn("fixr")}<div class="center" style="width:100%"><h2 style="font-size:1.6rem;color:var(--alarm);margin:0 0 4px">Partita finita</h2>
@@ -6858,7 +7107,7 @@ async function prBattleStart(){
 
 /* ============ ROUTER ============ */
 function render(){
-  lpSync();
+  lpSync();cloudPendCheck();
   cancelAnimationFrame(raf);cancelAnimationFrame(menuRaf);cancelAnimationFrame(custRaf);setTimeout(syncMusic,0);
   if(screen!=="sad")clearInterval(sadTimer);
   if(screen!=="pr")prCleanup();
