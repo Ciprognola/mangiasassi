@@ -657,3 +657,4 @@ Stage is per ghost. Scared (`s`) or eaten (`g`) ghosts never use abilities. Each
 (log [Q] answers here, with the chunk and date)
 
 - 2026-09-27 · P1b (0.4.5_5): owner feedback — the maze respawn blinking is replaced by a 5 s aura in the power-up colour (was 2 s blinking); the aura is the timer; §10.1 and §2 updated.
+- 2026-09-27 · U2 (not built) [Q open]: only rocks 0–3 and snacks 0–3 have distinct art/colours; rocks 4–9 and snacks 4–9 are drawn as the base rock / burger everywhere (pellets, eating, battle for snacks; measured: eat frame == pellet for all 10 rocks and 10 snacks). Extending the eaten-stone recolour to "every rock/snack" needs colours/art that don't exist. Waiting for the owner's decision (see report).
