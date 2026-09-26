@@ -851,7 +851,7 @@ function screenId(){
   }
   return"unknown:"+screen;
 }
-const SCREEN_IDS=new Set(["splash-question","sad-countdown","bye-goodbye","menu-home-roccia","menu-home-algidone","career-modal-roccia","career-modal-algidone","opt-generali","opt-generali-audio","opt-generali-screen","opt-generali-game","opt-generali-data","opt-login-modal","dev-tab","dev-acc-account","dev-acc-test","dev-acc-audio","dev-acc-obj","dev-acc-exp","export-dialog","wish-enemies-roccia","wish-enemies-algidone","wish-items-roccia","wish-items-algidone","wish-giocatore-locked","wish-giocatore-unlocked","wish-giochi-locked","wish-giochi-unlocked","ach-gen","ach-roc","ach-alg","ach-gio","ach-min","road-top-current","gift-closed","gift-opened","popup-milestone","cust-roccia","cust-algidone","maze-intro-roccia","maze-play-roccia","maze-steel-roccia","maze-water-roccia","maze-fire-roccia","maze-ice-roccia","maze-forest-roccia","maze-fire-algidone","maze-acciaio-roccia","maze-cinghiale-algidone","maze-over","bj-invite","bj-dealer-line","bj-table-hand","bj-result","bj-menu-again","bj-raise-stake","pr-choice-menu","pr-dialogue-question","pr-dialogue-yes","pr-throwout-street","pb-command","pb-move-panel","pb-win-ending","pb-win-question","fa-invite","fa-intro-floor1","fa-intro-floor2","fa-intro-floor3","fa-floor1-play","fa-floor2-play","fa-floor3-play","fa-pause","fa-game-over","fa-floor-win-panel","fa-final-panel","bug-popup","dev-textedit-popup"]);
+const SCREEN_IDS=new Set(["splash-question","sad-countdown","bye-goodbye","menu-home-roccia","menu-home-algidone","career-modal-roccia","career-modal-algidone","opt-generali","opt-generali-audio","opt-generali-screen","opt-generali-game","opt-generali-data","opt-login-modal","dev-tab","dev-acc-account","dev-acc-test","dev-acc-audio","dev-acc-obj","dev-acc-exp","dev-acc-skins","export-dialog","wish-enemies-roccia","wish-enemies-algidone","wish-items-roccia","wish-items-algidone","wish-giocatore-locked","wish-giocatore-unlocked","wish-giochi-locked","wish-giochi-unlocked","ach-gen","ach-roc","ach-alg","ach-gio","ach-min","road-top-current","gift-closed","gift-opened","popup-milestone","cust-roccia","cust-algidone","maze-intro-roccia","maze-play-roccia","maze-steel-roccia","maze-water-roccia","maze-fire-roccia","maze-ice-roccia","maze-forest-roccia","maze-fire-algidone","maze-acciaio-roccia","maze-cinghiale-algidone","maze-over","bj-invite","bj-dealer-line","bj-table-hand","bj-result","bj-menu-again","bj-raise-stake","pr-choice-menu","pr-dialogue-question","pr-dialogue-yes","pr-throwout-street","pb-command","pb-move-panel","pb-win-ending","pb-win-question","fa-invite","fa-intro-floor1","fa-intro-floor2","fa-intro-floor3","fa-floor1-play","fa-floor2-play","fa-floor3-play","fa-pause","fa-game-over","fa-floor-win-panel","fa-final-panel","bug-popup","dev-textedit-popup"]);
 
 /* congelamento del gioco mentre il popup e' aperto: come la pausa di ciascun gioco, senza il suo menu. Restituisce la funzione che riprende. */
 let _pnBase=null,_pnOff=0,_pnFz=null;
@@ -948,7 +948,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4_7";
+const VERSION="0.4_8";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -2435,7 +2435,7 @@ function devRows(){
      <div class="acts"><button class="btn ghost sm" data-popprev="asset">Asset</button><button class="btn ghost sm" data-popprev="char">Personaggio</button><button class="btn ghost sm" data-popprev="game">Minigioco</button><button class="btn ghost sm" data-popprev="milestone">Traguardo</button><button class="btn ghost sm" data-popprev="ach">Obiettivo</button></div></div>`;
   const exp=`<div class="opt"><div>Esporta modifiche<small>Crea uno zip con solo ciò che hai cambiato, pronto da caricare su GitHub</small></div><button class="btn sm" id="xopen">Prepara</button></div>
    <div class="opt"><div>Ripristina build originale<small>Cancella le modifiche locali di testi e schede</small></div><button class="btn red sm" id="rs">Ripristina</button></div>`;
-  return optAcc("account","Account",account)+optAcc("test","Strumenti di test",test)+optAcc("audio","Audio e testi",audio)+optAcc("obj","Anteprime",obj)+optAcc("exp","Consegna",exp);
+  return optAcc("account","Account",account)+optAcc("test","Strumenti di test",test)+optAcc("audio","Audio e testi",audio)+optAcc("obj","Anteprime",obj)+optAcc("exp","Consegna",exp)+optAcc("skins","Costumi",skinToolHTML());
 }
 function bindDev(){
   root.onchange=async e=>{
@@ -2485,6 +2485,8 @@ function bindDev(){
     const popprev=t.closest("[data-popprev]");if(popprev){popPreview(popprev.dataset.popprev);return}
     const roadprev=t.closest("[data-roadprev]");if(roadprev){roadPreviewGift(roadprev.dataset.roadprev);return}
     const dsk=t.closest("[data-devskin]");if(dsk){const v=dsk.dataset.devskin;DEV_SKIN_TEST=v==="off"?null:{char:v.split(":")[0],mode:v.split(":")[1]};return render()}
+    const skc=t.closest("[data-skinchar]");if(skc){skinExpChar=skc.dataset.skinchar;return render()}
+    if(t.closest("#skinExpGo"))return skinExportSheetUI();
     const sp=t.closest("[data-sp]");if(sp){const [c,s]=sp.dataset.sp.split(":");started=true;const was=S.opts.sound;S.opts.sound=true;playSnd(s,c);S.opts.sound=was;return}
     const sr=t.closest("[data-sr]");if(sr){const [c,s]=sr.dataset.sr.split(":");return confirmBox("Ma che sei gojo?","Rimuovere il suono personalizzato e tornare a quello predefinito?","Sì, deo caro","Noneee",async()=>{try{await IDB.del("snd_"+c+"_"+s)}catch(x){}SND[c][s]=await decodeSlotAudio("snd_"+c+"_"+s,sndTarget(c,s));toast("Suono predefinito");render()})}
     if(t.closest("#lvs")){const v=Math.max(1,Math.min(100,parseInt($("#lvt").value)||1));cs().lvl=v;cs().exp=0;persist();return toast("Livello impostato a "+v)}
@@ -2492,6 +2494,207 @@ function bindDev(){
     if(t.closest("#mr"))return confirmBox("Ma che sei gojo?","Tornare alla musica originale?","Sì, deo caro","Noneee",async()=>{try{await IDB.del("menuMusic")}catch(x){}await initMusic();toast("Musica originale")});
     if(t.closest("#rs"))return confirmBox("Ma che sei gojo?","Cancellare tutte le modifiche locali e tornare alla build originale?","Sì, deo caro","Noneee",()=>{S.tiles=JSON.parse(JSON.stringify(DEF_TILES));S.ov={};S.extra={plane:[],rock:[],algidone:{plane:[],rock:[]}};persist();render()});
   };
+}
+
+/* ============ SKIN TOOL — ESPORTA FOGLIO (F4a) ============
+   Foglio disegnabile per un costume: nessuna arte nuova, i pixel vengono da IMG[] e dalle funzioni
+   di disegno del gioco cosi' come sono in questa build (mai da refs/). Solo dev tool: mai salvato,
+   invisibile con dev off, per ogni ruolo sviluppatore (non solo master, vedi devUI()). */
+let skinExpChar="roccia";
+const SKIN_SCALE=4,SKIN_MARGIN=.25,SKIN_MAXSIDE=4096,SKIN_GAP=10,SKIN_PAD=28,SKIN_LBLH=22,SKIN_SECLBLH=24,SKIN_SECGAP=30,SKIN_HDRH=64;
+const SKIN_DIRNOTE={lato:"sinistra = specchiato dal codice, non disegnare mai una versione sinistra a parte",su:"mai specchiato",giu:"mai specchiato"};
+const SKIN_DEF={
+ roccia:{
+  name:"Uomo roccia",folder:"uomo_roccia",
+  sets:[
+   {label:"Lato",dir:"lato",keys:["f0","f1","f2"]},
+   {label:"Mangia (lato)",dir:"lato",keys:["e0","e1"]},
+   {label:"Su",dir:"su",keys:["fd0","fd1","fd2"]},
+   {label:"Giù",dir:"giu",keys:["fu0","fu3"]},
+  ],
+  skipped:[
+   ["f3","mai raggiunto dal ciclo di camminata laterale (0,1,2,1)"],
+   ["fd3","mai raggiunto dal ciclo su (0,1,2,1)"],
+   ["fu1","posa di transizione del ciclo giù, mai raggiunta (0,3,0,3)"],
+   ["fu2","posa di transizione del ciclo giù, mai raggiunta (0,3,0,3)"],
+   ["fd_e0","mangiare su usa l'icona roccia procedurale (v. Riferimenti), non questo fotogramma"],
+   ["fd_e1","mangiare su usa l'icona roccia procedurale (v. Riferimenti), non questo fotogramma"],
+   ["fu_e0","mangiare giù usa l'icona roccia procedurale (v. Riferimenti), non questo fotogramma"],
+   ["fu_e1","mangiare giù usa l'icona roccia procedurale (v. Riferimenti), non questo fotogramma"],
+  ],
+  used:{
+   f0:["camminata laterale (labirinto)","scena del menu (fermo/apertura bocca)","ritratti statici (carte, HUD vite, logo splash, cutscene stagno, dialogo professore)","rampicante Ferma Algidone! (fermo e cammina)"],
+   f1:["camminata laterale (labirinto)","scena del menu (masticare)"],
+   f2:["camminata laterale (labirinto)","ritratto fisso ovunque (carte, HUD, splash, cutscene, dialogo)","posa di caduta (morte)","rampicante Ferma Algidone! (cammina/salta)"],
+   e0:["morso mangiando di lato (labirinto, interiezione in battaglia)"],
+   e1:["morso mangiando di lato (labirinto)"],
+   fd0:["camminata su (labirinto)","rampicante Ferma Algidone! (sale)"],
+   fd1:["camminata su (labirinto)","rampicante Ferma Algidone! (sale)"],
+   fd2:["camminata su (labirinto)","rampicante Ferma Algidone! (sale)"],
+   fu0:["camminata giù (labirinto)","rampicante Ferma Algidone! (scende)"],
+   fu3:["camminata giù (labirinto)","rampicante Ferma Algidone! (scende)"],
+  },
+  refs:[
+   {key:"ref_eat_su",label:"Mangia su (icona roccia, solo codice)",w:140,h:180,render:(x,W,H)=>{x.save();x.translate(W/2,H*.6);drawFace(x,0,0,88,0,false,"fd");drawFaceEatFX(x,0,0,88,0,.12);x.restore()}},
+   {key:"ref_eat_giu",label:"Mangia giù (icona roccia, solo codice)",w:140,h:180,render:(x,W,H)=>{x.save();x.translate(W/2,H*.55);drawFace(x,0,0,88,0,false,"fu");drawFaceEatFX(x,0,0,88,2,.12);x.restore()}},
+  ],
+ },
+ algidone:{
+  name:"Algidone",folder:"algidone",
+  sets:[
+   {label:"Lato (fermo + cammina)",dir:"lato",keys:["al_st","al_w0","al_w1","al_w2","al_w3","al_w4","al_w5","al_w6","al_w7"]},
+   {label:"Su",dir:"su",keys:["al_u0","al_u1","al_u2","al_u3","al_u4","al_u5"]},
+   {label:"Giù (fermo + cammina)",dir:"giu",keys:["al_d_st","al_d0","al_d1","al_d2","al_d3"]},
+   {label:"Rotola (power-up, solo lato)",dir:"lato",keys:["al_r0","al_r1","al_r2","al_r3","al_r4","al_r5","al_r6"]},
+  ],
+  skipped:[["al_r7","fuori dal range %7 usato dall'animazione rotola, mai raggiunto"]],
+  used:{
+   al_st:["fermo di lato (labirinto)","scena del menu","ritratti statici (carte, HUD vite, logo splash, cutscene stagno, dialogo professore)","posa di caduta (morte)"],
+   al_w0:["camminata laterale (labirinto)","scena del menu"],
+   al_w1:["camminata laterale (labirinto)"],al_w2:["camminata laterale (labirinto)"],al_w3:["camminata laterale (labirinto)"],
+   al_w4:["camminata laterale (labirinto)"],al_w5:["camminata laterale (labirinto)"],al_w6:["camminata laterale (labirinto)"],al_w7:["camminata laterale (labirinto)"],
+   al_u0:["camminata su (labirinto)","fermo su (stesso fotogramma)"],al_u1:["camminata su (labirinto)"],al_u2:["camminata su (labirinto)"],al_u3:["camminata su (labirinto)"],al_u4:["camminata su (labirinto)"],al_u5:["camminata su (labirinto)"],
+   al_d_st:["fermo giù (labirinto)"],al_d0:["camminata giù (labirinto)"],al_d1:["camminata giù (labirinto)"],al_d2:["camminata giù (labirinto)"],al_d3:["camminata giù (labirinto)"],
+   al_r0:["rotola con il power-up (solo vista laterale)"],al_r1:["rotola con il power-up (solo vista laterale)"],al_r2:["rotola con il power-up (solo vista laterale)"],al_r3:["rotola con il power-up (solo vista laterale)"],al_r4:["rotola con il power-up (solo vista laterale)"],al_r5:["rotola con il power-up (solo vista laterale)"],al_r6:["rotola con il power-up (solo vista laterale)"],
+  },
+  refs:[
+   {key:"ref_boar_lato",label:"Cinghiale, lato (solo codice)",w:260,h:210,render:(x,W,H)=>{x.save();x.translate(W/2,H*.62);drawBoar(x,0,0,120,{face:1,anim:0,moving:false});x.restore()}},
+   {key:"ref_boar_su",label:"Cinghiale, su (solo codice)",w:260,h:210,render:(x,W,H)=>{x.save();x.translate(W/2,H*.62);drawBoar(x,0,0,120,{face:0,anim:0,moving:false});x.restore()}},
+   {key:"ref_boar_giu",label:"Cinghiale, giù (solo codice)",w:260,h:210,render:(x,W,H)=>{x.save();x.translate(W/2,H*.62);drawBoar(x,0,0,120,{face:2,anim:0,moving:false});x.restore()}},
+  ],
+ },
+};
+function skinRows(char){
+  const def=SKIN_DEF[char],maxW=SKIN_MAXSIDE-2*SKIN_PAD,rows=[],warn=[];
+  const addSection=(label,items)=>{
+    let x=0,lineH=0,line=[],first=true;
+    const flush=()=>{if(!line.length)return;rows.push({secLabel:first?label:null,cells:line,h:lineH});first=false;x=0;lineH=0;line=[]};
+    for(const it of items){
+      if(line.length&&x+it.cellW>maxW)flush();
+      it.x=x;x+=it.cellW+SKIN_GAP;lineH=Math.max(lineH,it.cellH);line.push(it);
+    }
+    flush();
+  };
+  for(const s of def.sets){
+    const items=[];
+    for(const k of s.keys){
+      const im=IMG[k];if(!im||!im.width){warn.push("Fotogramma mancante in IMG: "+k);continue}
+      const bw4=im.width*SKIN_SCALE,bh4=im.height*SKIN_SCALE;
+      const cw=Math.round(bw4*(1+2*SKIN_MARGIN)),ch=Math.round(bh4*(1+2*SKIN_MARGIN));
+      items.push({key:k,cellW:cw,cellH:ch,baseX:Math.round(bw4*SKIN_MARGIN),baseY:Math.round(bh4*SKIN_MARGIN),baseW:bw4,baseH:bh4,dir:s.dir,setLabel:s.label});
+    }
+    if(items.length)addSection(s.label,items);
+  }
+  if(def.refs&&def.refs.length){
+    const items=def.refs.map(r=>({key:r.key,cellW:Math.round(r.w*(1+2*SKIN_MARGIN)),cellH:Math.round(r.h*(1+2*SKIN_MARGIN)),ref:true,render:r.render,label:r.label,contentW:r.w,contentH:r.h}));
+    addSection("Riferimenti",items);
+  }
+  const totalW=rows.reduce((m,r)=>Math.max(m,r.cells.reduce((mm,c)=>Math.max(mm,c.x+c.cellW),0)),1);
+  return{def,rows,totalW,warn};
+}
+function skinPaginate(rows){
+  const maxContentH=SKIN_MAXSIDE-SKIN_HDRH-2*SKIN_PAD,pages=[];let cur=[],curH=0;
+  for(const r of rows){
+    const rh=(r.secLabel?SKIN_SECLBLH:0)+r.h+SKIN_LBLH+SKIN_SECGAP;
+    if(cur.length&&curH+rh>maxContentH){pages.push(cur);cur=[];curH=0}
+    cur.push(r);curH+=rh;
+  }
+  if(cur.length)pages.push(cur);
+  return pages;
+}
+function skinPageGeom(page){
+  let y=0;const laid=page.map(r=>{
+    const secH=r.secLabel?SKIN_SECLBLH:0,rowY=y+secH;
+    y=rowY+r.h+SKIN_LBLH+SKIN_SECGAP;
+    return Object.assign({},r,{secH,rowY});
+  });
+  return{laid,h:y};
+}
+const SKIN_LEGGIMI=(name,folder)=>
+`Foglio personaggio -- ${name} (build ${VERSION})
+
+Come disegnare:
+1. Apri ${folder}_DRAW_HERE.png nel tuo programma di disegno (Aseprite, Photopea, Photoshop...). Non ridimensionare ne' ritagliare il file: deve restare allineato a ${folder}_GUIDE.png.
+2. Guarda ${folder}_GUIDE.png per sapere dove va ogni fotogramma: ogni riquadro rosa contiene già il personaggio base, disegnato nella sua vera posizione dentro la cella. Il margine trasparente attorno serve per un cappello, una coda o qualsiasi dettaglio che sporga leggermente dal frame originale.
+3. Disegna dentro il riquadro rosa corrispondente, su un livello sopra la guida, poi nascondi il livello guida ed esporta solo il tuo disegno come ${folder}_DRAW_HERE.png (stessa dimensione esatta, sfondo trasparente).
+4. Lascia una cella vuota se non hai ancora quel fotogramma: il gioco mostra quel fotogramma senza costume, mai un errore.
+5. Le celle grigie con la scritta SOLO RIFERIMENTO mostrano pose disegnate dal codice (es. il Cinghiale di Algidone): servono solo per vedere come appare il personaggio in quei momenti. Non vanno disegnate né inviate.
+6. Il costume è overlay (disegni SOLO i pixel nuovi, es. un cappello: il personaggio del gioco resta visibile sotto) oppure replace (ridisegni l'intero personaggio, es. cambi colori o vestiti: copre tutto il frame base). Si decide una volta sola per l'intero costume, non fotogramma per fotogramma.
+7. Quando hai finito, tienilo da parte: il caricamento con anteprima dal foglio arriva con il prossimo strumento (in arrivo). Per ora non serve inviare nulla.
+
+Non ridimensionare i file, non spostare le celle, non disegnare fuori dai riquadri.
+`;
+async function skinBuildSheet(char){
+  const def=SKIN_DEF[char];if(!def)throw new Error("personaggio sconosciuto");
+  const{rows,totalW,warn}=skinRows(char),pages=skinPaginate(rows);
+  const sheetW=Math.min(SKIN_MAXSIDE,totalW+2*SKIN_PAD);
+  const entries=[],allFrames={},allRefs=[],sheets=[];let realCount=0;
+  for(let pi=0;pi<pages.length;pi++){
+    const geom=skinPageGeom(pages[pi]),sheetH=Math.min(SKIN_MAXSIDE,geom.h+SKIN_HDRH+2*SKIN_PAD);
+    const guide=document.createElement("canvas");guide.width=sheetW;guide.height=sheetH;
+    const dh=document.createElement("canvas");dh.width=sheetW;dh.height=sheetH;
+    const gx=guide.getContext("2d");
+    gx.fillStyle="#c9ccd1";gx.fillRect(0,0,sheetW,sheetH);
+    gx.fillStyle="#1b2530";gx.font="bold 20px system-ui,sans-serif";gx.textBaseline="top";gx.textAlign="left";
+    gx.fillText(def.name+" -- foglio "+VERSION+(pages.length>1?" ("+(pi+1)+"/"+pages.length+")":""),SKIN_PAD,14);
+    gx.font="13px system-ui,sans-serif";gx.fillStyle="#3a4552";
+    gx.fillText("Disegna solo dentro i riquadri rosa. Il margine trasparente è spazio per l'arte che sporge dal frame originale.",SKIN_PAD,40);
+    for(const r of geom.laid){
+      if(r.secLabel){gx.font="bold 15px system-ui,sans-serif";gx.fillStyle="#1b2530";gx.textAlign="left";gx.fillText(r.secLabel,SKIN_PAD,SKIN_HDRH+r.rowY-SKIN_SECLBLH+4)}
+      for(const c of r.cells){
+        const cx=SKIN_PAD+c.x,cy=SKIN_HDRH+r.rowY;
+        if(c.ref){
+          gx.fillStyle="#9aa2ad";gx.fillRect(cx,cy,c.cellW,c.cellH);
+          gx.save();gx.translate(cx+(c.cellW-c.contentW)/2,cy+(c.cellH-c.contentH)/2);gx.imageSmoothingEnabled=true;
+          try{c.render(gx,c.contentW,c.contentH)}catch(e){}
+          gx.restore();
+          gx.fillStyle="#1b2530";gx.textAlign="center";
+          gx.font="bold 11px system-ui,sans-serif";gx.fillText("SOLO RIFERIMENTO",cx+c.cellW/2,cy+c.cellH+4);
+          gx.font="11px system-ui,sans-serif";gx.fillText(c.label,cx+c.cellW/2,cy+c.cellH+18);
+          gx.textAlign="left";
+          allRefs.push({key:c.key,label:c.label,x:cx,y:cy,w:c.cellW,h:c.cellH,ref:true,sheet:pages.length>1?pi+1:undefined});
+        }else{
+          gx.strokeStyle="#ff2ec4";gx.lineWidth=2;gx.strokeRect(cx+1,cy+1,c.cellW-2,c.cellH-2);
+          gx.imageSmoothingEnabled=false;gx.drawImage(IMG[c.key],cx+c.baseX,cy+c.baseY,c.baseW,c.baseH);
+          gx.fillStyle="#1b2530";gx.textAlign="center";gx.font="11px system-ui,sans-serif";
+          gx.fillText(c.key+" · "+(c.dir==="lato"?"lato":c.dir==="su"?"su":"giù"),cx+c.cellW/2,cy+c.cellH+4);
+          gx.textAlign="left";
+          allFrames[c.key]={x:cx,y:cy,w:c.cellW,h:c.cellH,base:{x:cx+c.baseX,y:cy+c.baseY,w:c.baseW,h:c.baseH},set:c.setLabel,dir:c.dir,flip:SKIN_DIRNOTE[c.dir],used:(def.used&&def.used[c.key])||[],sheet:pages.length>1?pi+1:undefined};
+          realCount++;
+        }
+      }
+    }
+    const guideBlob=await new Promise(res=>guide.toBlob(res,"image/png")),dhBlob=await new Promise(res=>dh.toBlob(res,"image/png"));
+    const suffix=pages.length>1?"_"+(pi+1):"";
+    const guideName=def.folder+"_GUIDE"+suffix+".png",dhName=def.folder+"_DRAW_HERE"+suffix+".png";
+    entries.push({name:guideName,data:new Uint8Array(await guideBlob.arrayBuffer())});
+    entries.push({name:dhName,data:new Uint8Array(await dhBlob.arrayBuffer())});
+    sheets.push({n:pi+1,guide:guideName,drawHere:dhName,w:sheetW,h:sheetH});
+  }
+  const cellsJson={schema:1,skin:"nuovo",char:def.folder,mode:"overlay",baseVersion:VERSION,scale:SKIN_SCALE,margin:SKIN_MARGIN,
+   sheet:{w:sheets[0].w,h:sheets[0].h},sheets,frames:allFrames,refs:allRefs,skipped:(def.skipped||[]).map(([key,reason])=>({key,reason}))};
+  const enc=new TextEncoder();
+  entries.push({name:def.folder+"_cells.json",data:enc.encode(JSON.stringify(cellsJson,null,1))});
+  entries.push({name:"LEGGIMI.txt",data:enc.encode(SKIN_LEGGIMI(def.name,def.folder))});
+  const zip=expZip(entries);
+  return{zip,zipName:def.folder+"_foglio_"+VERSION+".zip",sheets:pages.length,realCount,refCount:allRefs.length,skipCount:(def.skipped||[]).length,warn};
+}
+function skinToolHTML(){
+  const c=skinExpChar==="algidone"?"algidone":"roccia";
+  return`<div class="opt" style="flex-direction:column;align-items:stretch"><div>Esporta foglio personaggio<small>Foglio disegnabile con ogni fotogramma del personaggio (scala ×4, margine per l'arte che sporge dal bordo) + una mappa delle celle: punto di partenza per un costume. Non tocca il salvataggio.</small></div>
+   <div class="seg" style="margin-top:8px"><button data-skinchar="roccia" class="${c==="roccia"?"on":""}" style="flex:1">Uomo roccia</button><button data-skinchar="algidone" class="${c==="algidone"?"on":""}" style="flex:1">Algidone</button></div>
+   <div class="acts" style="margin-top:8px"><button class="btn sm" id="skinExpGo">Scarica foglio</button></div>
+   <div id="skinExpOut" style="margin-top:8px"></div></div>`;
+}
+async function skinExportSheetUI(){
+  const btn=$("#skinExpGo"),out=$("#skinExpOut");if(!btn||!out)return;
+  const old=btn.textContent;btn.disabled=true;btn.textContent="Preparo…";out.innerHTML="";
+  try{
+    const r=await skinBuildSheet(skinExpChar);
+    expDownload(r.zipName,r.zip);
+    out.innerHTML=`<small style="display:block;color:var(--runway)">${esc(r.zipName)} creato: ${r.realCount} fotogrammi${r.sheets>1?" su "+r.sheets+" fogli":""}, ${r.refCount} di riferimento, ${r.skipCount} saltati.</small>${r.warn&&r.warn.length?`<small style="display:block;color:var(--mute);margin-top:4px">${r.warn.map(esc).join("<br>")}</small>`:""}`;
+  }catch(e){out.innerHTML=`<div class="err">Esportazione non riuscita${e&&e.message?": "+esc(e.message):""}.</div>`;console.error(e)}
+  btn.disabled=false;btn.textContent=old;
 }
 
 /* ============ OBIETTIVI ============ */
