@@ -10,6 +10,8 @@ import fbstub
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
+_v = [int(x) for x in open(os.path.join(ROOT, "VERSION"), encoding="utf-8").read().strip().split("_")[0].split(".")]
+NEWER_VER = "%d.%d" % (_v[0], _v[1] + 1)  # always newer than the current build (0.4.5_N -> 0.5, 0.5 -> 0.6), derived from VERSION
 PORT = 8793
 BASE = "http://127.0.0.1:%d/" % PORT
 VIEW = {"width": 390, "height": 844}
@@ -450,7 +452,7 @@ with sync_playwright() as pw:
     ctx.close()
 
     # ============================================================ newer ver in the cloud -> never applied, never overwritten
-    ctx, p, errs = page(b, site="dev", cloud={UID + "_dev": cdoc(norm(b, save(r=40)), rev=9, ver="0.9")}); settle(p)
+    ctx, p, errs = page(b, site="dev", cloud={UID + "_dev": cdoc(norm(b, save(r=40)), rev=9, ver=NEWER_VER)}); settle(p)
     c = cl(p)
     check("cloud copy from a newer build -> not applied (local still fresh), no write", p.evaluate("S.p.ch.roccia.lvl") == 1 and docs(p)[UID + "_dev"]["rev"] == 9 and c["status"] == "ver", c)
     check("status «Aggiorna il gioco per sincronizzare» in the Account accordion", open_account(p) and p.evaluate("document.querySelector('#clst').textContent") == "Aggiorna il gioco per sincronizzare")

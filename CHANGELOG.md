@@ -1949,6 +1949,14 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Checks before this release: all test suites green except the known `test_f1` "Esc closes the login" (root-caused, not fixed — 0.5 backlog); `node --check` + smoke test; a save made on the tagged `v0.4` build still loads here with progress, achievements, extras, texts/colours and no console errors; `refs/skins/SKIN_COVERAGE.md` regenerated — every remaining `manca` is one of the grandfathered BK gaps (13 Ferma thrower + 6 Cinghiale frames), nothing new.
 - Not tested: real devices, the live Pages deploy after this release.
 
+## 0.4.5_4 — 2026-09-26 — P1b
+- **Maze respawn invulnerability**: after losing a life `G.invuln=RESPAWN_INVULN` (2 s, counts down in play, the player blinks; ghosts pass through). Acciaio/Cinghiale immunity, quicksave/resume and Hardcore unchanged.
+- **`protectedCell(x,y)`** (standalone helper, reused by E5): outer ring, tunnel rows, ghost house rect + 1-cell margin (walls and door); `smashable()` now uses it, so Cinghiale can't break the house or tunnel rows.
+- **«sad» screen deleted**: `renderSad`, `sadArm`, `sadTimer/sadN`, render/`mgback`/freeze cases, the `sad-countdown` screen id, its `capture.py`/`make_index.py`/`SCREENS.md` entries and PNG, and its `test_f6` checks.
+- `test_f2b`: the «newer build» fixture is derived from `VERSION` (`NEWER_VER`, next minor). New `tools/fbstub/test_p1b.py` (17 checks).
+- CLAUDE.md corrections (§2/§4): terrain only on extra/dev maps, «Non ora» = first-ever table, both abilities immune, 2 s respawn invulnerability, TOAST/DIAG/protectedCell in the code map; the «sad» backlog note removed. Level-10 map-unlock text untouched (M1a).
+- Not tested: real phone.
+
 ## 0.4.5_3 — 2026-09-26 — toast module, cloud toggle without re-render, diagnostics log
 - **F1**: the cloud test switch (Opzioni › Account) now only rewrites the Account section in place (`optRefreshAccount`): no full re-render, scroll and open accordion stay. The reload that follows a cloud apply / «Ripristina backup» also saves and restores the scroll position (`mgs_resume.y`).
 - **F2 — one toast module (`TOAST`)**. Old mechanisms found: (1) `toast()` (42 calls, menu/Opzioni/Percorso/maze/dev screens; a `<div>` inside `#root`, absolute at the bottom, destroyed by any `render()` — the reason toasts flashed and vanished, and it sat over d-pad/buttons); (2) the achievement popup `#ach-pop` (`achPopup`/`pumpPop`, bottom, closable, dodges the d-pad via `popBottom()` — rich content with a close button, deliberately left as it is); (3) the crash overlay `#errbox` (red, bottom, tap to close, deliberately left); (4) canvas banners drawn in-game («Pronti?», «Ripulito!», BJ result banner, Ferma «+50» texts) and dialogue/panel popups (`openModal`, `faPanel`, BJ/Professor dialogue boxes) — not toasts; (5) `.banner` CSS class, unused.

@@ -3,7 +3,7 @@
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
 ## SESSION HANDOFF
-0.5 plan in §10. 0.4.5_2 (cloud-save reload fix) built, awaiting the owner's phone test; P1b not started. Dev-branch builds are `0.4.5_N`. Sessions may run as Claude Code cloud sessions: then the brief starts with a cloud preamble; follow it.
+0.5 plan in §10. Built: P1a (0.4.5_1, phone-tested OK), 0.4.5_2 cloud-reload fix (OK), 0.4.5_3 toast module + cloud toggle in place + DIAG log, 0.4.5_4 = P1b; the last two await the owner's phone test. Next: B1 waits for the owner's screenshot; then phase 2 (U1…). Dev-branch builds are `0.4.5_N`. Sessions may run as Claude Code cloud sessions: then the brief starts with a cloud preamble; follow it.
 
 ---
 
@@ -85,16 +85,16 @@ Never let assets cross between characters. This has been a repeated correction.
 | Prefix in overrides | *(none)* | `alg_` |
 
 Abilities last 8 s with a 25 s cooldown (balancing flagged as a future task). The ability button pulses
-yellow when ready. Ability exit buttons: "basta ti prego" (roccia) / "basta basta" (Algidone).
+yellow when ready. **While an ability is active the player is immune to ghosts (both Acciaio and Cinghiale).** Ability exit buttons: "basta ti prego" (roccia) / "basta basta" (Algidone).
 
 ### Core mechanics
 - 100-level progression per character, separate careers, XP, unlockable assets, ranks (`RANKS`: Recluta →
   Re delle pietre), hidden **limiter** on earnings (`limiter(l)`), `expNeed(l)` with a harder curve from lv 60.
 - Three difficulties (Facile / Media / Difficile) with hidden multipliers — **harder rewards more**.
-- Power-up reverses enemy behaviour for 15 s.
+- Power-up reverses enemy behaviour for 15 s. After losing a life the maze gives **2 s of respawn invulnerability** (blinking, `RESPAWN_INVULN`, like Ferma).
 - **Gironi** (rounds): themed maze maps (steel, water, fire, ice, forest) chosen at random per girone.
   After girone 5: Nuovo gioco / Hardcore split.
-- **Terrain**: water and lava drawn as sinuous generated *streams along corridors* (not filled areas).
+- **Terrain** (only on the 10 extra maps and the 2 dev maps — the 5 standard themed maps have none): water and lava drawn as sinuous generated *streams along corridors* (not filled areas).
   Lava = 60 % speed, kills after 3 s of contact. Water = 75 % speed, extinguishes burning 4× faster, with
   steam hiss + bubbles when entering while burning. A map-hardening pass stops lava blocking pellets.
 - **10 extra hand-authored maps** unlocked by the level-10 achievement; big maps cap pellets at 130 spread
@@ -108,8 +108,8 @@ yellow when ready. Ability exit buttons: "basta ti prego" (roccia) / "basta bast
 2. **El Gamblador** — blackjack after girone 5. `screen="bj"`, all `bj*` functions. Sprite-animated dealer
    whose cigarette smoke tracks per-frame tip positions; streaming wood table borders, props on the rails,
    centred cards, 2×2 menu grid, raise/stake logic with a chip stack and ±100 buttons, dealer lines.
-   "Puntata" and fiches stay on the **left** (shifted slightly right). "Non ora" hidden only on the first
-   appearance per run.
+   "Puntata" and fiches stay on the **left** (shifted slightly right). "Non ora" is hidden only on the **first-ever
+   table** (lifetime counter `S.p.gam.visits`, never reset), not once per run.
 3. **"Roccia no" / Il Professore** — Pokémon-Emerald-style mini-game reached by answering "Roccia no" on the
    splash question. `screen="pr"`. Scenes/dialogue = `pr*`, battle engine = `pb*`. See §3.
 
@@ -187,6 +187,9 @@ in-universe — never use developer words like "asset" or "fantasma" in player-f
 - **Battle**: `PB_LIB/pbLib` (moves), `pbMon, pbBattle, pbDamage, pbTurn, pbAI, pbAct`, anim `pbAnimMove, pbFxDraw`,
   UI `pbPanel, pbBox, pbCommand, pbFight, pbEnding`, sim `pbSim`. Each fighter currently has 4 fixed moves.
 - **Achievements**: `ach, unlockAch, renderAch, bindAch`.
+- **Toast (0.4.5_3)**: one self-contained module `TOAST` (+ `toast(msg)` wrapper): container `#toasts` outside `#root`, queue of one, fade, `pointer-events:none`, 2.5–5 s, top-centre under the top bar (moves onto the bar band if it would cover a control, `TOAST.place`), compact and held while the maze/Ferma run is in play (`TOAST.hold`). The achievement popup `#ach-pop` and the crash overlay `#errbox` are separate on purpose. Tests: `tools/fbstub/test_toast_diag.py`.
+- **Diagnostics (0.4.5_3)**: self-contained `DIAG` (defined right after `store`, before everything else): 200-entry ring buffer in `mgs_diag` (`_dev` on the dev site, ≤50 KB, survives reloads), `DIAG.log(kind,msg)` / `DIAG.clean()` (masks emails and 28+ char ids — never log uid/email/tokens); hooks on window errors, rejections, console.error/warn, auth/`fbVerify`, cloud outcomes, reloads, screen changes, bug-icon taps. UI: Opzioni › Sviluppatore › «Diagnostica». Dev bug reports get `meta.diag` (last 30), player reports nothing.
+- **Protected cells (0.4.5_4)**: `protectedCell(x,y)` = outer ring, tunnel rows, ghost house (`MET.house`) + 1-cell margin (walls, door); `smashable()` uses it. Standalone — Super Panino (E5) reuses it. Tests: `tools/fbstub/test_p1b.py`.
 - **Export (F3b, format v2, docs/submissions-v2.md)**: `exportDialog` (two actions; both need a Firebase dev session, otherwise disabled with "Accedi per inviare"); texts/colours/scales: `expTextChanges` (with the built-in `before`) → `expTextEdits` → `expSendTexts` → `editSubmit`/`editPost` (Firestore `edits`, fields exactly as the rules) with the local queue `mgs_editq` (`editQueue`/`editFlush`, flushed like the bug queue) and the sent marks `mgs_editsent` (`expSentState`: new / queued / sent, both keys `_dev` on the dev site); audio + sprites: `expBuildPackage` (`expAudioItems`, `expSpriteItems` = hook for F4, `expBuiltinB64`, `expSha256`, `expZip`) → ZIP `submissions/<acct>/<date>/`. `exportTargetsMd` (v1 target list) is kept but no longer exposed; `window.mgExport` is gone. Tests: `tools/fbstub/test_f3b.py`.
 
 ### Dev mode
@@ -483,9 +486,6 @@ by Claude (the planning side) before Claude Code executes them.
 ### Post-0.4 — audio submissions (A1…An)
 One build per approved audio submission (Uomo roccia sounds, Algidone sounds, Blackjack voiceover, Professore voiceover, professor intro music, and the new `sound.fa.<slot>` set for Ferma Algidone!). They will arrive eventually and
 are processed **after the 0.4 release** via the §5 procedure and the A0 built-in layer (keep the running slot table in §10.9; music: half-length + crossfade loop per §6 rule 7). Not a dependency of REL.
-
-### 0.5 observation — "sad" screen
-`screen="sad"` (`renderSad`, 3-2-1 countdown back to the splash) has no path that reaches it (no `go("sad")` anywhere): dead code or a missing trigger? Decide in 0.5; nothing changed now.
 
 ### 0.5 note — player bug reports and privacy
 Before player bug reports go live (0.5, `BUG_PLAYERS=true`): the repo is public — player reports must not store uid/ua/account in `bugs/` (strip them in the export or keep those reports private).

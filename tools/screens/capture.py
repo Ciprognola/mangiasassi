@@ -534,7 +534,6 @@ def sc_bug(b, only):
         c.shot("dev-textedit-popup", 300)
         c.p.keyboard.press("Escape"); time.sleep(0.3)
     c.ev("go('bye')"); c.shot("bye-goodbye", 300)
-    c.ev("go('sad')"); c.shot("sad-countdown", 200)  # legacy screen, not reachable from the UI: shown through go()
     c.close()
 
 
