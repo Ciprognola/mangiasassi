@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""0.4.5_4 (P1b) tests: 2 s respawn invulnerability in the maze, protectedCell()/smashable() (outer ring, tunnel rows, ghost house + door),
+"""0.4.5_4 (P1b) tests: 5 s respawn aura (invulnerability) in the maze, protectedCell()/smashable() (outer ring, tunnel rows, ghost house + door),
 the «sad» screen is gone. Reuses the harness of test_f2b.py. Run: python tools/fbstub/test_p1b.py"""
 import json, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -36,16 +36,19 @@ with sync_playwright() as pw:
         start(p, hard); lives0 = p.evaluate("G.lives")
         lose_life(p)
         s = p.evaluate("({lives:G.lives,inv:G.invuln,st:G.state})")
-        check(f"({tag}) losing a life sets invulnerability to 2 s", s["lives"] == lives0 - 1 and abs(s["inv"] - 2) < 0.01, s)
+        check(f"({tag}) losing a life sets invulnerability to 5 s", s["lives"] == lives0 - 1 and abs(s["inv"] - 5) < 0.01, s)
         p.wait_for_function("G.state==='play'", timeout=5000)
-        inv = p.evaluate("G.invuln"); check(f"({tag}) it starts counting down once the run is in play", 0.5 < inv <= 2, inv)
-        p.evaluate("window.__ov=setInterval(()=>{%s},16);0" % PLACE)
-        p.wait_for_timeout(1300)
+        inv = p.evaluate("G.invuln"); check(f"({tag}) it starts counting down once the run is in play", 3 < inv <= 5, inv)
+        p.evaluate("window.__aura=0;if(!window.__da){window.__da=drawRespawnAura;drawRespawnAura=function(){if(G.invuln>0)window.__aura++;return window.__da.apply(this,arguments)}};window.__ov=setInterval(()=>{%s},16);0" % PLACE)
+        p.wait_for_timeout(3500)
         s = p.evaluate("({st:G.state,lives:G.lives,inv:G.invuln})")
         check(f"({tag}) ghosts sitting on the player do not kill while invulnerable", s["st"] == "play" and s["lives"] == lives0 - 1 and s["inv"] > 0, s)
         p.wait_for_function("G.state==='dying'", timeout=5000)
         p.evaluate("clearInterval(window.__ov);0")
-        check(f"({tag}) once the 2 s are over the same overlap kills", p.evaluate("G.state==='dying'"))
+        check(f"({tag}) once the 5 s are over the same overlap kills", p.evaluate("G.state==='dying'"))
+        z = p.evaluate("(()=>{let n=0;const c={createRadialGradient(){n++;return{addColorStop(){}}},save(){},restore(){},beginPath(){},arc(){},fill(){}};const iv=G.invuln;G.invuln=0;window.__da(c,10,10,20);const z=n;G.invuln=3;window.__da(c,10,10,20);G.invuln=iv;return [z,n]})()")
+        check(f"({tag}) no aura once the protection has ended, aura when it is on", z == [0, 1], z)
+        a1 = p.evaluate("window.__aura"); check(f"({tag}) the aura was drawn during the window (frames counted)", a1 > 100, a1)
         p.wait_for_function("G.state==='ready'||screen!=='game'", timeout=5000)
         if p.evaluate("screen") == "game":
             p.evaluate("clearInterval(window.__ov);0")
@@ -57,7 +60,7 @@ with sync_playwright() as pw:
     start(p); lose_life(p); p.wait_for_function("G.state==='play'", timeout=5000)
     p.evaluate("quicksave();go('menu')"); p.wait_for_timeout(300)
     p.click("[data-tile=cur]"); p.wait_for_function("G&&G.state==='ready'||G.state==='play'", timeout=5000)
-    check("quicksave/resume after a life loss works (run resumes, lives kept)", p.evaluate("G.lives")==2, p.evaluate("G.lives"))
+    check("quicksave/resume after a life loss works (run resumes, lives and the remaining protection kept)", p.evaluate("G.lives")==2 and p.evaluate("G.invuln")>2, p.evaluate("[G.lives,G.invuln]"))
     check("no console errors (invulnerability)", not errs, errs)
 
     # ---------------- (b) protected cells

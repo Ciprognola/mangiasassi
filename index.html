@@ -1315,7 +1315,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_4";
+const VERSION="0.4.5_5";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -3747,7 +3747,7 @@ function devJump(n,mi){
 }
 function startGame(resume,opt){
   cancelAnimationFrame(raf);
-  if(resume&&S.quick){G=JSON.parse(JSON.stringify(S.quick));G.mapi=G.mapi||0;setDims(G.mapi);G.power=G.power>0?G.power:0;G.pu=G.pu||null;G.since=G.since||0;G.open=G.open||8;G.chain=G.chain||0;G.still=false;G.char=G.char||"roccia";G.mapi=G.mapi||0;G.plane=G.plane||0;G.rock=G.rock||0;G.banner=null;G.en.forEach(e=>{e.mode=e.mode||"n";e.gt=e.gt||0;if(G.power<=0&&e.mode==="s")e.mode="n"});G.state="ready";G.t=1.4;G.invuln=0;G.anim=0;G.st=null;G.fx=[];G.shake=0;G.burn=0;G.cam=null}
+  if(resume&&S.quick){G=JSON.parse(JSON.stringify(S.quick));G.mapi=G.mapi||0;setDims(G.mapi);G.power=G.power>0?G.power:0;G.pu=G.pu||null;G.since=G.since||0;G.open=G.open||8;G.chain=G.chain||0;G.still=false;G.char=G.char||"roccia";G.mapi=G.mapi||0;G.plane=G.plane||0;G.rock=G.rock||0;G.banner=null;G.en.forEach(e=>{e.mode=e.mode||"n";e.gt=e.gt||0;if(G.power<=0&&e.mode==="s")e.mode="n"});G.state="ready";G.t=1.4;G.invuln=Math.max(0,+G.invuln||0);G.anim=0;G.st=null;G.fx=[];G.shake=0;G.burn=0;G.cam=null}
   else{const M0=pickMap(-1);G={stage:(opt&&opt.stage)||1,score:(opt&&opt.score)||0,lives:opt&&opt.hard?4:3,hard:!!(opt&&opt.hard),grid:freshGrid(M0),parts:[],diff:S.opts.diff||"medium",char:S.p.char||"roccia",mapi:M0,plane:cs().selP,rock:cs().selR};resetActors();ach("dbg_new",{ch:G.char,d:G.diff})}
   G.parts=[];screen="game";syncMusic();buildGameDOM();
 }
@@ -3792,7 +3792,17 @@ function protectedCell(x,y){
   const h=MET.house;return x>=h[0]-1&&x<=h[2]+1&&y>=h[1]-1&&y<=h[3]+1;
 }
 function smashable(x,y){return !protectedCell(x,y)&&G.grid[y][x]==="#"}
-const RESPAWN_INVULN=2; // secondi di invulnerabilita' (lampeggio) dopo aver perso una vita nel labirinto
+/* valori del labirinto (indipendenti da Ferma Algidone!, che ha il suo respawn di 2 s): dopo aver perso una vita si e' protetti per RESPAWN_INVULN s.
+   La protezione E' l'alone: si vede finche' vale, sfuma negli ultimi RESPAWN_FADE s e sparisce esattamente quando finisce. Colori = quelli del proprio power-up
+   (Roccia luminosa: alone giallo oro come `draw` sul bagliore; Algidone: giallo/rosso della coppa `cupCv`) */
+const RESPAWN_INVULN=5,RESPAWN_FADE=1.5,RESPAWN_AURA={roccia:["255,244,160","255,200,60"],algidone:["255,199,44","229,72,77"]};
+function drawRespawnAura(ctx,X,Y,c){
+  const t=G.invuln;if(!(t>0))return;
+  const k=t>=RESPAWN_FADE?1:t/RESPAWN_FADE,pul=1+.06*Math.sin(G.anim*6),col=RESPAWN_AURA[gcar()]||RESPAWN_AURA.roccia,r=c*(.95+(1-k)*.5)*pul;
+  const g=ctx.createRadialGradient(X,Y,c*.1,X,Y,r);
+  g.addColorStop(0,"rgba("+col[0]+","+(.55*k).toFixed(3)+")");g.addColorStop(.55,"rgba("+col[1]+","+(.4*k).toFixed(3)+")");g.addColorStop(1,"rgba("+col[1]+",0)");
+  ctx.save();ctx.fillStyle=g;ctx.beginPath();ctx.arc(X,Y,r,0,7);ctx.fill();ctx.restore();
+}
 let _nb=null;
 /* sfSSS: oggetto caldo in acqua (soffio di vapore + bollicine) */
 function sfxCool(big){
@@ -4270,10 +4280,10 @@ function draw(){
     ctx.restore();
   }else{
     const moving=P.dir!=null&&!G.still&&G.state==="play"&&!(G.st&&G.st.stun>0);
-    const blink=G.invuln>0&&Math.floor(G.anim*14)%2;
     const yy=Y-c*.12+(moving?Math.sin(G.anim*14)*c*.03:0),dy=Y-yy;yy0=yy;
     const o={moving,power:G.power,eat:P.eat||0,flip:P.lastH<0,anim:G.anim,dir:P.face==null?1:P.face};
-    if(!blink){
+    {
+      drawRespawnAura(ctx,X,yy,c);
       const fn=(t,a,b)=>drawHero(t,a,b+dy,b,c,o);
       const stl=G.st&&G.st.on&&!G.st.boar,brd=G.st&&G.st.on&&G.st.boar;
       if(brd)drawBoar(ctx,X,yy+c*.1,c,{face:P.face!=null?P.face:(P.lastH<0?3:1),anim:G.anim,moving});

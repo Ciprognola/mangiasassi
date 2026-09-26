@@ -1949,6 +1949,11 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Checks before this release: all test suites green except the known `test_f1` "Esc closes the login" (root-caused, not fixed — 0.5 backlog); `node --check` + smoke test; a save made on the tagged `v0.4` build still loads here with progress, achievements, extras, texts/colours and no console errors; `refs/skins/SKIN_COVERAGE.md` regenerated — every remaining `manca` is one of the grandfathered BK gaps (13 Ferma thrower + 6 Cinghiale frames), nothing new.
 - Not tested: real devices, the live Pages deploy after this release.
 
+## 0.4.5_5 — 2026-09-27 — maze respawn aura
+- Owner feedback on P1b: no more blinking. After losing a life the character gets a soft glow in the colour of their own power-up (Uomo roccia: the gold of the Roccia luminosa glow; Algidone: yellow/red of the coppa, `RESPAWN_AURA`, no new art), for **5 s** (`RESPAWN_INVULN`, was 2). The aura is the timer: full until the last 1.5 s (`RESPAWN_FADE`), then it shrinks in opacity and blurs outward, gone exactly when the protection ends. Own maze constants; Ferma keeps its 2 s. Works for every skin/character, normal and Hardcore; quicksave/resume now keeps the remaining time (was reset to 0); Acciaio/Cinghiale immunity unchanged.
+- `test_p1b` (21 checks): 5 s window, overlap doesn't kill then does, aura drawn during and not after, resume keeps the time.
+- Not tested: how the aura reads on a real phone screen.
+
 ## 0.4.5_4 — 2026-09-26 — P1b
 - **Maze respawn invulnerability**: after losing a life `G.invuln=RESPAWN_INVULN` (2 s, counts down in play, the player blinks; ghosts pass through). Acciaio/Cinghiale immunity, quicksave/resume and Hardcore unchanged.
 - **`protectedCell(x,y)`** (standalone helper, reused by E5): outer ring, tunnel rows, ghost house rect + 1-cell margin (walls and door); `smashable()` now uses it, so Cinghiale can't break the house or tunnel rows.

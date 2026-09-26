@@ -91,7 +91,7 @@ yellow when ready. **While an ability is active the player is immune to ghosts (
 - 100-level progression per character, separate careers, XP, unlockable assets, ranks (`RANKS`: Recluta →
   Re delle pietre), hidden **limiter** on earnings (`limiter(l)`), `expNeed(l)` with a harder curve from lv 60.
 - Three difficulties (Facile / Media / Difficile) with hidden multipliers — **harder rewards more**.
-- Power-up reverses enemy behaviour for 15 s. After losing a life the maze gives **2 s of respawn invulnerability** (blinking, `RESPAWN_INVULN`, like Ferma).
+- Power-up reverses enemy behaviour for 15 s. After losing a life the maze gives **5 s respawn protection shown as an aura** in the character's power-up colour (`RESPAWN_INVULN`; Ferma keeps its own 2 s).
 - **Gironi** (rounds): themed maze maps (steel, water, fire, ice, forest) chosen at random per girone.
   After girone 5: Nuovo gioco / Hardcore split.
 - **Terrain** (only on the 10 extra maps and the 2 dev maps — the 5 standard themed maps have none): water and lava drawn as sinuous generated *streams along corridors* (not filled areas).
@@ -539,7 +539,7 @@ Any question a chunk raises → ask as [Q], log the answer in §10.9. Player-fac
 - Enemy art stays procedural; enemies stay outside the skin system and §6 rule 11.
 - **Level-10 map lock removed**: `mapsUnlocked()` no longer gates maps; the girone schedule (10.2) picks the map class. Achievement `g4` keeps its sordi/XP; update its description text.
 - El Gamblador «Non ora»: keep today's behaviour (hidden only at the first-ever table). Fix the §2 text.
-- Maze: add 2 s respawn invulnerability after losing a life (blinking), like Ferma. Maze lives otherwise unchanged.
+- Maze: after losing a life, a **5 s aura in the character's own power-up colour** (Roccia luminosa gold / Algidone cup yellow-red) — the aura is the protection and the timer: it fades over the last 1.5 s and vanishes exactly when the invulnerability ends. No blinking. Own maze constants (`RESPAWN_INVULN`, `RESPAWN_FADE`, `RESPAWN_AURA`), independent of Ferma's own 2 s respawn. Quicksave/resume keeps the remaining time. Maze lives otherwise unchanged.
 - `smashable()` also protects the ghost house and tunnel rows (shared helper, reused by Super Panino).
 - «sad» screen: delete (`renderSad`, `sadArm`, render case) — unreachable.
 - Maze stays without music in 0.5.
@@ -654,4 +654,6 @@ Stage is per ghost. Scared (`s`) or eaten (`g`) ghosts never use abilities. Each
 | 5 | REL | Release 0.5 (§9 checklist) | Sonnet 5 / medium |
 
 ### 10.9 Answers log
-(empty — log [Q] answers here, with the chunk and date)
+(log [Q] answers here, with the chunk and date)
+
+- 2026-09-27 · P1b (0.4.5_5): owner feedback — the maze respawn blinking is replaced by a 5 s aura in the power-up colour (was 2 s blinking); the aura is the timer; §10.1 and §2 updated.
