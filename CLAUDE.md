@@ -3,7 +3,7 @@
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
 ## SESSION HANDOFF
-0.5 plan in §10. Built: P1a (0.4.5_1, phone-tested OK), 0.4.5_2 cloud-reload fix (OK), 0.4.5_3 toast module + cloud toggle in place + DIAG log, 0.4.5_4 = P1b; the last two await the owner's phone test. Next: B1 waits for the owner's screenshot; then phase 2 (U1…). Dev-branch builds are `0.4.5_N`. Sessions may run as Claude Code cloud sessions: then the brief starts with a cloud preamble; follow it.
+0.5 plan in §10. Built: P1a, cloud-reload fix, toast + DIAG, P1b (0.4.5_1–4, phone-tested OK); 0.4.5_5 (maze respawn aura) and 0.4.5_6 (U1: Mr. Stone title, Giochi labels, El Gamblador picture, forced Ferma at girone 8) await the owner's phone test. Next: U2…U4, S1; B1 waits for the owner's screenshot. Dev-branch builds are `0.4.5_N`. Sessions may run as Claude Code cloud sessions: then the brief starts with a cloud preamble; follow it.
 
 ---
 

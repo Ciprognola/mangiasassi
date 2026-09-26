@@ -1949,6 +1949,14 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Checks before this release: all test suites green except the known `test_f1` "Esc closes the login" (root-caused, not fixed — 0.5 backlog); `node --check` + smoke test; a save made on the tagged `v0.4` build still loads here with progress, achievements, extras, texts/colours and no console errors; `refs/skins/SKIN_COVERAGE.md` regenerated — every remaining `manca` is one of the grandfathered BK gaps (13 Ferma thrower + 6 Cinghiale frames), nothing new.
 - Not tested: real devices, the live Pages deploy after this release.
 
+## 0.4.5_6 — 2026-09-27 — U1
+- **«Mr. Stone»**: page `<title>`, error overlay, `<noscript>`, menu `<h1>`, splash `<h1>` and splash popup `<h3>` (the only player-visible uses of the old title). Repo, URL, file names, storage keys and identifiers unchanged; the texts stay editable by long-press as before.
+- **Giochi**: existing but still locked games (G2 El Gamblador, G3 Rocciamon, G4 Ferma Algidone!) show «???» + **«non sbloccato»**; «In arrivo» stays only for things that don't exist yet (G5/G6 cards, «Altri giochi in arrivo», Personalizza items, «Altri personaggi»). Unlocked cards unchanged.
+- **El Gamblador picture**: his Giochi card (when unlocked) now draws `gambImg()` (the dealer presentation sprite) instead of the two playing cards; the unlock popup for `char:gam` shows the same picture (`gambImg` repaints any open `gamb` canvas when it finishes loading). No new art.
+- **Forced Ferma Algidone! encounter**: from girone **8** (was 10) when the player has never met it (`bjAfterClear`); random 15% chance from girone 5 unchanged.
+- Tests: new `tools/fbstub/test_u1.py` (23 checks).
+- Not tested: real phone.
+
 ## 0.4.5_5 — 2026-09-27 — maze respawn aura
 - Owner feedback on P1b: no more blinking. After losing a life the character gets a soft glow in the colour of their own power-up (Uomo roccia: the gold of the Roccia luminosa glow; Algidone: yellow/red of the coppa, `RESPAWN_AURA`, no new art), for **5 s** (`RESPAWN_INVULN`, was 2). The aura is the timer: full until the last 1.5 s (`RESPAWN_FADE`), then it shrinks in opacity and blurs outward, gone exactly when the protection ends. Own maze constants; Ferma keeps its 2 s. Works for every skin/character, normal and Hardcore; quicksave/resume now keeps the remaining time (was reset to 0); Acciaio/Cinghiale immunity unchanged.
 - `test_p1b` (21 checks): 5 s window, overlap doesn't kill then does, aura drawn during and not after, resume keeps the time.

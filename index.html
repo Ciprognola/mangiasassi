@@ -2,12 +2,12 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<title>Mangiasassi</title>
+<title>Mr. Stone</title>
 <script>
 (function(){
   function show(msg){try{var d=document.getElementById("errbox");if(!d){d=document.createElement("div");d.id="errbox";(document.body||document.documentElement).appendChild(d)}
     d.style.cssText="position:fixed;left:8px;right:8px;bottom:8px;z-index:99999;background:#7a1010;color:#fff;font:12px/1.35 monospace;padding:10px;border-radius:8px;white-space:pre-wrap;max-height:45%;overflow:auto";
-    d.textContent="Errore Mangiasassi\n"+msg+"\n(tocca per chiudere)";d.onclick=function(){d.remove()}}catch(_){}}
+    d.textContent="Errore Mr. Stone\n"+msg+"\n(tocca per chiudere)";d.onclick=function(){d.remove()}}catch(_){}}
   window.addEventListener("error",function(e){show((e.message||"errore")+(e.lineno?" [riga "+e.lineno+"]":""))});
   window.addEventListener("unhandledrejection",function(e){show("Promise: "+((e.reason&&e.reason.message)||e.reason))});
 })();
@@ -315,7 +315,7 @@ input[type=color]{width:100%;height:42px;border:0;background:none;padding:0}
 </style>
 </head>
 <body>
-<noscript><p style="color:#fff;font:16px sans-serif;padding:20px">Mangiasassi richiede JavaScript. Apri il gioco da un indirizzo web in Safari o Chrome.</p></noscript>
+<noscript><p style="color:#fff;font:16px sans-serif;padding:20px">Mr. Stone richiede JavaScript. Apri il gioco da un indirizzo web in Safari o Chrome.</p></noscript>
 <div id="root"></div>
 <div id="ach-pop"></div>
 <script>
@@ -1315,7 +1315,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_5";
+const VERSION="0.4.5_6";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -1899,7 +1899,7 @@ function drawHero(ctx,X,Y,yy,c,o){
     else drawEat(ctx,X,yy,c*1.5,o.eat>.13?0:1,flip,null,prefix);
   }else drawFace(ctx,X,yy,c*1.5,fr,flip,prefix);
 }
-let _gi=null;function gambImg(){if(!_gi){_gi=new Image();_gi.onload=()=>{if(screen==="wish")paintCanvases()};_gi.src=BJSPR.pres}return _gi}
+let _gi=null;function gambImg(){if(!_gi){_gi=new Image();_gi.onload=()=>{if(screen==="wish"||document.querySelector('canvas[data-draw^="gamb"]'))paintCanvases()};_gi.src=BJSPR.pres}return _gi}
 let _pri=false;function profImg(){if(!_pri){_pri=true;prLoadImgs().then(()=>{if(screen==="wish")paintCanvases()})}return(PRIMG.blink&&PRIMG.blink[0])||null}
 let faIconTried=false;
 function faIconDraw(x,s){
@@ -1923,7 +1923,8 @@ function paintCanvases(){
     else if(k==="prof"){const im=profImg();if(im&&im.complete&&im.naturalWidth){const q=Math.min(92/im.naturalWidth,92/im.naturalHeight);x.imageSmoothingEnabled=true;x.drawImage(im,48-im.naturalWidth*q/2,94-im.naturalHeight*q,im.naturalWidth*q,im.naturalHeight*q)}}
     else if(k==="game"){
       if(+i===0){drawFace(x,36,50,66*s,2,false);const r=IMG.rock;x.drawImage(r,60,54,r.width*.85,r.height*.85)}
-      else if(+i===1&&(SIM()||(S.p.gam&&S.p.gam.seen))){const a=cardCv(1,0),b2=cardCv(13,1);x.save();x.translate(38,52);x.rotate(-.18);x.drawImage(a,-20*s,-28*s,40*s,56*s);x.restore();x.save();x.translate(58,50);x.rotate(.16);x.drawImage(b2,-20*s,-28*s,40*s,56*s);x.restore()}
+      else if(+i===1&&(SIM()||(S.p.gam&&S.p.gam.seen))){const im=gambImg();if(im.complete&&im.naturalWidth){const q=Math.min(92/im.naturalWidth,92/im.naturalHeight);x.imageSmoothingEnabled=true;x.drawImage(im,48-im.naturalWidth*q/2,94-im.naturalHeight*q,im.naturalWidth*q,im.naturalHeight*q)}}
+      else if(false){const a=cardCv(1,0),b2=cardCv(13,1);x.save();x.translate(38,52);x.rotate(-.18);x.drawImage(a,-20*s,-28*s,40*s,56*s);x.restore();x.save();x.translate(58,50);x.rotate(.16);x.drawImage(b2,-20*s,-28*s,40*s,56*s);x.restore()}
       else if(+i===2&&(SIM()||(S.p.pr&&S.p.pr.seen))){const im=profImg();if(im&&im.complete&&im.naturalWidth){const q=Math.min(92/im.naturalWidth,92/im.naturalHeight);x.imageSmoothingEnabled=true;x.drawImage(im,48-im.naturalWidth*q/2,94-im.naturalHeight*q,im.naturalWidth*q,im.naturalHeight*q)}}
       else if(+i===3&&(SIM()||S.p.fa.seen||faInvShow))faIconDraw(x,s); // Ferma Algidone!: fa_alg_idle0 come nel gioco (specchiato, x0.6)
       else{x.globalAlpha=.6;x.fillStyle="#7c8896";x.font="56px Bungee,Impact,sans-serif";x.textAlign="center";x.fillText("?",48,68)}
@@ -2205,7 +2206,8 @@ function scanNewUnlocks(){
 function popShow(preview){
   const group=preview||S.p.pop.queue[0];
   if(!group)return;
-  const pv=group.type==="milestone"?group.items.map(it=>ROAD_REWARDS[it.tile]).filter(r=>r&&r.type==="skin").map(r=>`<canvas data-draw="hero:${r.char}:90:${r.id}"></canvas>`).join(""):"";
+  let pv=group.type==="milestone"?group.items.map(it=>ROAD_REWARDS[it.tile]).filter(r=>r&&r.type==="skin").map(r=>`<canvas data-draw="hero:${r.char}:90:${r.id}"></canvas>`).join(""):"";
+  if(group.type==="char"&&group.items.some(it=>it.key==="gam")){gambImg();pv+=`<canvas data-draw="gamb:0:100"></canvas>`} // El Gamblador: la sua immagine di presentazione
   const m=openModal(`<h3>${POP_TITLE[group.type]||"Novità"}</h3>${pv?`<div style="display:flex;gap:8px;justify-content:center">${pv}</div>`:""}<p>${popBodyHTML(group)}</p><div class="acts"><button class="btn ghost" id="popd">Non ora</button><button class="btn" id="popg">Guarda</button></div>`);
   const advance=()=>{if(!preview){S.p.pop.queue.shift();persist()}closeModal()};
   if(pv)paintCanvases();
@@ -2235,7 +2237,7 @@ function renderMenu(){
       ${devUI()&&t.custom?`<span class="minus" data-del="${t.id}">−</span>`:""}</button>`}).join("");
   shell(`<div class="screen"><div class="brand"><button class="trop" id="trop" aria-label="Obiettivi"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M7 3h10v2h3v3c0 2.2-1.8 4-4 4h-.3A5 5 0 0 1 13 14.9V17h3v2H8v-2h3v-2.1A5 5 0 0 1 8.3 12H8C5.8 12 4 10.2 4 8V5h3V3zM6 7v1c0 1.1.9 2 2 2V7H6zm12 0h-2v3c1.1 0 2-.9 2-2V7z"/></svg></button>
     <button class="trop road" id="road" aria-label="Percorso"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M4 20l6-16h2l-2 6h4l-2-6h2l6 16h-2l-1.7-4.5h-9.6L5 20H4zm4.6-6.5h6.8L12 6.4l-3.4 7.1z"/></svg></button>
-    ${bugBtn(role?"rr":"")}<div><h1>Mangiasassi</h1><small>Versione ${VERSION}</small></div>${role?`<button class="devt ${devOn?"on":""} ${S.sim?"sim":""}" id="devt" aria-label="Modalità sviluppatore">✎</button>`:""}</div>
+    ${bugBtn(role?"rr":"")}<div><h1>Mr. Stone</h1><small>Versione ${VERSION}</small></div>${role?`<button class="devt ${devOn?"on":""} ${S.sim?"sim":""}" id="devt" aria-label="Modalità sviluppatore">✎</button>`:""}</div>
     <canvas class="mstage" id="mstage"></canvas>
     <button class="career" id="career"><div class="row"><span><b>Liv. ${cc.lvl}</b> · ${esc((S.ov["char_"+charKey()]||{}).label||CH().name)}</span><span class="disp" style="font-size:.85rem">${p.sordi} sordi</span></div>
     <div class="bar"><i style="width:${pct}%"></i></div></button>
@@ -2295,7 +2297,7 @@ function gamesHTML(){
   const cards=Array.from({length:6},(_,i)=>{
     if(i===3&&(SIM()||S.p.fa.seen)){const ov=S.ov["game_3"]||{},bg=ov.color?`background:${ov.color};color:${contrast(ov.color)}`:"";return `<div class="card sel" style="${bg}"><span class="tag">G4</span><canvas data-draw="game:3:${Math.round((ov.scale||1)*100)}"></canvas><div class="nm">${esc(ov.label||"Ferma Algidone!")}</div><div style="display:flex;gap:4px;justify-content:center">${SIM()?FA_LEVELS.map((_,f)=>`<button class="btn sm" data-fafloor="${f}">${f+1}</button>`).join(""):`<button class="btn sm" data-fagame="1">Gioca</button>`}</div></div>`}
     const ok=i===0||(i===1&&(SIM()||(S.p.gam&&S.p.gam.seen)))||(i===2&&(SIM()||(S.p.pr&&S.p.pr.seen))),ov=S.ov["game_"+i]||{},nm=ov.label||(i===0?"Mangiaroccia":i===1?(ok?"El Gamblador":"???"):i===2?(ok?"Rocciamon":"???"):"???"),bg=ov.color?`background:${ov.color};color:${contrast(ov.color)}`:"";
-    return `<div class="card ${ok?"sel":"locked"}" style="${bg}"><span class="tag">G${i+1}</span><canvas data-draw="game:${i}:${Math.round((ov.scale||1)*100)}"></canvas><div class="nm">${esc(nm)}</div><span class="st"${ok?' style="color:var(--runway);font-weight:700"':""}>${ok?"Disponibile":"In arrivo"}</span></div>`}).join("");
+    return `<div class="card ${ok?"sel":"locked"}" style="${bg}"><span class="tag">G${i+1}</span><canvas data-draw="game:${i}:${Math.round((ov.scale||1)*100)}"></canvas><div class="nm">${esc(nm)}</div><span class="st"${ok?' style="color:var(--runway);font-weight:700"':""}>${ok?"Disponibile":i<=3?"non sbloccato":"In arrivo"}</span></div>`}).join(""); // i<=3: giochi che esistono (G1-G4), ancora chiusi; G5/G6 non esistono ancora
   return `<p style="margin:0 0 10px;text-align:center;color:var(--mute);font-size:.85rem">Altri giochi in arrivo</p><div class="grid">${cards}</div>`;
 }
 function renderWish(){
@@ -4984,14 +4986,14 @@ function bjAfterClear(){
   // (owner wants it to stay rare -- 0.2_45's higher/checkpoint-based odds
   // were reverted).
   // M8a: Ferma Algidone! usa gli stessi intervalli (un solo minigioco per intervallo): 15% dal girone 5 in poi
-  // (quando El Gamblador non parte), FORZATA se enc===0 dal girone 10; la forzata batte El Gamblador casuale.
+  // (quando El Gamblador non parte), FORZATA se enc===0 dal girone 8; la forzata batte El Gamblador casuale.
   const st=G.stage,mult5=st%5===0,dv=!!G.dev||SIM();
   const want=st===5||(st>5&&Math.random()<.15);
   let gam=false;
   if(want){const price=bjPrice(G.score,S.p.gam.visits);gam=price>=50}
   let fgo=false,forced=false,fn=1;
   if(dv){if(FA_FORCE.on){fgo=true;FA_FORCE.on=false;fn=Math.min(++FA_FORCE.n,3)}}
-  else if(st>=5){forced=S.p.fa.enc===0&&st>=10;fgo=forced||(!gam&&Math.random()<.15)}
+  else if(st>=5){forced=S.p.fa.enc===0&&st>=8;fgo=forced||(!gam&&Math.random()<.15)}
   if(fgo){faInvite({forced,dev:dv,n:fn,mult5});return}
   if(gam){G.state="mini";startGamblador({run:true});return}
   if(mult5)miniInterlude();
@@ -5649,9 +5651,9 @@ addEventListener("blur",faKeysClear);
 
 /* ============ AVVIO ============ */
 function renderSplash(){
-  shell(`<div class="screen">${bugBtn("spl")}<div class="center"><canvas id="logo" width="96" height="96" style="width:120px;height:112px;image-rendering:pixelated"></canvas><h1 style="font-size:2.2rem;color:var(--runway);margin:8px 0 0">Mangiasassi</h1></div></div>`);
+  shell(`<div class="screen">${bugBtn("spl")}<div class="center"><canvas id="logo" width="96" height="96" style="width:120px;height:112px;image-rendering:pixelated"></canvas><h1 style="font-size:2.2rem;color:var(--runway);margin:8px 0 0">Mr. Stone</h1></div></div>`);
   const lg=$("#logo").getContext("2d");lg.imageSmoothingEnabled=false;if(charKey()==="algidone"){const im=IMG.al_st,h=94;lg.imageSmoothingEnabled=true;drawSkinned(lg,"algidone","al_st",im,48-im.width*h/im.height/2,1,im.width*h/im.height,h)}else drawFace(lg,48,48,92,2,false);
-  const m=openModal(`<h3>Mangiasassi</h3><p style="color:var(--mute);margin-bottom:6px">Versione ${VERSION}</p><p class="disp" style="font-size:1.25rem;text-align:center;margin:14px 0 4px">Roccia sì o roccia no?</p>
+  const m=openModal(`<h3>Mr. Stone</h3><p style="color:var(--mute);margin-bottom:6px">Versione ${VERSION}</p><p class="disp" style="font-size:1.25rem;text-align:center;margin:14px 0 4px">Roccia sì o roccia no?</p>
     <div class="acts" style="justify-content:center"><button class="btn red" id="rno">Roccia no</button><button class="btn" id="rsi">Roccia sì</button></div>`);
   m.querySelector("#rsi").onclick=()=>{started=true;closeModal();go("menu");if(bgm)bgm.play().catch(()=>{})};
   m.querySelector("#rno").onclick=rocciaNo;
