@@ -3,7 +3,7 @@
 Permanent project context for Claude Code. Read it fully at the start of every session.
 
 ## SESSION HANDOFF
-0.5 plan in §10. Built: P1a, cloud-reload fix, toast + DIAG, P1b (0.4.5_1–4, phone-tested OK); 0.4.5_5 (maze respawn aura) and 0.4.5_6 (U1: Mr. Stone title, Giochi labels, El Gamblador picture, forced Ferma at girone 8) await the owner's phone test. Next: U2…U4, S1; B1 waits for the owner's screenshot. Dev-branch builds are `0.4.5_N`. Sessions may run as Claude Code cloud sessions: then the brief starts with a cloud preamble; follow it.
+0.5 plan in §10. Built: P1a…U1 (0.4.5_1–7, phone-tested OK); 0.4.5_8 (U2: rocks 4–9 colours) and 0.4.5_9 (U3: professor achievement, tile 3, tile hints, gift tags) await the owner's phone test. Next: U4, S1; B1 waits for the owner's screenshot. Dev-branch builds are `0.4.5_N`. Sessions may run as Claude Code cloud sessions: then the brief starts with a cloud preamble; follow it.
 
 ---
 
@@ -99,7 +99,7 @@ yellow when ready. **While an ability is active the player is immune to ghosts (
   steam hiss + bubbles when entering while burning. A map-hardening pass stops lava blocking pellets.
 - **10 extra hand-authored maps** unlocked by the level-10 achievement; big maps cap pellets at 130 spread
   evenly, and use a following camera.
-- **34 achievements** across 5 categories (incl. Minigiochi); 50 cycling "Partita finita" quotes per character, some
+- **35 achievements** across 5 categories (incl. Minigiochi, 5 entries since «Batti il professore», 0.4.5_9); 50 cycling "Partita finita" quotes per character, some
   achievement-triggered.
 - Desktop scaling supported up to 3440×1440; Enter/Esc shortcuts on popups.
 
@@ -660,3 +660,4 @@ Stage is per ghost. Scared (`s`) or eaten (`g`) ghosts never use abilities. Each
 
 - 2026-09-27 · P1b (0.4.5_5): owner feedback — the maze respawn blinking is replaced by a 5 s aura in the power-up colour (was 2 s blinking); the aura is the timer; §10.1 and §2 updated.
 - 2026-09-27 · U2 (0.4.5_8) [Q answered]: rocks 4–9 get colours from their existing battle-type colours (`PB_TCOL`, same formula as `pbRockTint`), applied to pellets, side/up/down eating and the menu bite; snacks 4–9 stay as they are and "palette/art for snacks 4–9" goes on the §8 art-owed list. No other new art.
+- 2026-09-27 · U3 (0.4.5_9): tile→achievement mapping for the locked-tile hint `ROAD_HINT` = 3 → `m5` «Batti il professore», 5 → `m1` «Il banco trema», 10 → `m2` «Fuori da Coccia!» (all exist, no [Q]). Tile 3 now opens only on `S.p.pr.won` (real professor win, not test/SIM); old saves that had seen a real battle or claimed tile 3 keep it (`S.p.road.keep3`); no retroactive achievement because no old save can prove a win (only `visits/seen` existed). «sblocca regalo!» shows only where the linked tile has a ready gift (m5 → GEKA, m1 → BK); m2/tile 10 has no gift yet, so no tag until one exists.

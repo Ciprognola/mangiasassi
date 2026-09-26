@@ -163,6 +163,9 @@ html{-webkit-text-size-adjust:100%}
 .rtile.claimed{background:#2a3444;color:#7c8896}
 .rtile.cur{outline:2px solid #fff;outline-offset:2px}
 .rtile.hl{outline:3px solid var(--runway);outline-offset:2px}
+.rtile.gold{box-shadow:inset 0 0 0 2px var(--runway),0 0 8px rgba(242,194,48,.45)}
+.ach.hl{outline:2px solid var(--runway)}
+.gifttag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;background:var(--runway);color:#1b1500;font-size:.68rem;font-weight:700;vertical-align:middle}
 .rtile canvas{width:62%;height:62%;image-rendering:pixelated}
 @keyframes giftwobble{0%,100%{transform:rotate(-4deg) translateY(0)}50%{transform:rotate(4deg) translateY(-4px)}}
 .giftbox{width:96px;height:96px;margin:6px auto 10px;cursor:pointer;display:flex;align-items:center;justify-content:center}
@@ -521,6 +524,9 @@ for(const k of Object.keys(S.p.ch)){const c=S.p.ch[k];if(c.lvl==null){c.lvl=k===
 S.extra=S.extra||{plane:[],rock:[]};S.extra.algidone=S.extra.algidone||{plane:[],rock:[]};}
 S.ach=S.ach||{prog:{},done:{}};S.gtext=S.gtext||{};S.p.gam=Object.assign({visits:0,seen:false,won:0},S.p.gam||{});S.p.pr=Object.assign({visits:0,seen:false},S.p.pr||{});S.p.fa=Object.assign({enc:0,seen:false,f1:false},S.p.fa||{});S.ach.prog=S.ach.prog||{};S.ach.done=S.ach.done||{};
 if(S.sim){if(S.realP){S.p=S.realP;S.quick=S.realQuick||null}if(S.realAch)S.ach=S.realAch}S.sim=false;S.realP=null;S.realQuick=null;S.realAch=null;
+/* U3 (0.4.5_9): la tessera 3 (cappello GEKA) si apre solo con la vittoria sul professore (S.p.pr.won). Chi l'aveva gia' sbloccata (battaglia vera vista) o riscattata la tiene (S.p.road.keep3).
+   Una vittoria passata non e' dimostrabile da nessun salvataggio precedente (c'era solo visits/seen): nessun obiettivo retroattivo. */
+if(S.p.pr.won===undefined){S.p.pr.won=false;S.p.road=S.p.road||{claimed:{}};if(S.p.pr.seen||(S.p.road.claimed&&S.p.road.claimed[3]))S.p.road.keep3=true}
 delete S.creds; // F1: le vecchie credenziali locali (password in chiaro) non esistono piu'
 /* popup di sblocco (§10.3 P1): un salvataggio gia' esistente prima di questa build non deve
    ritrovarsi inondato di popup per tutto cio' che aveva gia' sbloccato -- needsSeed lo segnala,
@@ -1329,7 +1335,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_8";
+const VERSION="0.4.5_9";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -3394,7 +3400,7 @@ async function skinExportSheetUI(){
 
 /* ============ OBIETTIVI ============ */
 const DR={easy:0,medium:1,hard:2},AMULT={easy:.75,medium:1,hard:1.5};
-const ACH_CATS=[["gen","Generali",25],["roc","Uomo roccia",20],["alg","Algidone",20],["gio","Gioco",35],["min","Minigiochi",4]];
+const ACH_CATS=[["gen","Generali",25],["roc","Uomo roccia",20],["alg","Algidone",20],["gio","Gioco",35],["min","Minigiochi",5]];
 const ROC=c=>c.ch==="roccia",ALGI=c=>c.ch==="algidone";
 const ACH=[
  {id:"g1",c:"gen",n:"Primi sordi",d:"Ottieni 1.000 sordi in totale",ev:"sordi",m:"sum",goal:1000,r:[60,40]},
@@ -3430,6 +3436,7 @@ const ACH=[
  {id:"m1",c:"min",n:"Il banco trema",d:"Vinci 10 mani a El Gamblador",ev:"bjwon",m:"max",goal:10,r:[200,120]},
  {id:"m2",c:"min",n:"Fuori da Coccia!",d:"Supera il piano 1 di Ferma Algidone!",ev:"faclear",m:"max",goal:1,f:c=>c.floor===0,r:[150,90]},
  {id:"m3",c:"min",n:"Algidone \u00e8 a terra",d:"Supera tutti e 3 i piani di Ferma Algidone!",ev:"faclear",m:"max",goal:1,f:c=>c.floor===2,r:[600,360]},
+ {id:"m5",c:"min",n:"Batti il professore",d:"Vinci una battaglia vera contro il professore",ev:"prwin",m:"max",goal:1,r:[300,180]},
  {id:"m4",c:"min",n:"Senza un graffio",d:"Supera un piano di Ferma Algidone! senza perdere una vita",ev:"faclear",m:"max",goal:1,f:c=>c.flawless,r:[250,150]},
 ];
 let achQ=[],A_t=0,achTab="gen",popQ=[],popCur=null,popInt=0;
@@ -3483,12 +3490,13 @@ function renderAch(){
   const rows=items.map(a=>{
     const dd=A.done[a.id],p=A.prog[a.id]||0,pct=dd?100:Math.min(100,p/a.goal*100);
     const req=a.min?` · ${a.min==="hard"?"Solo Difficile":"Da Media in su"}`:"";
-    return `<div class="ach ${dd?"done":""}"><div class="ai">${dd?"★":"☆"}</div><div class="at"><b>${esc(a.n)}</b><small>${esc(a.d)}${req}</small><div class="bar" style="margin:6px 0 3px"><i style="width:${pct}%"></i></div><small>${dd?"Completato":achFmt(a,Math.min(p,a.goal))+" / "+achFmt(a,a.goal)}</small></div><div class="ar">+${a.r[0]}<small>sordi</small>+${a.r[1]}<small>exp</small></div></div>`}).join("");
+    return `<div class="ach ${dd?"done":""} ${achHi===a.id?"hl":""}" data-ach="${a.id}"><div class="ai">${dd?"★":"☆"}</div><div class="at"><b>${esc(a.n)}${giftTile(a.id)?'<span class="gifttag">sblocca regalo!</span>':""}</b><small>${esc(a.d)}${req}</small><div class="bar" style="margin:6px 0 3px"><i style="width:${pct}%"></i></div><small>${dd?"Completato":achFmt(a,Math.min(p,a.goal))+" / "+achFmt(a,a.goal)}</small></div><div class="ar">+${a.r[0]}<small>sordi</small>+${a.r[1]}<small>exp</small></div></div>`}).join("");
   const phs=Array.from({length:ph},()=>`<div class="ach ph"><div class="ai">?</div><div class="at"><b>???</b><small>Obiettivo bloccato</small></div></div>`).join("");
   shell(`<div class="screen"><div class="top"><button class="btn ghost sm" id="back">‹</button><h2>Obiettivi</h2><span class="wallet">${done}/${total}</span>${bugBtn()}</div>
    <div class="tabs">${cats.map(c=>`<button data-atab="${c[0]}" class="${achTab===c[0]?"on":""}">${c[1]}</button>`).join("")}</div>
    <p style="margin:0 0 10px;text-align:center;color:var(--mute);font-size:.85rem">${dn}/${items.length} sbloccati · ${cat[2]} posti in questa categoria</p>
    <div class="scroll" style="flex:1;min-height:0">${rows}${phs}</div></div>`);
+  if(achHi){const e=document.querySelector('[data-ach="'+achHi+'"]');if(e)e.scrollIntoView({block:"center"});achHi=null}
 }
 function bindAch(){
   root.onclick=e=>{
@@ -3524,7 +3532,7 @@ function roadFaceHTML(n){
    usano ancora la stessa regola di sempre. */
 function roadUnlocked(n){
   if(SIM())return true; // "Sblocca tutto": tutte le tessere (i premi non pronti restano "Premio in arrivo")
-  if(n===3)return!!(S.p.pr&&S.p.pr.seen); // richiede una battaglia vera col professore, non solo la cacciata
+  if(n===3)return!!(S.p.pr&&S.p.pr.won)||!!(S.p.road&&(S.p.road.keep3||(S.p.road.claimed&&S.p.road.claimed[3]))); // U3: la vittoria sul professore (chi l'aveva gia' sbloccata la tiene: keep3)
   if(n===5)return(S.p.gam&&S.p.gam.won||0)>=10;
   if(n===10)return!!(S.p.fa&&S.p.fa.f1); // primo piano 1 di Ferma Algidone! superato in un incontro vero (premio ancora da definire: resta "Premio in arrivo")
   return roadGir()>=n;
@@ -3536,6 +3544,16 @@ const ROAD_REWARDS={
   3:{type:"skin",id:"geka",char:"roccia",name:"Cappello GEKA SNC",ready:true},
   5:{type:"skin",id:"bk",char:"algidone",name:"Costume BK",ready:true}
 };
+/* tessere 3, 5, 10: finche' sono bloccate hanno il bordo dorato e il tocco spiega quale obiettivo le apre (e ci porta). Tessera -> obiettivo. */
+const ROAD_HINT={3:"m5",5:"m1",10:"m2"};
+let achHi=null; // obiettivo da evidenziare aprendo la pagina Obiettivi (un solo uso)
+const giftTile=id=>Object.keys(ROAD_HINT).map(Number).find(n=>ROAD_HINT[n]===id&&ROAD_REWARDS[n]&&ROAD_REWARDS[n].ready)||0; // tessera con un regalo pronto legata a questo obiettivo
+function roadHint(n){
+  const a=ACH.find(x=>x.id===ROAD_HINT[n]);if(!a)return toast("Tessera ancora bloccata");
+  const m=openModal(`<h3>Tessera bloccata</h3><p>Si apre con l'obiettivo <b>«${esc(a.n)}»</b>: ${esc(a.d.charAt(0).toLowerCase()+a.d.slice(1))}${/[.!?]$/.test(a.d)?"":"."}</p><div class="acts"><button class="btn ghost" id="rhx">Non ora</button><button class="btn" id="rhg">Vai all'obiettivo</button></div>`);
+  m.querySelector("#rhx").onclick=closeModal;
+  m.querySelector("#rhg").onclick=()=>{closeModal();achTab=a.c;achHi=a.id;go("ach")};
+}
 function roadState(n){
   if(!roadUnlocked(n))return"locked";
   if(S.p.road.claimed[n])return"claimed";
@@ -3550,7 +3568,7 @@ function renderRoad(){
   const body=Array.from({length:rows},(_,r)=>{
     const tiles=roadRowTiles(r).map(n=>{
       const st=roadState(n),isCur=n===cur&&hl==null,isHl=n===hl,face=roadFaceHTML(n);
-      return `<button class="rtile ${st} ${isCur?"cur":""} ${isHl?"hl":""}" data-road="${n}">${ROAD_CANVAS[n]?face:esc(String(face))}</button>`;
+      return `<button class="rtile ${st} ${st==="locked"&&ROAD_HINT[n]?"gold":""} ${isCur?"cur":""} ${isHl?"hl":""}" data-road="${n}">${ROAD_CANVAS[n]?face:esc(String(face))}</button>`;
     }).join(`<span class="rconn">${r%2?"‹":"›"}</span>`);
     const nextFirst=(r+1)*ROAD_COLS+1,linksDown=r<rows-1;
     return `<div class="roadrow">${tiles}</div>${linksDown?`<div class="roadlink" style="justify-content:${r%2?"flex-start":"flex-end"}">↓</div>`:""}`;
@@ -3566,7 +3584,7 @@ function bindRoad(){
     const t=e.target;if(t.closest("#back"))return go("menu");
     const rd=t.closest("[data-road]");if(!rd)return;
     const n=+rd.dataset.road,st=roadState(n);
-    if(st==="locked")return toast(n===3||n===5||n===10?"Tessera ancora bloccata":"Sblocca al girone "+n); // 3 e 5 non dipendono dal girone: niente numero fuorviante
+    if(st==="locked")return ROAD_HINT[n]?roadHint(n):toast("Sblocca al girone "+n); // 3, 5 e 10 non dipendono dal girone: spiegano l'obiettivo
     if(st==="claimable")return roadClaim(n);
     if(st==="claimed")return;
     if(ROAD_REWARDS[n]||n%5===0)return toast("Premio in arrivo");
@@ -7215,6 +7233,7 @@ async function pbEnding(res,M){
     await prSay("pr_no",{expr:"angry"});await prThrowOut();return prExit();
   }
   if(res.winner==="own"){
+    if(!PR.test&&!SIM()){S.p.pr.won=true;persist();ach("prwin",{n:1})} // vittoria vera: obiettivo «Batti il professore» e tessera 3
     prMusicStop(400);
     prMusic("win",{fadeIn:300});
     await pbSay(pbT("pb_ui_win1"),{wait:true});
