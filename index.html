@@ -1339,7 +1339,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_23";
+const VERSION="0.4.5_24";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -2959,6 +2959,7 @@ function devRows(){
      <div class="acts"><button class="btn sm" id="jg4">Girone 4</button><button class="btn sm" id="jg7">Girone 7</button></div>
      <div class="acts" style="margin-top:8px"><input type="number" id="jgN" min="1" max="20" value="1" style="width:70px;background:#0f1824;border:2px solid var(--steel);border-radius:10px;color:var(--ink);padding:8px;font:inherit"><button class="btn sm" id="jgGo">Vai al girone</button></div>
      <div class="acts" style="margin-top:8px;align-items:center;gap:8px"><span style="font-size:.85rem;color:var(--mute)">Stadio (E1a)</span><select id="jgStOv" style="flex:1;background:#0f1824;border:2px solid var(--steel);border-radius:10px;color:var(--ink);padding:8px;font:inherit"><option value=""${E1_STAGE_OV?"":" selected"}>Auto</option><option value="1"${E1_STAGE_OV===1?" selected":""}>1</option><option value="2"${E1_STAGE_OV===2?" selected":""}>2</option><option value="3"${E1_STAGE_OV===3?" selected":""}>3</option></select></div>
+     <div class="acts" style="margin-top:8px"><button class="btn sm" id="jgPan">Forza Super Panino</button></div>
      <div class="acts" style="margin-top:8px"><select id="jmsel" style="flex:1;background:#0f1824;border:2px solid var(--steel);border-radius:10px;color:var(--ink);padding:8px;font:inherit">${devMapOpts()}</select><button class="btn sm" id="jmg">Vai</button></div></div>
    <div class="opt" style="flex-direction:column;align-items:stretch"><div>Livello di prova — scrive nel salvataggio<small>Strumento di test: imposta il livello del personaggio selezionato (sblocca schede, ecc.). Attenzione: modifica il salvataggio (in "Sblocca tutto" solo la copia di prova).</small></div>
      <div style="display:flex;gap:8px;margin-top:8px"><input type="number" id="lvt" min="1" max="100" value="${cs().lvl}" style="width:90px;background:#0f1824;border:2px solid var(--steel);border-radius:10px;color:var(--ink);padding:8px;font:inherit"><button class="btn sm" id="lvs">Imposta</button></div></div>
@@ -3012,6 +3013,7 @@ function bindDev(){
     if(t.closest("#jmg")){devJump(4,+$("#jmsel").value);return}
     const jg=t.closest("#jg4,#jg7");if(jg){devJump(jg.id==="jg4"?4:7);return}
     if(t.closest("#jgGo")){devJump(Math.min(20,Math.max(1,+$("#jgN").value||1)));return}
+    if(t.closest("#jgPan")){PANINO.forceMerge();return}
     const fe=t.closest("#mgfe1,#mgfe2,#mgfe3");if(fe){startFerma({test:true,encounter:+fe.id.slice(-1)});return} // prova dev: incontro (nessun salvataggio), Continua -> menu
     const fdb=t.closest("#mgfd");if(fdb){FA_DBG.on=!FA_DBG.on;fdb.textContent="Overlay debug: "+(FA_DBG.on?"s\u00ec":"no");return}
     const ffz=t.closest("#mgff");if(ffz){FA_FORCE.on=!FA_FORCE.on;ffz.textContent="Forza incontro: "+(FA_FORCE.on?"s\u00ec":"no");return}
@@ -3835,13 +3837,24 @@ const ABIL={
     onSpawn(g){g.ab.grease={t:GREASE_CFG.dropEvery}},
     update(g,dt){
       const s=g.ab.grease;if(!s)return;
+      if(g.pan)return; // paused while part of a Super Panino merge (E5a, CLAUDE.md §10.3)
       s.t-=dt;
       if(s.t<=0){s.t=GREASE_CFG.dropEvery;if(g.dir!=null)GREASE.add(g.tx,g.ty,g)}
     },
     draw(ctx,g){}, // puddles are a shared floor layer (GREASE.draw), not a per-ghost effect
     reset(g){g.ab.grease={t:GREASE_CFG.dropEvery}}
   },
-  panino:{id:"panino",onSpawn(g){/* E5 fills this in */},update(g,dt){/* E5 fills this in */},draw(ctx,g){/* E5 fills this in */},reset(g){/* E5 fills this in */}}
+  panino:{id:"panino",
+    onSpawn(g){g.ab.panino={cd:0}},
+    update(g,dt){
+      if(!g.ab)g.ab={};
+      const s=g.ab.panino=g.ab.panino||{cd:0};
+      if(s.cd>0)s.cd=Math.max(0,s.cd-dt);
+      PANINO.check(g);
+    },
+    draw(ctx,g){}, // the merged body/intro have their own position+size (PANINO.drawHost/drawIntro), not a per-ghost overlay
+    reset(g){if(!g.ab.panino)g.ab.panino={cd:0}} // a merge persists through scared/eaten interrupts (E5a, CLAUDE.md §10.3): only cooldown bookkeeping lives here
+  }
 };
 const E1AbilsFor=e=>(STAGE_ABIL[E1Family()]&&STAGE_ABIL[E1Family()][e.stage])||[];
 let E1_STAGE_OV=null; // dev-only "Stadio" override (1/2/3, null=auto); module-level, never on G -> never in the quicksave
@@ -3997,6 +4010,149 @@ const GREASE={
   },
   clear(){this.list=[]}
 };
+/* E5a attrezzi stage-3 Super Panino (CLAUDE.md §10.3): merge, intro, merged movement/contact/eating,
+   timed split. No wall-breaking yet (E5b). Both ghosts stay in G.en (ghost count/M1b bonus unaffected);
+   host = the lower-index ghost of the pair (guaranteed by G.en's own iteration order, never compared
+   explicitly); partner gets e.merged=true (hidden: not updated/drawn/collided). Host carries e.pan =
+   {partner:<index>,t:<life left>,chaseSave:<original chase>}. The 1s intro freezes the whole maze via a
+   dedicated G.state ("panintro"), the same early-return pattern "ready"/"dying"/"clear" already use; the
+   12s merged life then ticks unconditionally in the main per-ghost loop (not through E1UpdateGhost, whose
+   E1Active gate excludes a scared ghost -- but "the 12s keep running" while scared per §10.3). */
+const PANINO_CFG={range:1,introT:1.0,life:12,size:1.6,speedMult:1.25,chase:.9,score:3200,hitExtra:.3,graceStart:6,reMergeCd:10,maxActive:1};
+function paninoPlaceNear(tx,ty){
+  for(let r=1;r<=2;r++){
+    const cand=[];
+    for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++){
+      if(Math.max(Math.abs(dx),Math.abs(dy))!==r)continue;
+      const nx=tx+dx,ny=ty+dy;
+      if(nx<0||nx>=W||ny<0||ny>=H)continue;
+      if(wall(nx,ny)||inHouse(nx,ny))continue;
+      cand.push([nx,ny]);
+    }
+    if(cand.length)return cand[Math.floor(Math.random()*cand.length)];
+  }
+  return[tx,ty];
+}
+const PANINO={
+  check(g){
+    if(g.pan||g.merged)return;
+    const s=g.ab&&g.ab.panino;
+    if(s&&s.cd>0)return;
+    if(G.anim<PANINO_CFG.graceStart)return;
+    if(G.en.filter(x=>x.pan).length>=PANINO_CFG.maxActive)return;
+    for(const h of G.en){
+      if(h===g||h.pan||h.merged)continue;
+      if(h.stage!==3)continue;
+      if(!E1Active(h))continue;
+      if(h.ab&&h.ab.panino&&h.ab.panino.cd>0)continue;
+      if(Math.max(Math.abs(g.tx-h.tx),Math.abs(g.ty-h.ty))>PANINO_CFG.range)continue;
+      this.startIntro(g,h);return;
+    }
+  },
+  startIntro(g,h){
+    g.pan={partner:G.en.indexOf(h),t:0,chaseSave:g.chase};
+    h.merged=true;g.chase=PANINO_CFG.chase;
+    G.panIntroHost=G.en.indexOf(g);G.state="panintro";G.t=PANINO_CFG.introT;
+    playSnd("power");
+  },
+  finishIntro(){
+    const host=G.en[G.panIntroHost];
+    if(host&&host.pan)host.pan.t=PANINO_CFG.life;
+    G.panIntroHost=null;
+  },
+  split(host){
+    const partner=G.en[host.pan.partner],scared=host.mode==="s";
+    if(host.pan.chaseSave!=null)host.chase=host.pan.chaseSave;
+    const[nx,ny]=paninoPlaceNear(host.tx,host.ty);
+    if(partner){
+      partner.tx=nx;partner.ty=ny;partner.dir=host.dir!=null?(host.dir+2)%4:null;partner.prog=0;
+      partner.merged=false;partner.mode=scared?"s":"n";
+      if(!partner.ab)partner.ab={};partner.ab.panino=partner.ab.panino||{cd:0};partner.ab.panino.cd=PANINO_CFG.reMergeCd;
+    }
+    if(!host.ab)host.ab={};host.ab.panino=host.ab.panino||{cd:0};host.ab.panino.cd=PANINO_CFG.reMergeCd;
+    for(let i=0;i<4;i++)G.parts.push({x:host.tx,y:host.ty,vx:(Math.random()-.5)*3,vy:-Math.random()*2-.5,l:.3});
+    host.pan=null;
+  },
+  eatSplit(host){
+    const partner=G.en[host.pan.partner];
+    if(host.pan.chaseSave!=null)host.chase=host.pan.chaseSave;
+    G.score+=PANINO_CFG.score;G.girPts=(G.girPts||0)+PANINO_CFG.score;$("#sc").textContent=G.score;playSnd("foe");ach("foe",{ch:G.char,pl:G.plane,d:G.diff});
+    const[px,py]=pos(G.pl),cand=[];
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+      if(G.grid[y][x]==="#"||(isTun(y)&&(x===0||x===W-1)))continue;
+      if(inHouse(x,y)||terAt(x,y)==="l")continue;
+      if(Math.hypot(x-px,y-py)<6)continue;
+      cand.push([x,y]);
+    }
+    for(const g of(partner?[host,partner]:[host])){
+      const sp=cand.length?cand[Math.floor(Math.random()*cand.length)]:[1,1];
+      g.tx=sp[0];g.ty=sp[1];g.dir=null;g.prog=0;g.mode="g";g.gt=5;
+    }
+    for(let i=0;i<8;i++)G.parts.push({x:px,y:py,vx:(Math.random()-.5)*6,vy:-Math.random()*4-1,l:.5});
+    if(partner)partner.merged=false;
+    host.pan=null;
+  },
+  drawHost(ctx,e,X,Y,c){
+    const bc=burgerCv(),w=c*PANINO_CFG.size,h=w*bc.height/bc.width;
+    ctx.save();ctx.imageSmoothingEnabled=false;ctx.drawImage(bc,X-w/2,Y-h/2,w,h);ctx.restore();
+    E1DrawMarker(ctx,X,Y,c,3);
+  },
+  drawIntro(ctx,c){
+    if(G.panIntroHost==null)return;
+    const host=G.en[G.panIntroHost];if(!host||!host.pan)return;
+    const partner=G.en[host.pan.partner];
+    const k=Math.min(1,1-Math.max(0,G.t)/PANINO_CFG.introT);
+    const[hx,hy]=[host.tx,host.ty],[pxg,pyg]=partner?[partner.tx,partner.ty]:[hx,hy];
+    const ix=pxg+(hx-pxg)*k,iy=pyg+(hy-pyg)*k,X=ix*c+c/2,Y=iy*c+c/2-c*.12;
+    const AR=artOf(G.plane),ALG=gcar()==="algidone";
+    if(partner){
+      ctx.save();ctx.globalAlpha=Math.max(0,1-k*.7);
+      if(ALG&&AR)drawGymArt(ctx,X,Y,c*1.05,partner.dir==null?1:partner.dir,host.tint,undefined,AR,G.anim);
+      else if(ALG)drawGym(ctx,X,Y,c*1.05,partner.dir==null?1:partner.dir,host.tint);
+      ctx.restore();
+    }
+    if(k>.55){
+      const fl=(k-.55)/.45,HX=hx*c+c/2,HY=hy*c+c/2-c*.12;
+      ctx.save();ctx.globalAlpha=fl;ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(HX,HY,c*(.3+fl*.9),0,7);ctx.fill();ctx.restore();
+      if(fl>.5)this.drawHost(ctx,host,HX,HY,c);
+      ctx.save();ctx.globalAlpha=fl;ctx.textAlign="center";ctx.font=`${c*.8}px Bungee,Impact,sans-serif`;ctx.lineWidth=c*.15;ctx.strokeStyle="#000";
+      ctx.strokeText("SUPER PANINO!",c*VWT/2,c*VHT*.4);ctx.fillStyle="#ff3040";ctx.fillText("SUPER PANINO!",c*VWT/2,c*VHT*.4);ctx.restore();
+    }
+  },
+  forceMerge(){
+    if(!G||!G.en){toast("Servono 2 attrezzi stadio 3 fuori casa");return}
+    const elig=G.en.filter(e=>!e.pan&&!e.merged&&e.stage===3&&E1Active(e));
+    if(elig.length<2){toast("Servono 2 attrezzi stadio 3 fuori casa");return}
+    this.startIntro(elig[0],elig[1]);
+  },
+  snapshotSplit(en){
+    for(const host of en){
+      if(!host||!host.pan)continue;
+      const partner=en[host.pan.partner],scared=host.mode==="s";
+      if(host.pan.chaseSave!=null)host.chase=host.pan.chaseSave;
+      const[nx,ny]=paninoPlaceNear(host.tx,host.ty);
+      if(partner){
+        partner.tx=nx;partner.ty=ny;partner.dir=host.dir!=null?(host.dir+2)%4:null;partner.prog=0;
+        partner.merged=false;partner.mode=scared?"s":"n";
+        if(!partner.ab)partner.ab={};partner.ab.panino=partner.ab.panino||{cd:0};partner.ab.panino.cd=PANINO_CFG.reMergeCd;
+      }
+      if(!host.ab)host.ab={};host.ab.panino=host.ab.panino||{cd:0};host.ab.panino.cd=PANINO_CFG.reMergeCd;
+      host.pan=null;
+    }
+  },
+  clear(){
+    for(const e of G.en){
+      if(e.pan){
+        const partner=G.en[e.pan.partner];
+        if(e.pan.chaseSave!=null)e.chase=e.pan.chaseSave;
+        if(partner)partner.merged=false;
+        e.pan=null;
+      }
+    }
+    G.panIntroHost=null;
+    if(G.state==="panintro")G.state="play";
+  }
+};
 const MPROJ={
   list:[],
   spawn(x,y,dir,speed,owner){if(this.list.length>=MPROJ_CFG.maxActive)return;this.list.push({x,y,dir,speed,owner})},
@@ -4063,7 +4219,7 @@ function resetActors(keep){
   const st=MET.ghosts,cls=mapClassOf(G.mapi)||"M",n=CLASS_GHOSTS[cls],stages=E1_STAGE_OV?Array.from({length:n},()=>E1_STAGE_OV):stagesFor(cls,G.stage),ch=dfc().chase,chAvg=ch.reduce((a,b)=>a+b,0)/ch.length;
   /* il 5o fantasma (classe L): scarto FISSO di 2.5s dal 4o (non moltiplicato per dfc().wait) cosi' non supera mai i 3s richiesti, a qualunque difficolta' */
   G.en=Array.from({length:n},(_,i)=>{const s=st[i%st.length];return{tx:s[0],ty:s[1],dir:null,prog:0,wait:i<4?(i*2.2+1.2)*dfc().wait:(3*2.2+1.2)*dfc().wait+2.5,chase:i<ch.length?ch[i]:chAvg,tint:TINTS[i],mode:"n",gt:0,stage:stages[i]||2}});
-  E1InitGhosts();MPROJ.clear();GREASE.clear();
+  E1InitGhosts();MPROJ.clear();GREASE.clear();PANINO.clear();
   G.power=0;if(!keep)G.pu=null;G.since=0;G.open=8;G.chain=0;G.still=false;
   G.state="ready";G.t=1.6;G.invuln=0;G.anim=0;
   // losing a life (keep=true) must not refund the secret-ability cooldown --
@@ -4248,7 +4404,11 @@ function pauseMenu(again){
   };
 }
 function quicksave(){
-  const c=JSON.parse(JSON.stringify(G));delete c.last;S.quick=c;persist();
+  const c=JSON.parse(JSON.stringify(G));delete c.last;
+  if(c.state==="panintro"){c.state="play";c.t=0}
+  c.panIntroHost=null;
+  PANINO.snapshotSplit(c.en);
+  S.quick=c;persist();
 }
 function nextMinigame(){const g=runGameOf(G&&G.game),o=S.ov["game_"+g.idx]||{};return{name:o.label||g.name,restart:true}} // la carta dell'intervallo segue il gioco della partita in corso
 function drawMiniPlaceholder(cv,g){
@@ -4323,6 +4483,7 @@ function activatePower(){
   playSnd("power");ach("power",{ch:G.char,d:G.diff});
 }
 function eatPlane(e){
+  if(e.pan){PANINO.eatSplit(e);return}
   G.chain=(G.chain||0)+1;const foePts=Math.min(1600,100*Math.pow(2,G.chain));G.score+=foePts;G.girPts=(G.girPts||0)+foePts;$("#sc").textContent=G.score;playSnd("foe");ach("foe",{ch:G.char,pl:G.plane,d:G.diff});
   const [px,py]=pos(G.pl);
   const cand=[];
@@ -4341,6 +4502,7 @@ function update(dt){
   if(G.state==="ready"){G.t-=dt;if(G.t<=0)G.state="play";return}
   if(G.state==="dying"){G.t-=dt;if(G.t<=0){G.lives--;if(G.lives<=0)finishRun();else{resetActors(true);G.invuln=RESPAWN_INVULN;updateHud()}}return}
   if(G.state==="clear"){G.t-=dt;if(G.t<=0){G.stage++;if(!G.dev&&G.stage>=5&&!S.p.g5){S.p.g5=true;persist()}if(!G.dev&&G.stage>=7&&!S.p.sec){S.p.sec=true;persist();setTimeout(()=>toast("Segreto sbloccato: Trasformati! (al posto di Pausa)"),500)}if(!G.hard)G.lives=3;G.mapi=pickMap(G.stage);G.grid=freshGrid(G.mapi);if(cv)sizeCanvas();resetActors();G.girPts=0;G.girBonusTxt=null;updateHud();bjAfterClear()}return}
+  if(G.state==="panintro"){G.t-=dt;if(G.t<=0){PANINO.finishIntro();G.state="play"}return}
   if(G.state!=="play")return;
   G.invuln=Math.max(0,G.invuln-dt);A_t+=dt;if(A_t>=5)flushTime();
   const A=G.st;
@@ -4386,15 +4548,17 @@ function update(dt){
     if(!G.grid.some(r=>r.includes("."))){G.state="clear";G.t=1.6;G.score+=200;G.girPts=(G.girPts||0)+200;G.pu=null;G.power=0;beep(523,.3,"triangle",.06,1046);if(!G.dev){const c0=S.p.ch[G.char||"roccia"];c0.gir=(c0.gir||0)+1}ach("clear",{ch:G.char,d:G.diff});ach("stage",{ch:G.char,d:G.diff,n:G.stage});
       {const cls=mapClassOf(G.mapi)||"M",n2=G.en.filter(e=>e.stage===2).length,n3=G.en.filter(e=>e.stage===3).length,mult=GIR_BONUS.cls[cls]*(1+GIR_BONUS.st2*n2+GIR_BONUS.st3*n3),bonus=Math.round((G.girPts||0)*(mult-1));
       G.girBonusTxt=bonus>0?`Bonus girone ×${Math.round(mult*100)/100} +${bonus}`:null;if(bonus>0)G.score+=bonus}
-      MPROJ.clear();GREASE.clear();G.en.forEach(E1CancelGhost);updateHud();return}
+      MPROJ.clear();GREASE.clear();G.en.forEach(E1CancelGhost);PANINO.clear();updateHud();return}
   }
   const es=Math.min(5.7,4.3+G.stage*.18)*dfc().spd;
   for(const e of G.en){
     if(e.mode==="g"){e.gt-=dt;if(e.gt<=0){e.mode=G.power>0?"s":"n";e.dir=null;e.prog=0}continue}
+    if(e.merged)continue; // Super Panino (E5a): the hidden partner is not updated, drawn or collided at all
     if(e.wait>0){e.wait-=dt;if(e.wait<=0&&e.dir==null){e.dir=0}continue}
-    e.speed=(e.ab&&((e.ab.sprint&&e.ab.sprint.phase==="wind")||(e.ab.shoot&&e.ab.shoot.phase==="aim"))?0:es*(e.mode==="s"?.72:1)*terF(e)*(e.ab&&e.ab.sprint&&e.ab.sprint.phase==="run"?SPRINT_CFG.mult:1));step(e,dt,chooseE);E1UpdateGhost(e,dt);
+    e.speed=(e.ab&&((e.ab.sprint&&e.ab.sprint.phase==="wind")||(e.ab.shoot&&e.ab.shoot.phase==="aim"))?0:es*(e.mode==="s"?.72:1)*terF(e)*(e.ab&&e.ab.sprint&&e.ab.sprint.phase==="run"?SPRINT_CFG.mult:1)*(e.pan?PANINO_CFG.speedMult:1));step(e,dt,chooseE);E1UpdateGhost(e,dt);
+    if(e.pan&&G.state!=="panintro"){e.pan.t-=dt;if(e.pan.t<=0)PANINO.split(e)} // ticks even while scared (E1UpdateGhost's E1Active gate would otherwise pause it); skipped on the very frame a merge starts (t is still the intro placeholder, not the real life, until finishIntro sets it)
     const [ex,ey]=pos(e);
-    if(Math.hypot(ex-px,ey-py)<.62){
+    if(Math.hypot(ex-px,ey-py)<.62+(e.pan?PANINO_CFG.hitExtra:0)){
       if(e.mode==="s")eatPlane(e);
       else if(!G.invuln&&!(G.st&&G.st.on)){killPlayer();return}
     }
@@ -4599,12 +4763,14 @@ function draw(){
   // planes (depth: shadow + bob)
   const AR=artOf(G.plane);
   for(const e of G.en){
+    if(e.merged)continue; // Super Panino (E5a): the hidden partner is never drawn
     const [ex,ey]=pos(e),X=ex*c+c/2,Y=ey*c+c/2,bob=Math.sin(G.anim*6+e.tint.length+(e.chase*10))*c*.05;
     if(e.mode==="g"){
       ctx.globalAlpha=.45;if(ALG)AR?drawGymArt(ctx,X,Y-c*.12+bob,c*1.05,1,"#7c8896","#7c8896",AR,G.anim):drawGym(ctx,X,Y-c*.12+bob,c*1.05,1,"#7c8896","#7c8896");else drawPlane(ctx,X,Y-c*.12+bob,c*1.05,0,"#7c8896",undefined,AR);ctx.globalAlpha=1;
       ctx.textAlign="center";ctx.font=`${c*.9}px Bungee,Impact,sans-serif`;ctx.lineWidth=c*.16;ctx.strokeStyle="#000";ctx.strokeText(Math.ceil(e.gt),X,Y+c*.3);ctx.fillStyle="#fff";ctx.fillText(Math.ceil(e.gt),X,Y+c*.3);
       continue;
     }
+    if(e.pan){if(G.state!=="panintro")PANINO.drawHost(ctx,e,X,Y-c*.12+bob,c);continue}
     const sc=e.mode==="s",bl=sc&&G.power<3&&Math.floor(G.anim*8)%2;
     ctx.fillStyle="rgba(0,0,0,.35)";ctx.beginPath();ctx.ellipse(X,Y+c*.42,c*.34,c*.12,0,0,7);ctx.fill();
     if(ALG&&AR)drawGymArt(ctx,X,Y-c*.12+bob,c*1.05,e.dir==null?1:e.dir,sc?(bl?"#fff3b0":"#e0a800"):e.tint,sc?(bl?"#ffffff":"#ffe45c"):undefined,AR,G.anim+e.chase*10);
@@ -4612,6 +4778,7 @@ function draw(){
     else drawPlane(ctx,X,Y-c*.12+bob,c*1.05,e.dir==null?0:e.dir,sc?(bl?"#cfd8ff":"#2a49c8"):e.tint,sc?(bl?"#ffffff":"#5b8cff"):undefined,AR);
     E1DrawGhost(ctx,e,X,Y-c*.12+bob,c);
   }
+  PANINO.drawIntro(ctx,c);
   // player
   const P=G.pl,[px,py]=pos(P),X=px*c+c/2,Y=py*c+c/2;
   ctx.fillStyle="rgba(0,0,0,.4)";ctx.beginPath();ctx.ellipse(X,Y+c*.46,c*.38,c*.13,0,0,7);ctx.fill();
