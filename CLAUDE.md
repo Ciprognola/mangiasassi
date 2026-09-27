@@ -7,7 +7,7 @@ Permanent project context for Claude Code. Read it fully at the start of every s
 
 **Recovered 2026-09-27**: the 0.4.5_11 (S1) docs patch (commit `1eb6884`) used an unbounded `s.index(nl, i)` to replace the SESSION HANDOFF line and silently deleted ~186 lines (§0 Division of labour through most of §4 Code map) — `git diff --stat` was checked but the insertion/deletion counts weren't sanity-checked against what a one-line edit should look like, so it shipped. Fixed in `1258a71` by restoring from the last known-good commit and reapplying just the two intended edits. **Rule going forward**: any `s.index(a); ...; s.index(b, i)`-style patch to CLAUDE.md/CHANGELOG.md must bound the replaced span with an anchor on *both* ends (not just search forward for the next separator), and `git diff --stat` must be eyeballed against the expected size of the edit — a doc tweak showing 100+ line churn is a stop-and-investigate signal, not something to push through.
 
-0.5 plan in §10. Built: P1a…S1 (0.4.5_1–11, phone-tested OK); 0.4.5_12 (U4 feedback: owner's own Algidone rank names, §10.9) awaits the owner's phone test. Next: phase 3a (M1a…), B1 waits for the owner's screenshot. Dev-branch builds are `0.4.5_N`. Sessions may run as Claude Code cloud sessions: then the brief starts with a cloud preamble; follow it.
+0.5 plan in §10. Built: P1a…S1 (0.4.5_1–11, phone-tested OK); 0.4.5_12 (U4 feedback: owner's own Algidone rank names) and 0.4.5_13 (M1a: map classes/GIRONI schedule/3-4-5 ghosts/level-10 lock removed, §10.9) await the owner's phone test. Next: phase 3a (M1b…), B1 waits for the owner's screenshot. Dev-branch builds are `0.4.5_N`. Sessions may run as Claude Code cloud sessions: then the brief starts with a cloud preamble; follow it.
 
 ---
 
@@ -96,13 +96,11 @@ yellow when ready. **While an ability is active the player is immune to ghosts (
   Re delle pietre), hidden **limiter** on earnings (`limiter(l)`), `expNeed(l)` with a harder curve from lv 60.
 - Three difficulties (Facile / Media / Difficile) with hidden multipliers — **harder rewards more**.
 - Power-up reverses enemy behaviour for 15 s. After losing a life the maze gives **5 s respawn protection shown as an aura** in the character's power-up colour (`RESPAWN_INVULN`; Ferma keeps its own 2 s).
-- **Gironi** (rounds): themed maze maps (steel, water, fire, ice, forest) chosen at random per girone.
-  After girone 5: Nuovo gioco / Hardcore split.
+- **Gironi** (rounds): each girone plays a themed maze map of a class — S (grid mi 0–4, 3 ghosts), M (6 themed maps, 4 ghosts) or L (4 themed maps, 5 ghosts) — picked at random within that class (`GIRONI` schedule, `gironeSpec(stage)`, `pickMap(stage)`, §4). Gironi 1–8 follow a fixed class/ghost-stage schedule; from girone 9 the class is random (S 20% / M 40% / L 40%) and ghost stages keep climbing. After girone 5: Nuovo gioco / Hardcore split.
 - **Terrain** (only on the 10 extra maps and the 2 dev maps — the 5 standard themed maps have none): water and lava drawn as sinuous generated *streams along corridors* (not filled areas).
   Lava = 60 % speed, kills after 3 s of contact. Water = 75 % speed, extinguishes burning 4× faster, with
   steam hiss + bubbles when entering while burning. A map-hardening pass stops lava blocking pellets.
-- **10 extra hand-authored maps** unlocked by the level-10 achievement; big maps cap pellets at 130 spread
-  evenly, and use a following camera.
+- **10 extra hand-authored maps** are the M/L classes above, reached through the girone schedule from girone 3 on (no separate unlock — the level-10 achievement `g4` still gives sordi/XP, just not a map lock); big maps cap pellets at 130 spread evenly, and use a following camera.
 - **35 achievements** across 5 categories (incl. Minigiochi, 5 entries since «Batti il professore», 0.4.5_9); 50 cycling "Partita finita" quotes per character, some
   achievement-triggered.
 - Desktop scaling supported up to 3440×1440; Enter/Esc shortcuts on popups.
@@ -185,6 +183,7 @@ in-universe — never use developer words like "asset" or "fantasma" in player-f
   renderOpt, loginModal, openModal/closeModal/confirmBox, toast`.
 - **Core loop**: `startGame, buildGameDOM, update, loop, draw, step, chooseP/chooseE, activatePower, smash,
   steelOn/Off, boarOn/Off, updateHud, pauseMenu, quicksave, finishRun, nextMinigame`.
+- **Map classes / girone schedule (M1a, 0.4.5_13)**: `MAP_CLASS` (S/M/L by grid width, next to `STDMAPS`), `CLASS_GHOSTS`, `mapClassOf(mi)`; `GIRONI` (gironi 1-8, `{cls,ghosts:[stage,…]}`), `stagesForClass(cls,stage)` (girone 9+ rule), `pickClassForGirone(stage)`, `gironeSpec(stage)` (one class draw, reused for both the map class and the ghost stages — never two independent random draws for the same girone). `pickMap(stage)` (was `pickMap(prev)`, level-10-gated) picks inside the class, no immediate repeat (`G.lastMi={S,M,L}`, per-run, in the quicksave, migrated on an old one). `resetActors` sizes/tints/stages `G.en` from `mapClassOf(G.mapi)` (3/4/5 ghosts; the 5th reuses a `MET.ghosts` start + the difficulty's average chase). `mapsUnlocked()` deleted. Tests: `tools/fbstub/test_m1a.py`.
 - **Blackjack**: `bj*`, entry `startGamblador`.
 - **Professor**: `prIntro → prIntroYes → prBattleStart`; scenes `prSceneProf, prSceneKick, prThrowOut, prPond,
   prSceneBattle`; dev `prTest, prTestKick, prTestBattle, prDevPanel`.
@@ -669,3 +668,4 @@ Stage is per ghost. Scared (`s`) or eaten (`g`) ghosts never use abilities. Each
 - 2026-09-27 · U3 (0.4.5_9): tile→achievement mapping for the locked-tile hint `ROAD_HINT` = 3 → `m5` «Batti il professore», 5 → `m1` «Il banco trema», 10 → `m2` «Fuori da Coccia!» (all exist, no [Q]). Tile 3 now opens only on `S.p.pr.won` (real professor win, not test/SIM); old saves that had seen a real battle or claimed tile 3 keep it (`S.p.road.keep3`); no retroactive achievement because no old save can prove a win (only `visits/seen` existed). «sblocca regalo!» shows only where the linked tile has a ready gift (m5 → GEKA, m1 → BK); m2/tile 10 has no gift yet, so no tag until one exists.
 - 2026-09-27 · U4 (0.4.5_10) [proposal for the owner to approve at the phone test]: Algidone's ranks — 1 Pivello, 10 Tesserato, 20 Frequentatore, 30 Culturista, 40 Powerlifter, 50 Istruttore, 60 Personal trainer, 70 Campione di panca, 80 Leggenda della sala pesi, 90 Maestro del ferro, 100 Re della palestra.
 - 2026-09-27 · U4 (0.4.5_12): owner's Algidone rank names approved (10 names, thresholds 1,10…90; 90 covers to 100) — 1 Mangiatore modesto, 10 Usurpatore di Snacks, 20 Snacks Manager, 30 Mangiatore Professionista, 40 Bevitore di Bevande, 50 Re degli Snacks, 60 Amico del Colesterolo, 70 Perfettamente Sferico, 80 Regina delle Bevande, 90 Abbuffatore Seriale. Replaces the 0.4.5_10 proposal above.
+- 2026-09-27 · M1a (0.4.5_13): built exactly to §10.2/the level-10 lock line of §10.1, no [Q] raised. `gironeSpec(stage)` and `pickMap(stage)` share one class draw per girone (never two independent random picks for the same girone, which would risk a map class and a ghost count that disagree at girone 9+). No ghost abilities/markers/behaviour added (E1+); `.stage` is stored on each ghost only.

@@ -1339,7 +1339,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_12";
+const VERSION="0.4.5_13";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -3460,7 +3460,7 @@ const ACH=[
  {id:"g1",c:"gen",n:"Primi sordi",d:"Ottieni 1.000 sordi in totale",ev:"sordi",m:"sum",goal:1000,r:[60,40]},
  {id:"g2",c:"gen",n:"Portafoglio pesante",d:"Ottieni 25.000 sordi in totale",ev:"sordi",m:"sum",goal:25000,r:[250,150]},
  {id:"g3",c:"gen",n:"Milionario di sassi",d:"Ottieni 250.000 sordi in totale",ev:"sordi",m:"sum",goal:250000,min:"medium",r:[2000,900]},
- {id:"g4",c:"gen",n:"Sale la carriera",d:"Raggiungi il livello 10 con un personaggio · sblocca 10 nuove mappe",ev:"level",m:"max",goal:10,r:[120,80],u:"lv"},
+ {id:"g4",c:"gen",n:"Sale la carriera",d:"Raggiungi il livello 10 con un personaggio",ev:"level",m:"max",goal:10,r:[120,80],u:"lv"},
  {id:"g5",c:"gen",n:"Veterano dei sassi",d:"Raggiungi il livello 30 con un personaggio",ev:"level",m:"max",goal:30,min:"medium",r:[600,350],u:"lv"},
  {id:"g6",c:"gen",n:"Collezionista",d:"Sblocca 10 oggetti nella lista desideri",ev:"own",m:"max",goal:10,r:[200,120]},
  {id:"g7",c:"gen",n:"Museo personale",d:"Sblocca 25 oggetti nella lista desideri",ev:"own",m:"max",goal:25,min:"medium",r:[900,500]},
@@ -3524,7 +3524,7 @@ function ach(ev,ctx){
   }
 }
 function unlockAch(a,d,ctx){
-  S.ach.done[a.id]={d};S.qach=true;S.qlast=a.n;if(a.id==="g4")setTimeout(()=>toast("Sbloccate 10 nuove mappe!"),1600);
+  S.ach.done[a.id]={d};S.qach=true;S.qlast=a.n;
   const mult=AMULT[d]||1,s=Math.round(a.r[0]*mult),x=Math.round(a.r[1]*mult);
   const ck=a.c==="roc"?"roccia":a.c==="alg"?"algidone":(ctx.ch||S.p.char||"roccia"),cc=S.p.ch[ck];
   S.p.sordi+=s;cc.exp+=x;let up=0;
@@ -3688,14 +3688,31 @@ const MAPS=[MAZE,
  mkMaze([["#######","#"],["#......","#"],["#.####.","."],["#.....#","."],["###.#.#","."],["#......","."],["#.##.#.","."],[".......","."],["#.##.#.","."],["#......","."],["###.#.#","."],["#.....#","."],["#.####.","."],["#......","#"],["#.#.##.","."],["#......","."],["#######","#"]]),
  mkMaze([["#######","#"],["#......","."],["#.####.","."],["#......","#"],["#.##.#.","."],["#.#....","."],["#.#.##.","."],[".......","."],["#.#.##.","."],["#.#....","."],["#.##.#.","."],["#......","#"],["#.####.","."],["#......","."],["#.#..#.","#"],["#......","."],["#######","#"]]),
  mkMaze([["#######","#"],["#...#..","."],["#.#.#.#","."],["#.#....","."],["#.##.#.","."],["#......","."],["##.#.#.","."],[".......","."],["##.#.#.","."],["#......","."],["#.##.#.","."],["#.#....","."],["#.#.#.#","."],["#...#..","."],["#.###.#","."],["#......","."],["#######","#"]])];
-const STDMAPS=5,mapsUnlocked=()=>!!(S.ach&&S.ach.done&&S.ach.done.g4)||!!S.sim;
-const pickMap=prev=>{
-  if(!mapsUnlocked()){let m;do{m=Math.floor(Math.random()*STDMAPS)}while(STDMAPS>1&&m===prev);return m}
-  // once the level-10 achievement unlocks the 10 big hand-authored maps,
-  // bias towards them beyond their plain 10-in-15 share of the pool
-  const big=Math.random()<.75,lo=big?STDMAPS:0,hi=big?MAPS.length:STDMAPS;
-  let m;do{m=lo+Math.floor(Math.random()*(hi-lo))}while((hi-lo)>1&&m===prev);
-  return m;
+const STDMAPS=5;
+/* classi mappa per larghezza griglia (M1a, §10.2): S = mi 0-4 (3 fantasmi), M/L = le 10 mappe extra (4/5 fantasmi) */
+const MAP_CLASS={S:[0,1,2,3,4],M:[5,6,7,10,12,13],L:[8,9,11,14]};
+const CLASS_GHOSTS={S:3,M:4,L:5};
+const mapClassOf=mi=>MAP_CLASS.S.includes(mi)?"S":MAP_CLASS.M.includes(mi)?"M":MAP_CLASS.L.includes(mi)?"L":null;
+/* calendario gironi 1-8 (§10.2); dal 9 la classe e' casuale (S 20% / M 40% / L 40%) e gli stage salgono via stagesForClass */
+const GIRONI={
+  1:{cls:"S",ghosts:[1,1,1]},
+  2:{cls:"S",ghosts:[1,1,2]},
+  3:{cls:"M",ghosts:[1,1,1,1]},
+  4:{cls:"M",ghosts:[1,1,2,2]},
+  5:{cls:"M",ghosts:[1,1,2,2]},
+  6:{cls:"L",ghosts:[1,1,1,2,2]},
+  7:{cls:"L",ghosts:[1,1,2,2,3]},
+  8:{cls:"L",ghosts:[1,1,1,3,3]}
+};
+const stagesForClass=(cls,stage)=>{const n=CLASS_GHOSTS[cls],s3=Math.min(n,2+Math.floor((stage-8)/2));return Array.from({length:n},(_,i)=>i<n-s3?2:3)};
+const pickClassForGirone=stage=>{if(GIRONI[stage])return GIRONI[stage].cls;const r=Math.random();return r<.2?"S":r<.6?"M":"L"};
+const gironeSpec=stage=>{if(GIRONI[stage])return GIRONI[stage];const cls=pickClassForGirone(stage);return{cls,ghosts:stagesForClass(cls,stage)}};
+const stagesFor=(cls,stage)=>GIRONI[stage]?GIRONI[stage].ghosts:stagesForClass(cls,stage);
+const pickMap=stage=>{
+  const cls=pickClassForGirone(stage),pool=MAP_CLASS[cls],last=(G&&G.lastMi)?G.lastMi[cls]:null;
+  let mi;do{mi=pool[Math.floor(Math.random()*pool.length)]}while(pool.length>1&&mi===last);
+  if(G&&G.lastMi)G.lastMi[cls]=mi;
+  return mi;
 };
 const DX=[0,1,0,-1],DY=[-1,0,1,0];
 /* dimensioni e punti chiave per mappa. Una mappa e' un array di stringhe; se ha .meta sovrascrive i valori di DEFMETA:
@@ -3782,7 +3799,7 @@ const NEWMAPS=[
 ];
 NEWMAPS.forEach((d,i)=>{const m=hardenMap(addStreams(d.rows,d.streams,d.seed,d.meta),d.meta);m.meta=d.meta;MAPS.push(m)});
 function setDims(mi){const m=mapOf(mi);TERR=m;MET=Object.assign({},DEFMETA,m.meta||{});H=m.length;W=m[0].length;TUNR=MET.tun;TUN=TUNR[0]}
-const TINTS=["#e5484d","#3ec7e0","#ff9a3c","#ff7ac6"];
+const TINTS=["#e5484d","#3ec7e0","#ff9a3c","#ff7ac6","#a3e635"];
 let G=null,raf=0,cell=20,cv,cx,swipe=null;
 
 function wall(x,y){
@@ -3824,8 +3841,8 @@ function freshGrid(mi){
 }
 function resetActors(keep){
   G.pl={tx:MET.start[0],ty:MET.start[1],dir:null,next:null,prog:0,lastH:1};
-  const st=MET.ghosts;
-  G.en=st.map((s,i)=>({tx:s[0],ty:s[1],dir:null,prog:0,wait:(i*2.2+1.2)*dfc().wait,chase:dfc().chase[i],tint:TINTS[i],mode:"n",gt:0}));
+  const st=MET.ghosts,cls=mapClassOf(G.mapi)||"M",n=CLASS_GHOSTS[cls],stages=stagesFor(cls,G.stage),ch=dfc().chase,chAvg=ch.reduce((a,b)=>a+b,0)/ch.length;
+  G.en=Array.from({length:n},(_,i)=>{const s=st[i%st.length];return{tx:s[0],ty:s[1],dir:null,prog:0,wait:(i*2.2+1.2)*dfc().wait,chase:i<ch.length?ch[i]:chAvg,tint:TINTS[i],mode:"n",gt:0,stage:stages[i]||2}});
   G.power=0;if(!keep)G.pu=null;G.since=0;G.open=8;G.chain=0;G.still=false;
   G.state="ready";G.t=1.6;G.invuln=0;G.anim=0;
   // losing a life (keep=true) must not refund the secret-ability cooldown --
@@ -3835,15 +3852,16 @@ function resetActors(keep){
   G.fx=[];G.shake=0;G.burn=0;G.inW=false;G.cam=null;
 }
 function devJump(n,mi){
-  cancelAnimationFrame(raf);const M0=mi!=null?mi:pickMap(-1);
-  G={stage:n,score:1500,lives:3,hard:false,dev:true,grid:freshGrid(M0),parts:[],diff:S.opts.diff||"medium",char:S.p.char||"roccia",mapi:M0,plane:cs().selP,rock:cs().selR};
+  cancelAnimationFrame(raf);const M0=mi!=null?mi:pickMap(n);
+  G={stage:n,score:1500,lives:3,hard:false,dev:true,grid:freshGrid(M0),parts:[],diff:S.opts.diff||"medium",char:S.p.char||"roccia",mapi:M0,plane:cs().selP,rock:cs().selR,lastMi:{S:null,M:null,L:null}};
+  if(mapClassOf(M0))G.lastMi[mapClassOf(M0)]=M0;
   resetActors();G.parts=[];screen="game";syncMusic();buildGameDOM();
   toast("Partita di prova · girone "+n+" · nessun progresso salvato");
 }
 function startGame(resume,opt){
   cancelAnimationFrame(raf);
-  if(resume&&S.quick){G=JSON.parse(JSON.stringify(S.quick));G.mapi=G.mapi||0;setDims(G.mapi);G.power=G.power>0?G.power:0;G.pu=G.pu||null;G.since=G.since||0;G.open=G.open||8;G.chain=G.chain||0;G.still=false;G.char=G.char||"roccia";G.game=G.game||"maze";G.mapi=G.mapi||0;G.plane=G.plane||0;G.rock=G.rock||0;G.banner=null;G.en.forEach(e=>{e.mode=e.mode||"n";e.gt=e.gt||0;if(G.power<=0&&e.mode==="s")e.mode="n"});G.state="ready";G.t=1.4;G.invuln=Math.max(0,+G.invuln||0);G.anim=0;G.st=null;G.fx=[];G.shake=0;G.burn=0;G.cam=null}
-  else{const M0=pickMap(-1);G={game:(opt&&opt.game)||"maze",stage:(opt&&opt.stage)||1,score:(opt&&opt.score)||0,lives:opt&&opt.hard?4:3,hard:!!(opt&&opt.hard),grid:freshGrid(M0),parts:[],diff:S.opts.diff||"medium",char:S.p.char||"roccia",mapi:M0,plane:cs().selP,rock:cs().selR};resetActors();ach("dbg_new",{ch:G.char,d:G.diff})}
+  if(resume&&S.quick){G=JSON.parse(JSON.stringify(S.quick));G.mapi=G.mapi||0;setDims(G.mapi);G.power=G.power>0?G.power:0;G.pu=G.pu||null;G.since=G.since||0;G.open=G.open||8;G.chain=G.chain||0;G.still=false;G.char=G.char||"roccia";G.game=G.game||"maze";G.mapi=G.mapi||0;G.plane=G.plane||0;G.rock=G.rock||0;G.banner=null;G.lastMi=G.lastMi||{S:null,M:null,L:null};if(mapClassOf(G.mapi)&&!G.lastMi[mapClassOf(G.mapi)])G.lastMi[mapClassOf(G.mapi)]=G.mapi;G.en.forEach(e=>{e.mode=e.mode||"n";e.gt=e.gt||0;e.stage=e.stage||2;if(G.power<=0&&e.mode==="s")e.mode="n"});G.state="ready";G.t=1.4;G.invuln=Math.max(0,+G.invuln||0);G.anim=0;G.st=null;G.fx=[];G.shake=0;G.burn=0;G.cam=null}
+  else{const stage0=(opt&&opt.stage)||1,M0=pickMap(stage0);G={game:(opt&&opt.game)||"maze",stage:stage0,score:(opt&&opt.score)||0,lives:opt&&opt.hard?4:3,hard:!!(opt&&opt.hard),grid:freshGrid(M0),parts:[],diff:S.opts.diff||"medium",char:S.p.char||"roccia",mapi:M0,plane:cs().selP,rock:cs().selR,lastMi:{S:null,M:null,L:null}};if(mapClassOf(M0))G.lastMi[mapClassOf(M0)]=M0;resetActors();ach("dbg_new",{ch:G.char,d:G.diff})}
   G.parts=[];screen="game";syncMusic();buildGameDOM();
 }
 /* ---- abilita' segrete (dal girone 7): Uomo roccia "Trasformati" ---- */
@@ -4100,7 +4118,7 @@ function update(dt){
   G.anim+=dt;
   if(G.state==="ready"){G.t-=dt;if(G.t<=0)G.state="play";return}
   if(G.state==="dying"){G.t-=dt;if(G.t<=0){G.lives--;if(G.lives<=0)finishRun();else{resetActors(true);G.invuln=RESPAWN_INVULN;updateHud()}}return}
-  if(G.state==="clear"){G.t-=dt;if(G.t<=0){G.stage++;if(!G.dev&&G.stage>=5&&!S.p.g5){S.p.g5=true;persist()}if(!G.dev&&G.stage>=7&&!S.p.sec){S.p.sec=true;persist();setTimeout(()=>toast("Segreto sbloccato: Trasformati! (al posto di Pausa)"),500)}if(!G.hard)G.lives=3;G.mapi=pickMap(G.mapi);G.grid=freshGrid(G.mapi);if(cv)sizeCanvas();resetActors();updateHud();bjAfterClear()}return}
+  if(G.state==="clear"){G.t-=dt;if(G.t<=0){G.stage++;if(!G.dev&&G.stage>=5&&!S.p.g5){S.p.g5=true;persist()}if(!G.dev&&G.stage>=7&&!S.p.sec){S.p.sec=true;persist();setTimeout(()=>toast("Segreto sbloccato: Trasformati! (al posto di Pausa)"),500)}if(!G.hard)G.lives=3;G.mapi=pickMap(G.stage);G.grid=freshGrid(G.mapi);if(cv)sizeCanvas();resetActors();updateHud();bjAfterClear()}return}
   if(G.state!=="play")return;
   G.invuln=Math.max(0,G.invuln-dt);A_t+=dt;if(A_t>=5)flushTime();
   const A=G.st;
