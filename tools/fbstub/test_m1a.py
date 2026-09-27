@@ -124,6 +124,90 @@ with sync_playwright() as pw:
           r["lastMi"] is not None and r["lastMi"][r["cls"]] == r["mapi"], r)
     check("old quicksave (ghosts with no .stage) resumes: every ghost gets a default stage", all(isinstance(s, int) for s in r["stages"]), r)
     check("no console errors (old quicksave)", not errs, errs)
-    ctx.close(); b.close()
+
+    # ---------------- (0.4.5_16, fix: 5th ghost on large maps) every map of each class x both characters:
+    # G count = drawn count (spy on the enemy draw calls) = the class count, and every ghost leaves the house
+    DRAWN = """()=>{
+      let n=0;const o1=drawPlane,o2=drawGym,o3=drawGymArt;
+      drawPlane=function(...a){n++;return o1.apply(this,a)};
+      drawGym=function(...a){n++;return o2.apply(this,a)};
+      drawGymArt=function(...a){n++;return o3.apply(this,a)};
+      draw();
+      drawPlane=o1;drawGym=o2;drawGymArt=o3;
+      return n;
+    }"""
+    ALL_MAPS = {"S": [0, 1, 2, 3, 4], "M": [5, 6, 7, 10, 12, 13], "L": [8, 9, 11, 14]}
+    for ck in ("roccia", "algidone"):
+        for cls, maps in ALL_MAPS.items():
+            for mi in maps:
+                p.evaluate("cancelAnimationFrame(raf);S.p.char='%s';devJump(1,%d);G.state='play';G.t=0;G.invuln=99999" % (ck, mi))
+                r = p.evaluate("({enLen:G.en.length,drawn:(%s)()})" % DRAWN)
+                want = CLASS_N[cls]
+                check(f"{ck} mi={mi} ({cls}): G.en.length={want} and the same number are drawn", r["enLen"] == want and r["drawn"] == want, r)
+                p.evaluate("for(let i=0;i<340;i++)update(0.05)")  # ~17s, invuln forced so a death never resets ghost positions mid-check
+                left = p.evaluate("G.en.map(e=>e.dir!==null)")
+                check(f"{ck} mi={mi} ({cls}): every ghost leaves the house within ~17s", all(left), {"left": left, "waits": p.evaluate("G.en.map(e=>+e.wait.toFixed(2))")})
+    check("no console errors (per-map ghost count/draw/release)", not errs, errs)
+
+    # ---------------- girone 8 via all three paths: class L, 5 ghosts
+    p.evaluate("go('menu')"); p.wait_for_timeout(300)
+    # path (a): #jgN=8 + #jgGo (real UI)
+    p.click("[data-tile=opt]"); p.wait_for_timeout(300); p.click("[data-otab=dev]"); p.wait_for_timeout(300)
+    if not p.evaluate("document.querySelector('details.acc:has(#jgGo)').open"):
+        p.click("details.acc:has(#jgGo) > summary"); p.wait_for_timeout(250)
+    p.fill("#jgN", "8"); p.click("#jgGo"); p.wait_for_timeout(500)
+    ra = p.evaluate("({cls:mapClassOf(G.mapi),n:G.en.length})")
+    check("girone 8 path (a) #jgN+#jgGo: class L, 5 ghosts", ra["cls"] == "L" and ra["n"] == 5, ra)
+    # path (b): #jg7, then clear the girone to reach 8
+    p.evaluate("go('menu')"); p.wait_for_timeout(300)
+    dev_click(p, "#jg7")
+    rb = p.evaluate("""(()=>{
+      G.state='play';G.t=0;
+      G.grid=G.grid.map(row=>row.map(ch=>ch==='.'?' ':ch));
+      G.grid[G.pl.ty][G.pl.tx]='.';G.pl.prog=0;G.pl.dir=null;G.pl.next=null;
+      update(1/60);update(1.7);
+      return {stage:G.stage,cls:mapClassOf(G.mapi),n:G.en.length};
+    })()""")
+    check("girone 8 path (b) #jg7 then clear: class L, 5 ghosts", rb["stage"] == 8 and rb["cls"] == "L" and rb["n"] == 5, rb)
+    # path (c): a normal run, jump to girone 1 (not a dev-flagged jump: G.dev=false) then clear up to girone 8
+    p.evaluate("go('menu')"); p.wait_for_timeout(300)
+    p.evaluate("cancelAnimationFrame(raf);devJump(1);G.dev=false")
+    for _ in range(7):
+        rc = p.evaluate("""(()=>{
+          G.state='play';G.t=0;
+          G.grid=G.grid.map(row=>row.map(ch=>ch==='.'?' ':ch));
+          G.grid[G.pl.ty][G.pl.tx]='.';G.pl.prog=0;G.pl.dir=null;G.pl.next=null;
+          update(1/60);update(1.7);
+          return {stage:G.stage,cls:mapClassOf(G.mapi),n:G.en.length};
+        })()""")
+    check("girone 8 path (c) a normal run advanced girone by girone: class L, 5 ghosts", rc["stage"] == 8 and rc["cls"] == "L" and rc["n"] == 5, rc)
+    check("no console errors (girone 8, three paths)", not errs, errs)
+
+    # ---------------- girone 9: 30 jumps, class always matches the actual ghost count (no map/spec mismatch)
+    p.evaluate("go('menu')"); p.wait_for_timeout(300)
+    tally9 = p.evaluate("""(()=>{
+      const t={S:0,M:0,L:0};let bad=0;
+      for(let i=0;i<30;i++){cancelAnimationFrame(raf);devJump(9);const cls=mapClassOf(G.mapi);if(G.en.length!==({S:3,M:4,L:5})[cls])bad++;t[cls]++}
+      return {t,bad};
+    })()""")
+    check("girone 9, 30 jumps: ghost count always matches the picked map's class (no mismatch)", tally9["bad"] == 0, tally9)
+
+    # ---------------- dev readout: present for a dev, absent for a player
+    p.evaluate("go('menu')"); p.wait_for_timeout(300)
+    p.evaluate("cancelAnimationFrame(raf);devJump(8)"); p.wait_for_timeout(300)
+    readout = p.evaluate("(document.getElementById('jgro')||{}).textContent")
+    check("dev readout shows girone/class/count/stages", readout == "G8 · L · 5 · st 1,1,1,3,3", readout)
+    check("no console errors (readout)", not errs, errs)
+    ctx.close()
+
+    ctx2, p2, errs2 = page(b, site="stable", local=norm(b, save()), toggle=False, dev=False)
+    settle(p2, 600)
+    p2.click("[data-tile=new]"); p2.wait_for_timeout(400)
+    if p2.evaluate("!!document.querySelector('[data-rg]')"):
+        p2.click("[data-rg=maze]")
+    p2.wait_for_function("G&&G.state==='play'", timeout=8000)
+    check("no dev readout for a player run", not p2.evaluate("!!document.getElementById('jgro')"))
+    check("no console errors (player, no readout)", not errs2, errs2)
+    ctx2.close(); b.close()
 print("%d / %d passed" % (sum(RES), len(RES)))
 sys.exit(0 if all(RES) else 1)

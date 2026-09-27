@@ -1339,7 +1339,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_15";
+const VERSION="0.4.5_16";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -3846,7 +3846,8 @@ function freshGrid(mi){
 function resetActors(keep){
   G.pl={tx:MET.start[0],ty:MET.start[1],dir:null,next:null,prog:0,lastH:1};
   const st=MET.ghosts,cls=mapClassOf(G.mapi)||"M",n=CLASS_GHOSTS[cls],stages=stagesFor(cls,G.stage),ch=dfc().chase,chAvg=ch.reduce((a,b)=>a+b,0)/ch.length;
-  G.en=Array.from({length:n},(_,i)=>{const s=st[i%st.length];return{tx:s[0],ty:s[1],dir:null,prog:0,wait:(i*2.2+1.2)*dfc().wait,chase:i<ch.length?ch[i]:chAvg,tint:TINTS[i],mode:"n",gt:0,stage:stages[i]||2}});
+  /* il 5o fantasma (classe L): scarto FISSO di 2.5s dal 4o (non moltiplicato per dfc().wait) cosi' non supera mai i 3s richiesti, a qualunque difficolta' */
+  G.en=Array.from({length:n},(_,i)=>{const s=st[i%st.length];return{tx:s[0],ty:s[1],dir:null,prog:0,wait:i<4?(i*2.2+1.2)*dfc().wait:(3*2.2+1.2)*dfc().wait+2.5,chase:i<ch.length?ch[i]:chAvg,tint:TINTS[i],mode:"n",gt:0,stage:stages[i]||2}});
   G.power=0;if(!keep)G.pu=null;G.since=0;G.open=8;G.chain=0;G.still=false;
   G.state="ready";G.t=1.6;G.invuln=0;G.anim=0;
   // losing a life (keep=true) must not refund the secret-ability cooldown --
@@ -3980,7 +3981,7 @@ function updateAbil(){
 }
 function buildGameDOM(){
   shell(`<div class="hud"><span>PUNTI <b id="sc">0</b></span><span class="lives" id="lv"></span><span id="wv"></span>${bugBtn()}<button class="pause" id="ps">❚❚</button></div>
-   <div id="stage"><canvas id="cv"></canvas></div>
+   <div id="stage"><canvas id="cv"></canvas>${devOn?`<div id="jgro" style="position:absolute;left:4px;bottom:4px;font:10px monospace;color:#fff;background:rgba(0,0,0,.55);padding:2px 5px;border-radius:4px;pointer-events:none;z-index:5"></div>`:""}</div>
    <div class="dpad" data-nolp><button class="ctl" id="pz">Pausa</button><button data-d="0">▲</button><button class="ctl" id="stl">Fermo</button><button data-d="3">◀</button><button data-d="2">▼</button><button data-d="1">▶</button></div>`);
   cv=$("#cv");cx=cv.getContext("2d");sizeCanvas();
   const stage=$("#stage");
@@ -4017,6 +4018,7 @@ function setDir(d){if(G&&G.pl){G.pl.next=d;if(G.still){G.still=false;syncStill()
 function updateHud(){
   updateAbil();$("#sc").textContent=G.score;$("#wv").textContent="Girone "+G.stage;
   const lv=$("#lv");lv.innerHTML="";for(let i=0;i<G.lives;i++){const c=document.createElement("canvas");c.width=48;c.height=44;lv.appendChild(c);const x=c.getContext("2d");if(gcar()==="algidone"){const im=IMG.al_st;drawSkinned(x,"algidone","al_st",im,24-im.width*.21,1,im.width*.42,im.height*.42)}else drawFace(x,24,22,46,2,false)}
+  const jgro=$("#jgro");if(jgro)jgro.textContent=`G${G.stage} · ${mapClassOf(G.mapi)||"?"} · ${G.en.length} · st ${G.en.map(e=>e.stage).join(",")}`;
 }
 function pauseMenu(again){
   if(G.state==="over")return;const prev=again?(G.prevState||"play"):G.state;G.prevState=prev;G.state="pause";
