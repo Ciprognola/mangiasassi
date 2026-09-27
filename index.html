@@ -1339,7 +1339,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_18";
+const VERSION="0.4.5_19";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -3846,6 +3846,59 @@ function wall(x,y){
   if(x<0||x>=W){if(!isTun(y))return true;x=(x+W)%W}
   return G.grid[y][x]==="#";
 }
+/* ---- E1b: line-of-sight + maze projectile helpers (E2 sprint / E3 shoot; CLAUDE.md §10.3) ----
+   Two self-contained modules; nothing calls them yet, the ABIL stubs stay no-op. Both read maze
+   state only through this file's own adapter (wall(), inHouse(), pos(), DX/DY, G.pl/G.invuln/
+   G.power/G.st) -- no other maze code depends on them, so they stay transferable (§10.0).
+   losRC blocking = wall() (the exact test the player's movement uses) OR inHouse() -- the house
+   has no separate "door" tile in the map data (freshGrid opens its whole rectangle to floor), so
+   the door is modelled as the same rectangle blocking sight from outside, same as protectedCell
+   already treats the house+door as one zone for Cinghiale. */
+const losBlocked=(x,y)=>wall(x,y)||inHouse(x,y);
+function losRC(from,to,maxTiles){
+  if(from.x===to.x&&from.y===to.y)return{dir:null,dist:0};
+  let dir,dist;
+  if(from.x===to.x){dist=Math.abs(to.y-from.y);dir=to.y<from.y?0:2}
+  else if(from.y===to.y){dist=Math.abs(to.x-from.x);dir=to.x<from.x?3:1}
+  else return null; // diagonal
+  if(dist>maxTiles)return null;
+  const sx=dir===1?1:dir===3?-1:0,sy=dir===2?1:dir===0?-1:0;
+  for(let i=1;i<dist;i++)if(losBlocked(from.x+sx*i,from.y+sy*i))return null;
+  return{dir,dist};
+}
+function killPlayer(){G.state="dying";G.t=1.3;playSnd("die")}
+/* MPROJ_CFG.playerR: no shared "player hitbox radius" constant exists elsewhere (the ghost-contact
+   check inlines its own combined .62 threshold) -- a smaller, dedicated radius for a thin projectile. */
+const MPROJ_CFG={radius:.18,color:"#ffe066",maxActive:12,playerR:.4};
+const MPROJ={
+  list:[],
+  spawn(x,y,dir,speed,owner){if(this.list.length>=MPROJ_CFG.maxActive)return;this.list.push({x,y,dir,speed,owner})},
+  update(dt){
+    const P=G.pl,[px,py]=pos(P),surv=[];
+    for(const pr of this.list){
+      pr.x+=DX[pr.dir]*pr.speed*dt;pr.y+=DY[pr.dir]*pr.speed*dt;
+      const tx=Math.round(pr.x),ty=Math.round(pr.y);
+      if(tx<0||tx>=W||ty<0||ty>=H)continue; // left the grid -- tunnel edge, no wrap-around
+      if(wall(tx,ty))continue; // entered a blocking tile
+      if(Math.hypot(pr.x-px,pr.y-py)<MPROJ_CFG.radius+MPROJ_CFG.playerR){
+        if(!G.invuln&&!(G.st&&G.st.on)&&!(G.power>0))killPlayer(); // same death path a ghost contact uses
+        continue; // removed either way
+      }
+      surv.push(pr);
+    }
+    this.list=surv;
+  },
+  draw(ctx){
+    const c=cell;
+    for(const pr of this.list){
+      const X=pr.x*c+c/2,Y=pr.y*c+c/2,r=c*MPROJ_CFG.radius*2.2;
+      ctx.save();const g=ctx.createRadialGradient(X,Y,0,X,Y,r);
+      g.addColorStop(0,"#fff");g.addColorStop(.5,MPROJ_CFG.color);g.addColorStop(1,"rgba(255,224,102,0)");
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(X,Y,r,0,7);ctx.fill();ctx.restore();
+    }
+  },
+  clear(){this.list=[]}
+};
 /* mappe grandi: non ogni casella ha un sasso/snack. Il numero resta quello di una mappa standard (PCAP), sparso in modo uniforme */
 const PCAP=130;
 function scatterPellets(g){
@@ -3883,7 +3936,7 @@ function resetActors(keep){
   const st=MET.ghosts,cls=mapClassOf(G.mapi)||"M",n=CLASS_GHOSTS[cls],stages=E1_STAGE_OV?Array.from({length:n},()=>E1_STAGE_OV):stagesFor(cls,G.stage),ch=dfc().chase,chAvg=ch.reduce((a,b)=>a+b,0)/ch.length;
   /* il 5o fantasma (classe L): scarto FISSO di 2.5s dal 4o (non moltiplicato per dfc().wait) cosi' non supera mai i 3s richiesti, a qualunque difficolta' */
   G.en=Array.from({length:n},(_,i)=>{const s=st[i%st.length];return{tx:s[0],ty:s[1],dir:null,prog:0,wait:i<4?(i*2.2+1.2)*dfc().wait:(3*2.2+1.2)*dfc().wait+2.5,chase:i<ch.length?ch[i]:chAvg,tint:TINTS[i],mode:"n",gt:0,stage:stages[i]||2}});
-  E1InitGhosts();
+  E1InitGhosts();MPROJ.clear();
   G.power=0;if(!keep)G.pu=null;G.since=0;G.open=8;G.chain=0;G.still=false;
   G.state="ready";G.t=1.6;G.invuln=0;G.anim=0;
   // losing a life (keep=true) must not refund the secret-ability cooldown --
@@ -4206,7 +4259,7 @@ function update(dt){
     if(!G.grid.some(r=>r.includes("."))){G.state="clear";G.t=1.6;G.score+=200;G.girPts=(G.girPts||0)+200;G.pu=null;G.power=0;beep(523,.3,"triangle",.06,1046);if(!G.dev){const c0=S.p.ch[G.char||"roccia"];c0.gir=(c0.gir||0)+1}ach("clear",{ch:G.char,d:G.diff});ach("stage",{ch:G.char,d:G.diff,n:G.stage});
       {const cls=mapClassOf(G.mapi)||"M",n2=G.en.filter(e=>e.stage===2).length,n3=G.en.filter(e=>e.stage===3).length,mult=GIR_BONUS.cls[cls]*(1+GIR_BONUS.st2*n2+GIR_BONUS.st3*n3),bonus=Math.round((G.girPts||0)*(mult-1));
       G.girBonusTxt=bonus>0?`Bonus girone ×${Math.round(mult*100)/100} +${bonus}`:null;if(bonus>0)G.score+=bonus}
-      updateHud();return}
+      MPROJ.clear();updateHud();return}
   }
   const es=Math.min(5.7,4.3+G.stage*.18)*dfc().spd;
   for(const e of G.en){
@@ -4216,11 +4269,12 @@ function update(dt){
     const [ex,ey]=pos(e);
     if(Math.hypot(ex-px,ey-py)<.62){
       if(e.mode==="s")eatPlane(e);
-      else if(!G.invuln&&!(G.st&&G.st.on)){G.state="dying";G.t=1.3;playSnd("die");return}
+      else if(!G.invuln&&!(G.st&&G.st.on)){killPlayer();return}
     }
   }
   for(const q of G.parts){q.x+=q.vx*dt;q.y+=q.vy*dt;q.vy+=9*dt;q.l-=dt}
   G.parts=G.parts.filter(q=>q.l>0);
+  MPROJ.update(dt);
 }
 function loop(t){
   if(screen!=="game")return;
@@ -4463,6 +4517,7 @@ function draw(){
       ctx.stroke();ctx.restore()}}}
   if(G.burn>.05&&G.state!=="dying"){ctx.fillStyle="rgba(0,0,0,.55)";ctx.fillRect(X-c*.4,Y-c*.85,c*.8,c*.11);ctx.fillStyle=G.burn>2?"#ff3b1f":"#ff9a2e";ctx.fillRect(X-c*.4,Y-c*.85,c*.8*Math.min(1,G.burn/LAVA_KILL),c*.11)}
   ctx.fillStyle="#8a8f96";for(const q of G.parts){ctx.globalAlpha=Math.max(0,q.l*2.5);ctx.fillRect(q.x*c+c/2,q.y*c+c/2,c*.09,c*.09)}ctx.globalAlpha=1;
+  MPROJ.draw(ctx);
   if(G.st&&G.st.stun>0&&G.state!=="dying"){for(let i=0;i<3;i++){const a=G.anim*6+i*2.09,sx=X+Math.cos(a)*c*.42,sy=yy0-c*.62+Math.sin(a)*c*.12;ctx.fillStyle="#ffe45c";ctx.fillRect(sx-c*.07,sy-c*.02,c*.14,c*.04);ctx.fillRect(sx-c*.02,sy-c*.07,c*.04,c*.14);ctx.fillRect(sx-c*.04,sy-c*.04,c*.08,c*.08)}}
   ctx.restore();
   if(G.st&&(G.st.boar||G.st.stun>0)){const sv=Math.min(100,G.st.stress||0),col=sv<50?"#7ddc5a":sv<80?"#ffb02e":"#ff4d3a";
