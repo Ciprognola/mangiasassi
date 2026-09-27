@@ -455,7 +455,7 @@ const planePrice=i=>i===0?0:Math.round(100*Math.pow(i,1.9));
 const rockUnlock=i=>Math.min(100,1+i*9);
 const rockPrice=i=>i===0?0:Math.round(40*i*i);
 /* gradi di Algidone (U4, 0.4.5_10): stesse soglie di RANKS (1, 10, 20 ... 100), tema palestra. I gradi di RANKS restano di Uomo roccia. */
-const RANKS_ALG={1:"Pivello",10:"Tesserato",20:"Frequentatore",30:"Culturista",40:"Powerlifter",50:"Istruttore",60:"Personal trainer",70:"Campione di panca",80:"Leggenda della sala pesi",90:"Maestro del ferro",100:"Re della palestra"};
+const RANKS_ALG={1:"Mangiatore modesto",10:"Usurpatore di Snacks",20:"Snacks Manager",30:"Mangiatore Professionista",40:"Bevitore di Bevande",50:"Re degli Snacks",60:"Amico del Colesterolo",70:"Perfettamente Sferico",80:"Regina delle Bevande",90:"Abbuffatore Seriale"};
 const rankTable=ck=>(ck||charKey())==="algidone"?RANKS_ALG:RANKS;
 const rankOf=(l,ck)=>{const T=rankTable(ck);let r=T[1];for(const k of Object.keys(T))if(l>=+k)r=T[k];return r};
 function limiter(l){ // 80% @1, 65% @50, 50% @100 (hidden, +10 punti dalla 0.2_6)
@@ -1339,7 +1339,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_11";
+const VERSION="0.4.5_12";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -2348,9 +2348,11 @@ function bindMenu(){
 }
 function careerModal(){
   const L=cs().lvl,E=cs().exp;let rows="";
-  for(const l of [1,10,20,30,40,50,60,70,80,90,100]){
-    const cur=L>=l&&(l===100||L<(l===1?10:l+10));
-    rows+=`<div class="ms ${L>=l?"done":""} ${cur?"now":""}"><span class="n">Liv.${l}</span><span class="rk">${(SIM()||L>=l)?rankTable(charKey())[l]:"???"}</span></div>`;
+  const RT=rankTable(charKey()),LVs=Object.keys(RT).map(Number);
+  for(let i=0;i<LVs.length;i++){
+    const l=LVs[i],next=LVs[i+1];
+    const cur=L>=l&&(next===undefined||L<next);
+    rows+=`<div class="ms ${L>=l?"done":""} ${cur?"now":""}"><span class="n">Liv.${l}</span><span class="rk">${(SIM()||L>=l)?RT[l]:"???"}</span></div>`;
   }
   openModal(`<h3>Carriera · ${esc((S.ov["char_"+charKey()]||{}).label||CH().name)}</h3><p>Livello ${L}<br>Gironi completati: <b>${cs().gir||0}</b><br>${L>=100?"Hai raggiunto la vetta.":`Servono ${expNeed(L)-E} exp per il livello ${L+1}.`}</p>${rows}<div class="acts"><button class="btn" id="ok">Chiudi</button></div>`)
    .querySelector("#ok").onclick=closeModal;

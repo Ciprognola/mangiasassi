@@ -9,8 +9,9 @@ src = open(os.path.join(HERE, "test_f2b.py"), encoding="utf-8").read()
 exec(compile(src[:src.index("def dev_click")], os.path.join(HERE, "test_f2b.py"), "exec"))  # harness only
 
 ROCCIA = ["Recluta", "Allievo pilota", "Pilota", "Capitano", "Maggiore", "Comandante", "Colonnello", "Asso", "Leggenda", "Maestro dei cieli", "Re delle pietre"]
-ALG = ["Pivello", "Tesserato", "Frequentatore", "Culturista", "Powerlifter", "Istruttore", "Personal trainer", "Campione di panca", "Leggenda della sala pesi", "Maestro del ferro", "Re della palestra"]
-LV = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+ALG = ["Mangiatore modesto", "Usurpatore di Snacks", "Snacks Manager", "Mangiatore Professionista", "Bevitore di Bevande", "Re degli Snacks", "Amico del Colesterolo", "Perfettamente Sferico", "Regina delle Bevande", "Abbuffatore Seriale"]
+LV_ROCCIA = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+LV_ALG = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90]
 RING = "[...document.querySelectorAll('.kf')].map(e=>e.dataset.tile||e.id||e.textContent.trim().slice(0,20))"
 
 with sync_playwright() as pw:
@@ -20,7 +21,7 @@ with sync_playwright() as pw:
     settle(p, 600)
 
     # ---------------- ranks
-    for ck, names in (("roccia", ROCCIA), ("algidone", ALG)):
+    for ck, names, LV in (("roccia", ROCCIA, LV_ROCCIA), ("algidone", ALG, LV_ALG)):
         p.evaluate("S.p.char='%s';go('menu')" % ck); p.wait_for_timeout(300)
         p.click("#career"); p.wait_for_selector(".ms"); rk = p.evaluate("[...document.querySelectorAll('.ms .rk')].map(e=>e.textContent)")
         lv = p.evaluate("[...document.querySelectorAll('.ms .n')].map(e=>e.textContent)")
@@ -28,7 +29,7 @@ with sync_playwright() as pw:
         check(f"career modal ({ck}): the milestone list uses that character's ranks at the same thresholds (unreached = ???)", rk == exp and lv == ["Liv.%d" % l for l in LV], rk)
         p.click("#ok"); p.wait_for_timeout(150)
         r = p.evaluate("[%s].map(l=>rankOf(l,'%s'))" % (",".join(map(str, [1, 9, 10, 19, 20, 55, 99, 100])), ck))
-        want = [names[0], names[0], names[1], names[1], names[2], names[5], names[9], names[10]]
+        want = [names[0], names[0], names[1], names[1], names[2], names[5], names[9], names[10] if len(names) > 10 else names[9]]
         check(f"rankOf({ck}) follows the thresholds", r == want, r)
         p.evaluate("celebrate(9,10,null,'%s')" % ck); p.wait_for_timeout(200)
         txt = p.evaluate("document.querySelector('#modal').innerText")
@@ -37,7 +38,8 @@ with sync_playwright() as pw:
         p.evaluate("celebrate(10,11,null,'%s')" % ck); p.wait_for_timeout(150)
         check(f"celebrate ({ck}): a normal level-up has no rank line", "Livello 11" in p.evaluate("document.querySelector('#modal').innerText"))
         p.evaluate("closeModal()")
-    check("the two lists have the same length and thresholds", p.evaluate("Object.keys(RANKS).join()===Object.keys(RANKS_ALG).join()"))
+    check("RANKS has 11 thresholds (1..100), RANKS_ALG has 10 (1..90, covering through 100) and they share the first 10",
+          p.evaluate("Object.keys(RANKS).length===11 && Object.keys(RANKS_ALG).length===10 && Object.keys(RANKS).slice(0,10).join()===Object.keys(RANKS_ALG).join()"))
     p.evaluate("S.p.char='roccia';go('menu')"); p.wait_for_timeout(300)
 
     # ---------------- arrow navigation on the menu
