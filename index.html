@@ -1339,7 +1339,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_19";
+const VERSION="0.4.5_20";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -3742,8 +3742,54 @@ const inHouse=(x,y)=>x>=MET.house[0]&&x<=MET.house[2]&&y>=MET.house[1]&&y<=MET.h
 const STAGE_ABIL={aerei:{2:["sprint"],3:["sprint","shoot"]},attrezzi:{2:["grease"],3:["grease","panino"]}};
 const STAGE_MARK={2:{w:1,col:"#ffb000"},3:{w:2,col:"#ff3040"}};
 const E1Family=()=>gcar()==="algidone"?"attrezzi":"aerei";
+/* E2 aerei sprint (CLAUDE.md §10.3): own tuning table, all values here. */
+const SPRINT_CFG={range:6,wind:.6,mult:1.8,dur:1.5,cd:6,cdStartMax:3,shakePx:2,color:"#ffb000"};
 const ABIL={
-  sprint:{id:"sprint",onSpawn(g){/* E2 fills this in */},update(g,dt){/* E2 fills this in */},draw(ctx,g){/* E2 fills this in */},reset(g){/* E2 fills this in */}},
+  sprint:{id:"sprint",
+    onSpawn(g){g.ab.sprint={phase:"idle",t:0,cd:Math.random()*SPRINT_CFG.cdStartMax,chaseSave:null}},
+    update(g,dt){
+      const s=g.ab.sprint;if(!s)return;
+      if(s.phase==="idle"){
+        s.cd-=dt;
+        if(s.cd<=0){
+          const [px,py]=pos(G.pl),los=losRC({x:g.tx,y:g.ty},{x:Math.round(px),y:Math.round(py)},SPRINT_CFG.range);
+          if(los){s.phase="wind";s.t=SPRINT_CFG.wind}
+        }
+      }else if(s.phase==="wind"){
+        s.t-=dt;
+        if(s.t<=0){s.phase="run";s.t=SPRINT_CFG.dur;s.chaseSave=g.chase;g.chase=1}
+      }else if(s.phase==="run"){
+        s.t-=dt;
+        if(s.t<=0){if(s.chaseSave!=null){g.chase=s.chaseSave;s.chaseSave=null}s.phase="idle";s.cd=SPRINT_CFG.cd}
+      }
+    },
+    draw(ctx,g){
+      const s=g.ab.sprint;if(!s||s.phase==="idle")return;
+      const [ex,ey]=pos(g),X=ex*cell+cell/2,Y=ey*cell+cell/2-cell*.12;
+      if(s.phase==="wind"){
+        const sh=Math.sin(G.anim*40)*SPRINT_CFG.shakePx;
+        ctx.save();ctx.globalAlpha=.8;ctx.fillStyle=SPRINT_CFG.color;
+        for(let i=0;i<3;i++){const a=G.anim*10+i*2.1;ctx.fillRect(X+sh+Math.cos(a)*cell*.5-cell*.04,Y+Math.sin(a)*cell*.5-cell*.04,cell*.08,cell*.08)}
+        ctx.restore();
+      }else if(s.phase==="run"){
+        ctx.save();
+        for(let i=1;i<=3;i++){ctx.globalAlpha=.32/i;ctx.fillStyle=SPRINT_CFG.color;
+          ctx.beginPath();ctx.arc(X-DX[g.dir??1]*cell*.4*i,Y-DY[g.dir??1]*cell*.4*i,cell*.32,0,7);ctx.fill()}
+        ctx.restore();
+      }
+    },
+    /* only cancels a ghost caught mid wind-up/run (E1CancelGhost, "during wind or run" per the brief); an
+       idle ghost's own countdown is left alone -- a scared/eaten interrupt should not extend its cooldown. */
+    reset(g){
+      const s=g.ab.sprint;
+      if(s&&s.phase!=="idle"){
+        if(s.chaseSave!=null)g.chase=s.chaseSave;
+        g.ab.sprint={phase:"idle",t:0,cd:SPRINT_CFG.cd,chaseSave:null};
+      }else if(!s){
+        g.ab.sprint={phase:"idle",t:0,cd:SPRINT_CFG.cd,chaseSave:null}; // fresh ghost; onSpawn overwrites right after
+      }
+    }
+  },
   shoot:{id:"shoot",onSpawn(g){/* E3 fills this in */},update(g,dt){/* E3 fills this in */},draw(ctx,g){/* E3 fills this in */},reset(g){/* E3 fills this in */}},
   grease:{id:"grease",onSpawn(g){/* E4 fills this in */},update(g,dt){/* E4 fills this in */},draw(ctx,g){/* E4 fills this in */},reset(g){/* E4 fills this in */}},
   panino:{id:"panino",onSpawn(g){/* E5 fills this in */},update(g,dt){/* E5 fills this in */},draw(ctx,g){/* E5 fills this in */},reset(g){/* E5 fills this in */}}
@@ -3754,6 +3800,8 @@ function E1InitGhost(e){e.ab=e.ab||{};for(const id of E1AbilsFor(e)){ABIL[id].re
 function E1InitGhosts(){for(const e of G.en)E1InitGhost(e)}
 const E1Active=e=>e.stage>=2&&e.mode!=="s"&&e.mode!=="g"&&e.wait<=0&&!inHouse(e.tx,e.ty);
 function E1UpdateGhost(e,dt){if(!E1Active(e))return;for(const id of E1AbilsFor(e))ABIL[id].update(e,dt)}
+/* cancels every active ability a ghost has for its stage/family (scared/eaten/girone-end interrupts) -- generic, not sprint-specific, so a future ability reuses it too */
+function E1CancelGhost(e){for(const id of E1AbilsFor(e))ABIL[id].reset(e)}
 function E1DrawMarker(ctx,X,Y,c,stage){
   const m=STAGE_MARK[stage>=3?3:2];ctx.save();ctx.globalAlpha=.85;ctx.strokeStyle=m.col;ctx.lineWidth=c*.05*m.w;
   ctx.beginPath();ctx.arc(X,Y,c*.62,0,7);ctx.stroke();
@@ -4192,7 +4240,7 @@ function spawnGlow(){
 }
 function activatePower(){
   G.pu=null;G.power=15;G.chain=0;
-  for(const e of G.en){if(e.mode==="g")continue;e.mode="s";if(e.wait<=0)reverseE(e)}
+  for(const e of G.en){if(e.mode==="g")continue;e.mode="s";E1CancelGhost(e);if(e.wait<=0)reverseE(e)}
   playSnd("power");ach("power",{ch:G.char,d:G.diff});
 }
 function eatPlane(e){
@@ -4206,7 +4254,7 @@ function eatPlane(e){
     cand.push([x,y]);
   }
   const sp=cand.length?cand[Math.floor(Math.random()*cand.length)]:[1,1];
-  e.tx=sp[0];e.ty=sp[1];e.dir=null;e.prog=0;e.mode="g";e.gt=5;
+  e.tx=sp[0];e.ty=sp[1];e.dir=null;e.prog=0;e.mode="g";e.gt=5;E1CancelGhost(e);
   for(let i=0;i<8;i++)G.parts.push({x:px,y:py,vx:(Math.random()-.5)*6,vy:-Math.random()*4-1,l:.5});
 }
 function update(dt){
@@ -4259,13 +4307,13 @@ function update(dt){
     if(!G.grid.some(r=>r.includes("."))){G.state="clear";G.t=1.6;G.score+=200;G.girPts=(G.girPts||0)+200;G.pu=null;G.power=0;beep(523,.3,"triangle",.06,1046);if(!G.dev){const c0=S.p.ch[G.char||"roccia"];c0.gir=(c0.gir||0)+1}ach("clear",{ch:G.char,d:G.diff});ach("stage",{ch:G.char,d:G.diff,n:G.stage});
       {const cls=mapClassOf(G.mapi)||"M",n2=G.en.filter(e=>e.stage===2).length,n3=G.en.filter(e=>e.stage===3).length,mult=GIR_BONUS.cls[cls]*(1+GIR_BONUS.st2*n2+GIR_BONUS.st3*n3),bonus=Math.round((G.girPts||0)*(mult-1));
       G.girBonusTxt=bonus>0?`Bonus girone ×${Math.round(mult*100)/100} +${bonus}`:null;if(bonus>0)G.score+=bonus}
-      MPROJ.clear();updateHud();return}
+      MPROJ.clear();G.en.forEach(E1CancelGhost);updateHud();return}
   }
   const es=Math.min(5.7,4.3+G.stage*.18)*dfc().spd;
   for(const e of G.en){
     if(e.mode==="g"){e.gt-=dt;if(e.gt<=0){e.mode=G.power>0?"s":"n";e.dir=null;e.prog=0}continue}
     if(e.wait>0){e.wait-=dt;if(e.wait<=0&&e.dir==null){e.dir=0}continue}
-    e.speed=es*(e.mode==="s"?.72:1)*terF(e);step(e,dt,chooseE);E1UpdateGhost(e,dt);
+    e.speed=(e.ab&&e.ab.sprint&&e.ab.sprint.phase==="wind"?0:es*(e.mode==="s"?.72:1)*terF(e)*(e.ab&&e.ab.sprint&&e.ab.sprint.phase==="run"?SPRINT_CFG.mult:1));step(e,dt,chooseE);E1UpdateGhost(e,dt);
     const [ex,ey]=pos(e);
     if(Math.hypot(ex-px,ey-py)<.62){
       if(e.mode==="s")eatPlane(e);
