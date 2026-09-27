@@ -1949,6 +1949,12 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Checks before this release: all test suites green except the known `test_f1` "Esc closes the login" (root-caused, not fixed — 0.5 backlog); `node --check` + smoke test; a save made on the tagged `v0.4` build still loads here with progress, achievements, extras, texts/colours and no console errors; `refs/skins/SKIN_COVERAGE.md` regenerated — every remaining `manca` is one of the grandfathered BK gaps (13 Ferma thrower + 6 Cinghiale frames), nothing new.
 - Not tested: real devices, the live Pages deploy after this release.
 
+## 0.4.5_21 — 2026-09-27 — sprint tuning (owner phone-test feedback)
+- Owner feedback on 0.4.5_20: sprint works but triggers a bit too often; power-ups already counter it fine, so only a slightly longer gap is wanted.
+- `SPRINT_CFG`: `cd` 6→8, `cdStartMax` 3→4. Nothing else in the ability changed (range/wind/mult/dur/shakePx/color all as 0.4.5_20).
+- Tests: `test_e2.py` updated to the new values (most checks already read `SPRINT_CFG.cd`/`cdStartMax` live, so only the fixed-margin "no re-trigger within the cooldown" check needed its iteration count widened to stay meaningfully short of the new ~8s cd); 31/31 green. `node --check` + headless smoke test green.
+- Not tested: real phone — please confirm the lower frequency feels right.
+
 ## 0.4.5_20 — 2026-09-27 — E2: Aerei sprint (fills ABIL.sprint)
 - **Scope**: only the "aerei" family (Uomo roccia's enemies), stage ≥ 2; Attrezzi/Algidone untouched. Spec: CLAUDE.md §10.3.
 - **`SPRINT_CFG`** (own tuning table): `{range:6,wind:.6,mult:1.8,dur:1.5,cd:6,cdStartMax:3,shakePx:2,color:'#ffb000'}`.

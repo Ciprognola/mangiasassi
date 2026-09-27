@@ -35,7 +35,7 @@ with sync_playwright() as pw:
     check("found test geometry (open row + wall-between case)", geo["openRow"] and geo["wallCase"], geo)
     y, x0 = geo["openRow"]["y"], geo["openRow"]["x0"]
 
-    # ---------------- start cooldown is within 0..3s (SPRINT_CFG.cdStartMax), sampled across fresh spawns
+    # ---------------- start cooldown is within 0..cdStartMax (0.4.5_21: 4s), sampled across fresh spawns
     cds = p.evaluate("""(()=>{
       const out=[];
       for(let i=0;i<10;i++){cancelAnimationFrame(raf);devJump(1,0);out.push(G.en[0].ab.sprint.cd)}
@@ -105,10 +105,10 @@ with sync_playwright() as pw:
 
     r = p.evaluate("""(()=>{
       const e=G.en[0];let retrig=false;
-      for(let i=0;i<110;i++){update(0.05);if(e.ab.sprint.phase!=="idle"){retrig=true;break}} // ~5.5s, still short of the ~6s cd
+      for(let i=0;i<150;i++){update(0.05);if(e.ab.sprint.phase!=="idle"){retrig=true;break}} // ~7.5s, still short of the ~8s cd (0.4.5_21 tuning)
       return {retrig,cd:e.ab.sprint.cd};
     })()""")
-    check("no re-trigger while the ~6s cooldown is still running", not r["retrig"], r)
+    check("no re-trigger while the ~8s cooldown is still running", not r["retrig"], r)
     check("no console errors (timing)", not errs, errs)
 
     # ---------------- no sprint while scared, eaten, in the house or waiting

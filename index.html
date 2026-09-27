@@ -1339,7 +1339,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_20";
+const VERSION="0.4.5_21";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -3743,7 +3743,7 @@ const STAGE_ABIL={aerei:{2:["sprint"],3:["sprint","shoot"]},attrezzi:{2:["grease
 const STAGE_MARK={2:{w:1,col:"#ffb000"},3:{w:2,col:"#ff3040"}};
 const E1Family=()=>gcar()==="algidone"?"attrezzi":"aerei";
 /* E2 aerei sprint (CLAUDE.md §10.3): own tuning table, all values here. */
-const SPRINT_CFG={range:6,wind:.6,mult:1.8,dur:1.5,cd:6,cdStartMax:3,shakePx:2,color:"#ffb000"};
+const SPRINT_CFG={range:6,wind:.6,mult:1.8,dur:1.5,cd:8,cdStartMax:4,shakePx:2,color:"#ffb000"};
 const ABIL={
   sprint:{id:"sprint",
     onSpawn(g){g.ab.sprint={phase:"idle",t:0,cd:Math.random()*SPRINT_CFG.cdStartMax,chaseSave:null}},
