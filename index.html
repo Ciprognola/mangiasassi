@@ -1339,7 +1339,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_13";
+const VERSION="0.4.5_14";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -2955,8 +2955,9 @@ function devRows(){
   const devMapOpts=()=>THEMES.slice(0,5).map((t,i)=>`<option value="${i}">${i+1}. ${esc(t.n)}</option>`).join("")+NEWMAPS.map((d,i)=>`<option value="${5+i}">${5+i-4}. ${esc(d.name)} (${d.rows[0].length}×${d.rows.length})</option>`).join("")+`<option value="100">Prova torrenti</option><option value="101">Prova mappa larga</option>`;
   const test=`${m?`<div class="opt" style="flex-direction:column;align-items:stretch"><div>Sblocca tutto <b class="disp" style="color:${S.sim?"#b48cff":"var(--mute)"}">${S.sim?"attivo":"spento"}</b><small>Simulazione: livello 100, tutti gli asset visibili e utilizzabili, tutti i gironi, anche in partita. I dati reali del salvataggio non vengono toccati: disattivando torni a quelli.</small></div>
      <div class="seg" style="margin-top:8px"><button data-sim="1" class="${S.sim?"on":""}" style="flex:1">Attiva</button><button data-sim="0" class="${!S.sim?"on":""}" style="flex:1">Disattiva</button></div></div>`:""}
-   <div class="opt" style="flex-direction:column;align-items:stretch"><div>Salta al girone<small>Strumento di test: avvia una partita di prova al girone 4 (poi il tavolo di El Gamblador al 5), al girone 7 (abilità segrete attive) o su una mappa a scelta (5 temi + mappe extra, torrenti, mappa larga). Partita di prova: nessun sordo, exp, obiettivo o progresso salvato.</small></div>
+   <div class="opt" style="flex-direction:column;align-items:stretch"><div>Salta al girone<small>Strumento di test: avvia una partita di prova al girone 4 (poi il tavolo di El Gamblador al 5), al girone 7 (abilità segrete attive), a un girone a scelta (classe/fantasmi/stage reali di quel girone) o su una mappa a scelta (5 temi + mappe extra, torrenti, mappa larga). Partita di prova: nessun sordo, exp, obiettivo o progresso salvato.</small></div>
      <div class="acts"><button class="btn sm" id="jg4">Girone 4</button><button class="btn sm" id="jg7">Girone 7</button></div>
+     <div class="acts" style="margin-top:8px"><input type="number" id="jgN" min="1" max="20" value="1" style="width:70px;background:#0f1824;border:2px solid var(--steel);border-radius:10px;color:var(--ink);padding:8px;font:inherit"><button class="btn sm" id="jgGo">Vai al girone</button></div>
      <div class="acts" style="margin-top:8px"><select id="jmsel" style="flex:1;background:#0f1824;border:2px solid var(--steel);border-radius:10px;color:var(--ink);padding:8px;font:inherit">${devMapOpts()}</select><button class="btn sm" id="jmg">Vai</button></div></div>
    <div class="opt" style="flex-direction:column;align-items:stretch"><div>Livello di prova — scrive nel salvataggio<small>Strumento di test: imposta il livello del personaggio selezionato (sblocca schede, ecc.). Attenzione: modifica il salvataggio (in "Sblocca tutto" solo la copia di prova).</small></div>
      <div style="display:flex;gap:8px;margin-top:8px"><input type="number" id="lvt" min="1" max="100" value="${cs().lvl}" style="width:90px;background:#0f1824;border:2px solid var(--steel);border-radius:10px;color:var(--ink);padding:8px;font:inherit"><button class="btn sm" id="lvs">Imposta</button></div></div>
@@ -3008,6 +3009,7 @@ function bindDev(){
     const pmr=t.closest("[data-pmr]");if(pmr){const k=pmr.dataset.pmr;IDB.del("musicPr_"+k).catch(()=>{});prTrackInvalidate(k);toast("Musica originale ripristinata");return}
     if(t.closest("#jmg")){devJump(4,+$("#jmsel").value);return}
     const jg=t.closest("#jg4,#jg7");if(jg){devJump(jg.id==="jg4"?4:7);return}
+    if(t.closest("#jgGo")){devJump(Math.min(20,Math.max(1,+$("#jgN").value||1)));return}
     const fe=t.closest("#mgfe1,#mgfe2,#mgfe3");if(fe){startFerma({test:true,encounter:+fe.id.slice(-1)});return} // prova dev: incontro (nessun salvataggio), Continua -> menu
     const fdb=t.closest("#mgfd");if(fdb){FA_DBG.on=!FA_DBG.on;fdb.textContent="Overlay debug: "+(FA_DBG.on?"s\u00ec":"no");return}
     const ffz=t.closest("#mgff");if(ffz){FA_FORCE.on=!FA_FORCE.on;ffz.textContent="Forza incontro: "+(FA_FORCE.on?"s\u00ec":"no");return}
