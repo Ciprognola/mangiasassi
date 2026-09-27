@@ -1339,7 +1339,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_17";
+const VERSION="0.4.5_18";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -2958,6 +2958,7 @@ function devRows(){
    <div class="opt" style="flex-direction:column;align-items:stretch"><div>Salta al girone<small>Strumento di test: avvia una partita di prova al girone 4 (poi il tavolo di El Gamblador al 5), al girone 7 (abilità segrete attive), a un girone a scelta (classe/fantasmi/stage reali di quel girone) o su una mappa a scelta (5 temi + mappe extra, torrenti, mappa larga). Partita di prova: nessun sordo, exp, obiettivo o progresso salvato.</small></div>
      <div class="acts"><button class="btn sm" id="jg4">Girone 4</button><button class="btn sm" id="jg7">Girone 7</button></div>
      <div class="acts" style="margin-top:8px"><input type="number" id="jgN" min="1" max="20" value="1" style="width:70px;background:#0f1824;border:2px solid var(--steel);border-radius:10px;color:var(--ink);padding:8px;font:inherit"><button class="btn sm" id="jgGo">Vai al girone</button></div>
+     <div class="acts" style="margin-top:8px;align-items:center;gap:8px"><span style="font-size:.85rem;color:var(--mute)">Stadio (E1a)</span><select id="jgStOv" style="flex:1;background:#0f1824;border:2px solid var(--steel);border-radius:10px;color:var(--ink);padding:8px;font:inherit"><option value=""${E1_STAGE_OV?"":" selected"}>Auto</option><option value="1"${E1_STAGE_OV===1?" selected":""}>1</option><option value="2"${E1_STAGE_OV===2?" selected":""}>2</option><option value="3"${E1_STAGE_OV===3?" selected":""}>3</option></select></div>
      <div class="acts" style="margin-top:8px"><select id="jmsel" style="flex:1;background:#0f1824;border:2px solid var(--steel);border-radius:10px;color:var(--ink);padding:8px;font:inherit">${devMapOpts()}</select><button class="btn sm" id="jmg">Vai</button></div></div>
    <div class="opt" style="flex-direction:column;align-items:stretch"><div>Livello di prova — scrive nel salvataggio<small>Strumento di test: imposta il livello del personaggio selezionato (sblocca schede, ecc.). Attenzione: modifica il salvataggio (in "Sblocca tutto" solo la copia di prova).</small></div>
      <div style="display:flex;gap:8px;margin-top:8px"><input type="number" id="lvt" min="1" max="100" value="${cs().lvl}" style="width:90px;background:#0f1824;border:2px solid var(--steel);border-radius:10px;color:var(--ink);padding:8px;font:inherit"><button class="btn sm" id="lvs">Imposta</button></div></div>
@@ -2992,6 +2993,7 @@ function bindDev(){
     if(e.target.id==="skinImpTarget"){skinImpTarget=e.target.value;return render()}
     if(e.target.id==="skinImpName"){skinImpName=e.target.value;return render()}
     if(e.target.id==="skinImpFiles"){skinImpFiles=e.target.files;return}
+    if(e.target.id==="jgStOv"){E1_STAGE_OV=e.target.value?+e.target.value:null;return}
   };
   root.onclick=e=>{
     const t=e.target;
@@ -3730,6 +3732,39 @@ const DEFMETA={tun:[7],start:[7,15],house:[6,5,8,7],ghosts:[[7,6],[6,6],[8,6],[7
 let W=15,H=17,TUN=7,TUNR=[7],MET=DEFMETA;
 const isTun=y=>TUNR.includes(y);
 const inHouse=(x,y)=>x>=MET.house[0]&&x<=MET.house[2]&&y>=MET.house[1]&&y<=MET.house[3];
+/* ---- E1a: ghost stage ability framework (skeleton only; CLAUDE.md §10.3/§10.8) ----
+   Data (STAGE_ABIL/STAGE_MARK) and behaviour (ABIL, one module per ability id) live in one
+   self-contained block; the only maze state it reads is the small set below (ghost tile/dir/
+   mode/wait/stage, the player's tile via pos(G.pl), the grid via inHouse) -- no other maze code
+   depends on it, so it stays transferable to a future clean build (§10.0). E2 sprint, E3 shoot,
+   E4 grease and E5 panino fill in the NO-OP stubs; ghost movement/chase/targets/release timing
+   are untouched by this chunk. */
+const STAGE_ABIL={aerei:{2:["sprint"],3:["sprint","shoot"]},attrezzi:{2:["grease"],3:["grease","panino"]}};
+const STAGE_MARK={2:{w:1,col:"#ffb000"},3:{w:2,col:"#ff3040"}};
+const E1Family=()=>gcar()==="algidone"?"attrezzi":"aerei";
+const ABIL={
+  sprint:{id:"sprint",onSpawn(g){/* E2 fills this in */},update(g,dt){/* E2 fills this in */},draw(ctx,g){/* E2 fills this in */},reset(g){/* E2 fills this in */}},
+  shoot:{id:"shoot",onSpawn(g){/* E3 fills this in */},update(g,dt){/* E3 fills this in */},draw(ctx,g){/* E3 fills this in */},reset(g){/* E3 fills this in */}},
+  grease:{id:"grease",onSpawn(g){/* E4 fills this in */},update(g,dt){/* E4 fills this in */},draw(ctx,g){/* E4 fills this in */},reset(g){/* E4 fills this in */}},
+  panino:{id:"panino",onSpawn(g){/* E5 fills this in */},update(g,dt){/* E5 fills this in */},draw(ctx,g){/* E5 fills this in */},reset(g){/* E5 fills this in */}}
+};
+const E1AbilsFor=e=>(STAGE_ABIL[E1Family()]&&STAGE_ABIL[E1Family()][e.stage])||[];
+let E1_STAGE_OV=null; // dev-only "Stadio" override (1/2/3, null=auto); module-level, never on G -> never in the quicksave
+function E1InitGhost(e){e.ab=e.ab||{};for(const id of E1AbilsFor(e)){ABIL[id].reset(e);ABIL[id].onSpawn(e)}}
+function E1InitGhosts(){for(const e of G.en)E1InitGhost(e)}
+const E1Active=e=>e.stage>=2&&e.mode!=="s"&&e.mode!=="g"&&e.wait<=0&&!inHouse(e.tx,e.ty);
+function E1UpdateGhost(e,dt){if(!E1Active(e))return;for(const id of E1AbilsFor(e))ABIL[id].update(e,dt)}
+function E1DrawMarker(ctx,X,Y,c,stage){
+  const m=STAGE_MARK[stage>=3?3:2];ctx.save();ctx.globalAlpha=.85;ctx.strokeStyle=m.col;ctx.lineWidth=c*.05*m.w;
+  ctx.beginPath();ctx.arc(X,Y,c*.62,0,7);ctx.stroke();
+  if(stage>=3){ctx.globalAlpha=.5;ctx.beginPath();ctx.arc(X,Y,c*.74,0,7);ctx.stroke()}
+  ctx.restore();
+}
+function E1DrawGhost(ctx,e,X,Y,c){
+  if(e.stage<2||e.mode==="s"||e.mode==="g")return;
+  E1DrawMarker(ctx,X,Y,c,e.stage);
+  for(const id of E1AbilsFor(e))ABIL[id].draw(ctx,e);
+}
 /* generatore di torrenti: percorsi sinuosi lungo i corridoi (spec = [[carattere,lunghezza],...]); usabile anche per creare mappe vere */
 function addStreams(rows,spec,seed,meta){
   const g=rows.map(r=>[...r]),Hh=g.length,Ww=g[0].length,M=Object.assign({},DEFMETA,meta||{});let rs=seed>>>0;
@@ -3845,9 +3880,10 @@ function freshGrid(mi){
 }
 function resetActors(keep){
   G.pl={tx:MET.start[0],ty:MET.start[1],dir:null,next:null,prog:0,lastH:1};
-  const st=MET.ghosts,cls=mapClassOf(G.mapi)||"M",n=CLASS_GHOSTS[cls],stages=stagesFor(cls,G.stage),ch=dfc().chase,chAvg=ch.reduce((a,b)=>a+b,0)/ch.length;
+  const st=MET.ghosts,cls=mapClassOf(G.mapi)||"M",n=CLASS_GHOSTS[cls],stages=E1_STAGE_OV?Array.from({length:n},()=>E1_STAGE_OV):stagesFor(cls,G.stage),ch=dfc().chase,chAvg=ch.reduce((a,b)=>a+b,0)/ch.length;
   /* il 5o fantasma (classe L): scarto FISSO di 2.5s dal 4o (non moltiplicato per dfc().wait) cosi' non supera mai i 3s richiesti, a qualunque difficolta' */
   G.en=Array.from({length:n},(_,i)=>{const s=st[i%st.length];return{tx:s[0],ty:s[1],dir:null,prog:0,wait:i<4?(i*2.2+1.2)*dfc().wait:(3*2.2+1.2)*dfc().wait+2.5,chase:i<ch.length?ch[i]:chAvg,tint:TINTS[i],mode:"n",gt:0,stage:stages[i]||2}});
+  E1InitGhosts();
   G.power=0;if(!keep)G.pu=null;G.since=0;G.open=8;G.chain=0;G.still=false;
   G.state="ready";G.t=1.6;G.invuln=0;G.anim=0;
   // losing a life (keep=true) must not refund the secret-ability cooldown --
@@ -3865,7 +3901,7 @@ function devJump(n,mi){
 }
 function startGame(resume,opt){
   cancelAnimationFrame(raf);
-  if(resume&&S.quick){G=JSON.parse(JSON.stringify(S.quick));G.mapi=G.mapi||0;setDims(G.mapi);G.power=G.power>0?G.power:0;G.pu=G.pu||null;G.since=G.since||0;G.open=G.open||8;G.chain=G.chain||0;G.still=false;G.char=G.char||"roccia";G.game=G.game||"maze";G.mapi=G.mapi||0;G.plane=G.plane||0;G.rock=G.rock||0;G.banner=null;G.lastMi=G.lastMi||{S:null,M:null,L:null};if(mapClassOf(G.mapi)&&!G.lastMi[mapClassOf(G.mapi)])G.lastMi[mapClassOf(G.mapi)]=G.mapi;G.en.forEach(e=>{e.mode=e.mode||"n";e.gt=e.gt||0;e.stage=e.stage||2;if(G.power<=0&&e.mode==="s")e.mode="n"});G.girPts=G.girPts||0;G.girBonusTxt=null;G.state="ready";G.t=1.4;G.invuln=Math.max(0,+G.invuln||0);G.anim=0;G.st=null;G.fx=[];G.shake=0;G.burn=0;G.cam=null}
+  if(resume&&S.quick){G=JSON.parse(JSON.stringify(S.quick));G.mapi=G.mapi||0;setDims(G.mapi);G.power=G.power>0?G.power:0;G.pu=G.pu||null;G.since=G.since||0;G.open=G.open||8;G.chain=G.chain||0;G.still=false;G.char=G.char||"roccia";G.game=G.game||"maze";G.mapi=G.mapi||0;G.plane=G.plane||0;G.rock=G.rock||0;G.banner=null;G.lastMi=G.lastMi||{S:null,M:null,L:null};if(mapClassOf(G.mapi)&&!G.lastMi[mapClassOf(G.mapi)])G.lastMi[mapClassOf(G.mapi)]=G.mapi;G.en.forEach(e=>{e.mode=e.mode||"n";e.gt=e.gt||0;e.stage=e.stage||2;if(G.power<=0&&e.mode==="s")e.mode="n";if(!e.ab)E1InitGhost(e)});G.girPts=G.girPts||0;G.girBonusTxt=null;G.state="ready";G.t=1.4;G.invuln=Math.max(0,+G.invuln||0);G.anim=0;G.st=null;G.fx=[];G.shake=0;G.burn=0;G.cam=null}
   else{const stage0=(opt&&opt.stage)||1,M0=pickMap(stage0);G={game:(opt&&opt.game)||"maze",stage:stage0,score:(opt&&opt.score)||0,lives:opt&&opt.hard?4:3,hard:!!(opt&&opt.hard),grid:freshGrid(M0),parts:[],diff:S.opts.diff||"medium",char:S.p.char||"roccia",mapi:M0,plane:cs().selP,rock:cs().selR,lastMi:{S:null,M:null,L:null}};if(mapClassOf(M0))G.lastMi[mapClassOf(M0)]=M0;resetActors();ach("dbg_new",{ch:G.char,d:G.diff})}
   G.parts=[];screen="game";syncMusic();buildGameDOM();
 }
@@ -4018,7 +4054,7 @@ function setDir(d){if(G&&G.pl){G.pl.next=d;if(G.still){G.still=false;syncStill()
 function updateHud(){
   updateAbil();$("#sc").textContent=G.score;$("#wv").textContent="Girone "+G.stage;
   const lv=$("#lv");lv.innerHTML="";for(let i=0;i<G.lives;i++){const c=document.createElement("canvas");c.width=48;c.height=44;lv.appendChild(c);const x=c.getContext("2d");if(gcar()==="algidone"){const im=IMG.al_st;drawSkinned(x,"algidone","al_st",im,24-im.width*.21,1,im.width*.42,im.height*.42)}else drawFace(x,24,22,46,2,false)}
-  const jgro=$("#jgro");if(jgro)jgro.textContent=`G${G.stage} · ${mapClassOf(G.mapi)||"?"} · ${G.en.length} · st ${G.en.map(e=>e.stage).join(",")}`;
+  const jgro=$("#jgro");if(jgro)jgro.textContent=`G${G.stage} · ${mapClassOf(G.mapi)||"?"} · ${G.en.length} · st ${G.en.map(e=>e.stage).join(",")}${E1_STAGE_OV?` · stadio ${E1_STAGE_OV}`:""}`;
 }
 function pauseMenu(again){
   if(G.state==="over")return;const prev=again?(G.prevState||"play"):G.state;G.prevState=prev;G.state="pause";
@@ -4176,7 +4212,7 @@ function update(dt){
   for(const e of G.en){
     if(e.mode==="g"){e.gt-=dt;if(e.gt<=0){e.mode=G.power>0?"s":"n";e.dir=null;e.prog=0}continue}
     if(e.wait>0){e.wait-=dt;if(e.wait<=0&&e.dir==null){e.dir=0}continue}
-    e.speed=es*(e.mode==="s"?.72:1)*terF(e);step(e,dt,chooseE);
+    e.speed=es*(e.mode==="s"?.72:1)*terF(e);step(e,dt,chooseE);E1UpdateGhost(e,dt);
     const [ex,ey]=pos(e);
     if(Math.hypot(ex-px,ey-py)<.62){
       if(e.mode==="s")eatPlane(e);
@@ -4392,6 +4428,7 @@ function draw(){
     if(ALG&&AR)drawGymArt(ctx,X,Y-c*.12+bob,c*1.05,e.dir==null?1:e.dir,sc?(bl?"#fff3b0":"#e0a800"):e.tint,sc?(bl?"#ffffff":"#ffe45c"):undefined,AR,G.anim+e.chase*10);
     else if(ALG)drawGym(ctx,X,Y-c*.12+bob,c*1.05,e.dir==null?1:e.dir,sc?(bl?"#fff3b0":"#e0a800"):e.tint,sc?(bl?"#ffffff":"#ffe45c"):"#b6bfca");
     else drawPlane(ctx,X,Y-c*.12+bob,c*1.05,e.dir==null?0:e.dir,sc?(bl?"#cfd8ff":"#2a49c8"):e.tint,sc?(bl?"#ffffff":"#5b8cff"):undefined,AR);
+    E1DrawGhost(ctx,e,X,Y-c*.12+bob,c);
   }
   // player
   const P=G.pl,[px,py]=pos(P),X=px*c+c/2,Y=py*c+c/2;
