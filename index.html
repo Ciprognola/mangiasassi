@@ -1339,7 +1339,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_14";
+const VERSION="0.4.5_15";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -3716,6 +3716,8 @@ const pickMap=stage=>{
   if(G&&G.lastMi)G.lastMi[cls]=mi;
   return mi;
 };
+/* bonus girone (M1b, §10.4): mult = cls[classe] * (1 + st2*n_stage2 + st3*n_stage3), sugli stage reali dei fantasmi appena affrontati (G.en, non un nuovo sorteggio) */
+const GIR_BONUS={cls:{S:1.0,M:1.2,L:1.4},st2:.10,st3:.25};
 const DX=[0,1,0,-1],DY=[-1,0,1,0];
 /* dimensioni e punti chiave per mappa. Una mappa e' un array di stringhe; se ha .meta sovrascrive i valori di DEFMETA:
    tun = righe con tunnel laterale, start = [x,y] del giocatore, house = [x0,y0,x1,y1] casetta fantasmi, ghosts = 4 posizioni iniziali */
@@ -3862,7 +3864,7 @@ function devJump(n,mi){
 }
 function startGame(resume,opt){
   cancelAnimationFrame(raf);
-  if(resume&&S.quick){G=JSON.parse(JSON.stringify(S.quick));G.mapi=G.mapi||0;setDims(G.mapi);G.power=G.power>0?G.power:0;G.pu=G.pu||null;G.since=G.since||0;G.open=G.open||8;G.chain=G.chain||0;G.still=false;G.char=G.char||"roccia";G.game=G.game||"maze";G.mapi=G.mapi||0;G.plane=G.plane||0;G.rock=G.rock||0;G.banner=null;G.lastMi=G.lastMi||{S:null,M:null,L:null};if(mapClassOf(G.mapi)&&!G.lastMi[mapClassOf(G.mapi)])G.lastMi[mapClassOf(G.mapi)]=G.mapi;G.en.forEach(e=>{e.mode=e.mode||"n";e.gt=e.gt||0;e.stage=e.stage||2;if(G.power<=0&&e.mode==="s")e.mode="n"});G.state="ready";G.t=1.4;G.invuln=Math.max(0,+G.invuln||0);G.anim=0;G.st=null;G.fx=[];G.shake=0;G.burn=0;G.cam=null}
+  if(resume&&S.quick){G=JSON.parse(JSON.stringify(S.quick));G.mapi=G.mapi||0;setDims(G.mapi);G.power=G.power>0?G.power:0;G.pu=G.pu||null;G.since=G.since||0;G.open=G.open||8;G.chain=G.chain||0;G.still=false;G.char=G.char||"roccia";G.game=G.game||"maze";G.mapi=G.mapi||0;G.plane=G.plane||0;G.rock=G.rock||0;G.banner=null;G.lastMi=G.lastMi||{S:null,M:null,L:null};if(mapClassOf(G.mapi)&&!G.lastMi[mapClassOf(G.mapi)])G.lastMi[mapClassOf(G.mapi)]=G.mapi;G.en.forEach(e=>{e.mode=e.mode||"n";e.gt=e.gt||0;e.stage=e.stage||2;if(G.power<=0&&e.mode==="s")e.mode="n"});G.girPts=G.girPts||0;G.girBonusTxt=null;G.state="ready";G.t=1.4;G.invuln=Math.max(0,+G.invuln||0);G.anim=0;G.st=null;G.fx=[];G.shake=0;G.burn=0;G.cam=null}
   else{const stage0=(opt&&opt.stage)||1,M0=pickMap(stage0);G={game:(opt&&opt.game)||"maze",stage:stage0,score:(opt&&opt.score)||0,lives:opt&&opt.hard?4:3,hard:!!(opt&&opt.hard),grid:freshGrid(M0),parts:[],diff:S.opts.diff||"medium",char:S.p.char||"roccia",mapi:M0,plane:cs().selP,rock:cs().selR,lastMi:{S:null,M:null,L:null}};if(mapClassOf(M0))G.lastMi[mapClassOf(M0)]=M0;resetActors();ach("dbg_new",{ch:G.char,d:G.diff})}
   G.parts=[];screen="game";syncMusic();buildGameDOM();
 }
@@ -4103,7 +4105,7 @@ function activatePower(){
   playSnd("power");ach("power",{ch:G.char,d:G.diff});
 }
 function eatPlane(e){
-  G.chain=(G.chain||0)+1;G.score+=Math.min(1600,100*Math.pow(2,G.chain));$("#sc").textContent=G.score;playSnd("foe");ach("foe",{ch:G.char,pl:G.plane,d:G.diff});
+  G.chain=(G.chain||0)+1;const foePts=Math.min(1600,100*Math.pow(2,G.chain));G.score+=foePts;G.girPts=(G.girPts||0)+foePts;$("#sc").textContent=G.score;playSnd("foe");ach("foe",{ch:G.char,pl:G.plane,d:G.diff});
   const [px,py]=pos(G.pl);
   const cand=[];
   for(let y=0;y<H;y++)for(let x=0;x<W;x++){
@@ -4120,7 +4122,7 @@ function update(dt){
   G.anim+=dt;
   if(G.state==="ready"){G.t-=dt;if(G.t<=0)G.state="play";return}
   if(G.state==="dying"){G.t-=dt;if(G.t<=0){G.lives--;if(G.lives<=0)finishRun();else{resetActors(true);G.invuln=RESPAWN_INVULN;updateHud()}}return}
-  if(G.state==="clear"){G.t-=dt;if(G.t<=0){G.stage++;if(!G.dev&&G.stage>=5&&!S.p.g5){S.p.g5=true;persist()}if(!G.dev&&G.stage>=7&&!S.p.sec){S.p.sec=true;persist();setTimeout(()=>toast("Segreto sbloccato: Trasformati! (al posto di Pausa)"),500)}if(!G.hard)G.lives=3;G.mapi=pickMap(G.stage);G.grid=freshGrid(G.mapi);if(cv)sizeCanvas();resetActors();updateHud();bjAfterClear()}return}
+  if(G.state==="clear"){G.t-=dt;if(G.t<=0){G.stage++;if(!G.dev&&G.stage>=5&&!S.p.g5){S.p.g5=true;persist()}if(!G.dev&&G.stage>=7&&!S.p.sec){S.p.sec=true;persist();setTimeout(()=>toast("Segreto sbloccato: Trasformati! (al posto di Pausa)"),500)}if(!G.hard)G.lives=3;G.mapi=pickMap(G.stage);G.grid=freshGrid(G.mapi);if(cv)sizeCanvas();resetActors();G.girPts=0;G.girBonusTxt=null;updateHud();bjAfterClear()}return}
   if(G.state!=="play")return;
   G.invuln=Math.max(0,G.invuln-dt);A_t+=dt;if(A_t>=5)flushTime();
   const A=G.st;
@@ -4160,10 +4162,13 @@ function update(dt){
   else if(!G.pu){G.since=(G.since||0)+dt;if(G.since>=12||(G.since>=(G.open||8)&&Math.random()<dt/2.5))spawnGlow()}
   if(G.pu&&G.pu.x===rx&&G.pu.y===ry&&Math.hypot(px-rx,py-ry)<.5)activatePower();
   if(G.grid[ry]&&G.grid[ry][(rx+W)%W]==="."&&Math.hypot(px-rx,py-ry)<.45){
-    G.grid[ry][(rx+W)%W]=" ";G.score+=10;P.eat=gcar()==="algidone"?.26:.26;playSnd("eat");ach("eat",{ch:G.char,rk:G.rock,pl:G.plane,d:G.diff});
+    G.grid[ry][(rx+W)%W]=" ";G.score+=10;G.girPts=(G.girPts||0)+10;P.eat=gcar()==="algidone"?.26:.26;playSnd("eat");ach("eat",{ch:G.char,rk:G.rock,pl:G.plane,d:G.diff});
     for(let i=0;i<4;i++)G.parts.push({x:rx,y:ry,vx:(Math.random()-.5)*4,vy:-Math.random()*3-1,l:.4});
     $("#sc").textContent=G.score;
-    if(!G.grid.some(r=>r.includes("."))){G.state="clear";G.t=1.6;G.score+=200;G.pu=null;G.power=0;beep(523,.3,"triangle",.06,1046);if(!G.dev){const c0=S.p.ch[G.char||"roccia"];c0.gir=(c0.gir||0)+1}ach("clear",{ch:G.char,d:G.diff});ach("stage",{ch:G.char,d:G.diff,n:G.stage});updateHud();return}
+    if(!G.grid.some(r=>r.includes("."))){G.state="clear";G.t=1.6;G.score+=200;G.girPts=(G.girPts||0)+200;G.pu=null;G.power=0;beep(523,.3,"triangle",.06,1046);if(!G.dev){const c0=S.p.ch[G.char||"roccia"];c0.gir=(c0.gir||0)+1}ach("clear",{ch:G.char,d:G.diff});ach("stage",{ch:G.char,d:G.diff,n:G.stage});
+      {const cls=mapClassOf(G.mapi)||"M",n2=G.en.filter(e=>e.stage===2).length,n3=G.en.filter(e=>e.stage===3).length,mult=GIR_BONUS.cls[cls]*(1+GIR_BONUS.st2*n2+GIR_BONUS.st3*n3),bonus=Math.round((G.girPts||0)*(mult-1));
+      G.girBonusTxt=bonus>0?`Bonus girone ×${Math.round(mult*100)/100} +${bonus}`:null;if(bonus>0)G.score+=bonus}
+      updateHud();return}
   }
   const es=Math.min(5.7,4.3+G.stage*.18)*dfc().spd;
   for(const e of G.en){
@@ -4430,6 +4435,7 @@ function draw(){
   ctx.textAlign="center";ctx.font=`${c*1.1}px Bungee,Impact,sans-serif`;
   const say=G.state==="ready"?"Pronti?":G.state==="clear"?"Ripulito!":"";
   if(G.state==="ready"){ctx.font=`${c*.7}px Bungee,Impact,sans-serif`;ctx.lineWidth=c*.14;ctx.strokeStyle="#000";const gt="Girone "+G.stage+" · "+THEMES[G.mapi||0].n;ctx.strokeText(gt,c*VWT/2,c*VHT*.61,c*VWT-c);ctx.fillStyle="#fff";ctx.fillText(gt,c*VWT/2,c*VHT*.61,c*VWT-c);ctx.font=`${c*1.1}px Bungee,Impact,sans-serif`}
+  if(G.state==="clear"&&G.girBonusTxt){ctx.font=`${c*.5}px Bungee,Impact,sans-serif`;ctx.lineWidth=c*.1;ctx.strokeStyle="#000";ctx.strokeText(G.girBonusTxt,c*VWT/2,c*VHT*.61,c*VWT-c);ctx.fillStyle="#fff";ctx.fillText(G.girBonusTxt,c*VWT/2,c*VHT*.61,c*VWT-c);ctx.font=`${c*1.1}px Bungee,Impact,sans-serif`}
   if(say){ctx.lineWidth=c*.2;ctx.strokeStyle="#000";ctx.strokeText(say,c*VWT/2,c*VHT*.52);ctx.fillStyle="#f2c230";ctx.fillText(say,c*VWT/2,c*VHT*.52)}
   if(shk)ctx.restore();
 }
