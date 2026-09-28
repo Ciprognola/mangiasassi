@@ -1949,6 +1949,26 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Checks before this release: all test suites green except the known `test_f1` "Esc closes the login" (root-caused, not fixed — 0.5 backlog); `node --check` + smoke test; a save made on the tagged `v0.4` build still loads here with progress, achievements, extras, texts/colours and no console errors; `refs/skins/SKIN_COVERAGE.md` regenerated — every remaining `manca` is one of the grandfathered BK gaps (13 Ferma thrower + 6 Cinghiale frames), nothing new.
 - Not tested: real devices, the live Pages deploy after this release.
 
+## infra/docs — 2026-09-28 — E6a: balance measurement (no game change)
+
+- Owner feedback logged first: 0.4.5_25 (E5b wall-breaking) phone-tested OK. **E5 complete.**
+- New `tools/fbstub/sim_e6.py` (kept in the repo, re-run for E6b): headless-Chromium harness that drives
+  `update(1/60)` directly (dev mode, `cancelAnimationFrame(raf)`) with a simple seeded-BFS bot, no secret
+  abilities, playing both characters through gironi 1–12 at Normale, once scheduled and once with the dev
+  Stadio override forcing stage 1 (the ablation baseline) — 5 seeds each, 240 runs, 192s wall time.
+  Instrumentation wraps `MPROJ.spawn`/`GREASE.add`/`PANINO.startIntro`/`PANINO.eatSplit`/`smashFx`/
+  `killPlayer` for event counts; nothing in `index.html` changes.
+- Two real bugs in the bot itself were caught and fixed before trusting any numbers (both documented in
+  code comments in `sim_e6.py`): a one-tick decision-timing lag against the game's own `step()`/`chooseP()`
+  re-consultation, and a "nearest pellet" re-pick every tick that let two similarly-distant pellets swap
+  which one looked nearer, ping-ponging the bot forever. Both reproduced deterministically (the second one
+  with ghosts disabled entirely, isolating it from anything ability-related) and fixed before the real
+  sweep ran.
+- Report: `docs/releases/0.5-E6a-report.md` — per-character tables (map class/ghosts/stages, clear time or
+  timeout, deaths by cause, sprint/shoot/grease/panino rates, girPts/bonus share), a stage-1-ablation delta
+  table per character, 5 flagged anomalies with direction (no values changed), and caveats on the bot's own
+  limits. No VERSION bump — report-only, `index.html` untouched.
+
 ## 0.4.5_25 — 2026-09-28 — E5b: Super Panino wall-breaking
 - **Scope**: only the merged Super Panino host (E5a, 0.4.5_24). Normal ghosts, aerei, grease and the merge/split/eat rules are unchanged; `chooseE` (normal ghosts' own direction choice) was never touched. Spec: CLAUDE.md §10.3 ("breaks walls in its path via the shared smashable() helper; protected cells never").
 - Owner feedback logged first: 0.4.5_24 (E5a merge/intro/burger/speed/contact/split/eating) phone-tested OK — no code change needed.
