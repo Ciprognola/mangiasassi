@@ -1339,7 +1339,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_24";
+const VERSION="0.4.5_25";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -4018,7 +4018,7 @@ const GREASE={
    dedicated G.state ("panintro"), the same early-return pattern "ready"/"dying"/"clear" already use; the
    12s merged life then ticks unconditionally in the main per-ghost loop (not through E1UpdateGhost, whose
    E1Active gate excludes a scared ghost -- but "the 12s keep running" while scared per §10.3). */
-const PANINO_CFG={range:1,introT:1.0,life:12,size:1.6,speedMult:1.25,chase:.9,score:3200,hitExtra:.3,graceStart:6,reMergeCd:10,maxActive:1};
+const PANINO_CFG={range:1,introT:1.0,life:12,size:1.6,speedMult:1.25,chase:.9,score:3200,hitExtra:.3,graceStart:6,reMergeCd:10,maxActive:1,breakMax:8,breakPause:.3};
 function paninoPlaceNear(tx,ty){
   for(let r=1;r<=2;r++){
     const cand=[];
@@ -4050,7 +4050,7 @@ const PANINO={
     }
   },
   startIntro(g,h){
-    g.pan={partner:G.en.indexOf(h),t:0,chaseSave:g.chase};
+    g.pan={partner:G.en.indexOf(h),t:0,chaseSave:g.chase,breaks:0,pauseT:0};
     h.merged=true;g.chase=PANINO_CFG.chase;
     G.panIntroHost=G.en.indexOf(g);G.state="panintro";G.t=PANINO_CFG.introT;
     playSnd("power");
@@ -4091,6 +4091,30 @@ const PANINO={
     for(let i=0;i<8;i++)G.parts.push({x:px,y:py,vx:(Math.random()-.5)*6,vy:-Math.random()*4-1,l:.5});
     if(partner)partner.merged=false;
     host.pan=null;
+  },
+  /* E5b: the merged host's own direction choice -- never touches chooseE (normal ghosts are untouched).
+     A wall cell counts as open when smashable(), budget permitting; breaking it reuses the shared
+     smashFx()+sfxSmash() path (no second copy of the smash code) and holds the host still for
+     breakPause via e.pan.pauseT (enforced one level up, in the main per-ghost loop). */
+  choose(e){
+    const s=e.pan,rev=e.dir==null?null:(e.dir+2)%4;
+    const openTo=d=>{const nx=e.tx+DX[d],ny=e.ty+DY[d];return !wall(nx,ny)||(smashable(nx,ny)&&s.breaks<PANINO_CFG.breakMax)};
+    const open=[0,1,2,3].filter(d=>d!==rev&&openTo(d));
+    let pick=null;
+    if(open.length){
+      if(Math.random()<e.chase){
+        const [px,py]=pos(G.pl);let best=open[0],bd=1e9;
+        for(const d of open){const dd=Math.hypot(e.tx+DX[d]-px,e.ty+DY[d]-py);if(dd<bd){bd=dd;best=d}}
+        pick=best;
+      }else pick=open[Math.floor(Math.random()*open.length)];
+    }else pick=rev;
+    if(pick==null){e.dir=null;return}
+    const nx=e.tx+DX[pick],ny=e.ty+DY[pick];
+    if(wall(nx,ny)&&smashable(nx,ny)){
+      smashFx(nx,ny);s.breaks++;sfxSmash(s.breaks);s.pauseT=PANINO_CFG.breakPause;
+      e.dir=null;return; // hold this frame; next choose() call (once pauseT clears) finds it already floor
+    }
+    e.dir=pick;
   },
   drawHost(ctx,e,X,Y,c){
     const bc=burgerCv(),w=c*PANINO_CFG.size,h=w*bc.height/bc.width;
@@ -4324,14 +4348,20 @@ function sfxSmash(k){
     noise(t+.09,.07,"bandpass",2400,1.2,.16);noise(t+.15,.06,"bandpass",3100,1.2,.12);noise(t+.22,.05,"bandpass",2000,1.2,.09); // sassolini
   }catch(e){}
 }
-function smash(x,y){
-  G.grid[y][x]=" ";const A=G.st;if(A)A.stress=Math.min(100,(A.stress||0)+BOAR_STRESS);
-  A&&(A.hits=(A.hits||0)+1);sfxSmash(A?A.hits:0);
+/* grid+dust+shake only -- shared by the player's own smash() (below) and the Super Panino host
+   (PANINO.choose, E5b), which must NOT touch G.st (the player's own boar-ability stress/hit counters). */
+function smashFx(x,y){
+  G.grid[y][x]=" ";
   const TH=THEMES[G.mapi||0]||THEMES[0],cols=[TH.wt,TH.wh,TH.wf,TH.wt];G.fx=G.fx||[];
   G.fx.push({k:"crack",x,y,t:0,d:.32,seed:Math.random()*99});
   for(let i=0;i<11;i++){const a=Math.random()*6.283,sp=2+Math.random()*4;G.fx.push({k:"deb",x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-2.2,g:14,t:0,d:.55+Math.random()*.3,rot:Math.random()*6,vr:(Math.random()-.5)*16,s:.1+Math.random()*.16,col:cols[i%4]})}
   for(let i=0;i<6;i++)G.fx.push({k:"smoke",x:x+(Math.random()-.5)*.6,y:y+(Math.random()-.5)*.6,vx:(Math.random()-.5)*1.4,vy:-.3-Math.random()*.8,t:0,d:.6+Math.random()*.4,r0:.15,r1:.5+Math.random()*.25,a:.5,col:"196,178,158"});
   G.shake=.16;
+}
+function smash(x,y){
+  smashFx(x,y);
+  const A=G.st;if(A)A.stress=Math.min(100,(A.stress||0)+BOAR_STRESS);
+  A&&(A.hits=(A.hits||0)+1);sfxSmash(A?A.hits:0);
 }
 function abilPress(){
   if(!abilOn()||!G||G.state!=="play")return;
@@ -4555,7 +4585,10 @@ function update(dt){
     if(e.mode==="g"){e.gt-=dt;if(e.gt<=0){e.mode=G.power>0?"s":"n";e.dir=null;e.prog=0}continue}
     if(e.merged)continue; // Super Panino (E5a): the hidden partner is not updated, drawn or collided at all
     if(e.wait>0){e.wait-=dt;if(e.wait<=0&&e.dir==null){e.dir=0}continue}
-    e.speed=(e.ab&&((e.ab.sprint&&e.ab.sprint.phase==="wind")||(e.ab.shoot&&e.ab.shoot.phase==="aim"))?0:es*(e.mode==="s"?.72:1)*terF(e)*(e.ab&&e.ab.sprint&&e.ab.sprint.phase==="run"?SPRINT_CFG.mult:1)*(e.pan?PANINO_CFG.speedMult:1));step(e,dt,chooseE);E1UpdateGhost(e,dt);
+    e.speed=(e.ab&&((e.ab.sprint&&e.ab.sprint.phase==="wind")||(e.ab.shoot&&e.ab.shoot.phase==="aim"))?0:es*(e.mode==="s"?.72:1)*terF(e)*(e.ab&&e.ab.sprint&&e.ab.sprint.phase==="run"?SPRINT_CFG.mult:1)*(e.pan?PANINO_CFG.speedMult:1));
+    if(e.pan&&e.pan.pauseT>0)e.pan.pauseT=Math.max(0,e.pan.pauseT-dt); // holding still after a wall break (E5b) -- no step() this frame
+    else step(e,dt,e.pan&&e.mode!=="s"?PANINO.choose:chooseE); // scared Super Panino flees on the normal grid, no wall-breaking (E5b)
+    E1UpdateGhost(e,dt);
     if(e.pan&&G.state!=="panintro"){e.pan.t-=dt;if(e.pan.t<=0)PANINO.split(e)} // ticks even while scared (E1UpdateGhost's E1Active gate would otherwise pause it); skipped on the very frame a merge starts (t is still the intro placeholder, not the real life, until finishIntro sets it)
     const [ex,ey]=pos(e);
     if(Math.hypot(ex-px,ey-py)<.62+(e.pan?PANINO_CFG.hitExtra:0)){
