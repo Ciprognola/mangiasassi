@@ -7,7 +7,8 @@ sys.path.insert(0, HERE)
 src = open(os.path.join(HERE, "test_f2b.py"), encoding="utf-8").read()
 exec(compile(src[:src.index("def dev_click")], os.path.join(HERE, "test_f2b.py"), "exec"))  # harness only
 
-EXPECT_MULT = {1: 1.0, 2: 1.1, 3: 1.2, 4: 1.44, 5: 1.44, 6: 1.68, 7: 2.03, 8: 2.1}
+# gironi 7/8's raw formula gives 2.03/2.1 -- both capped to GIR_BONUS.maxMult (1.8) as of E6b (0.4.5_26)
+EXPECT_MULT = {1: 1.0, 2: 1.1, 3: 1.2, 4: 1.44, 5: 1.44, 6: 1.68, 7: 1.8, 8: 1.8}
 
 # force a real girone clear: one pellet, at the player's own cell, then one update() tick
 CLEAR_ONE = """(dt)=>{
@@ -32,19 +33,35 @@ with sync_playwright() as pw:
     ctx, p, errs = page(b, site="stable", local=norm(b, save()), toggle=False, dev=True)
     settle(p, 600)
 
-    # ---------------- mult for gironi 1-8 matches the table; 9+ matches the formula
+    # ---------------- mult for gironi 1-8 matches the table (capped at GIR_BONUS.maxMult); 9+ matches the formula
+    check("GIR_BONUS.maxMult is 1.8", p.evaluate("GIR_BONUS.maxMult") == 1.8, p.evaluate("GIR_BONUS.maxMult"))
     for g in range(1, 9):
         p.evaluate("cancelAnimationFrame(raf);devJump(%d)" % g); p.wait_for_timeout(300)
         r = p.evaluate("""(()=>{const cls=mapClassOf(G.mapi),n2=G.en.filter(e=>e.stage===2).length,n3=G.en.filter(e=>e.stage===3).length;
-          return {mult:GIR_BONUS.cls[cls]*(1+GIR_BONUS.st2*n2+GIR_BONUS.st3*n3),cls,n2,n3}})()""")
+          return {mult:Math.min(GIR_BONUS.maxMult,GIR_BONUS.cls[cls]*(1+GIR_BONUS.st2*n2+GIR_BONUS.st3*n3)),cls,n2,n3}})()""")
         want = EXPECT_MULT[g]
         check(f"girone {g}: bonus mult = {want} ({r['cls']}, {r['n2']}x stage2, {r['n3']}x stage3)", abs(r["mult"] - want) < 1e-9, r)
     for g in (9, 10, 12):
         p.evaluate("cancelAnimationFrame(raf);devJump(%d)" % g); p.wait_for_timeout(300)
         r = p.evaluate("""(()=>{const cls=mapClassOf(G.mapi),n2=G.en.filter(e=>e.stage===2).length,n3=G.en.filter(e=>e.stage===3).length,clsMult={S:1.0,M:1.2,L:1.4}[cls];
-          return {mult:GIR_BONUS.cls[cls]*(1+GIR_BONUS.st2*n2+GIR_BONUS.st3*n3),want:clsMult*(1+.10*n2+.25*n3)}})()""")
+          return {mult:Math.min(GIR_BONUS.maxMult,GIR_BONUS.cls[cls]*(1+GIR_BONUS.st2*n2+GIR_BONUS.st3*n3)),want:Math.min(1.8,clsMult*(1+.10*n2+.25*n3))}})()""")
         check(f"girone {g}: bonus mult matches the formula (girone-9+ classes/stages)", abs(r["mult"] - r["want"]) < 1e-9, r)
     check("no console errors (mult table)", not errs, errs)
+
+    # ---------------- cap boundary: an uncapped girone (6, x1.68) vs a capped one (8, raw x2.1 -> x1.8), plus a
+    # synthetic far-past-the-cap case proving it clamps rather than merely landing near 1.8 by coincidence
+    p.evaluate("cancelAnimationFrame(raf);devJump(6)"); p.wait_for_timeout(300)
+    r = p.evaluate("""(()=>{const cls=mapClassOf(G.mapi),n2=G.en.filter(e=>e.stage===2).length,n3=G.en.filter(e=>e.stage===3).length;
+      return {raw:GIR_BONUS.cls[cls]*(1+GIR_BONUS.st2*n2+GIR_BONUS.st3*n3),capped:Math.min(GIR_BONUS.maxMult,GIR_BONUS.cls[cls]*(1+GIR_BONUS.st2*n2+GIR_BONUS.st3*n3))}})()""")
+    check("girone 6 (x1.68) is below the cap -- capping is a no-op here", r["raw"] < 1.8 and abs(r["capped"] - r["raw"]) < 1e-9, r)
+    p.evaluate("cancelAnimationFrame(raf);devJump(8)"); p.wait_for_timeout(300)
+    r = p.evaluate("""(()=>{const cls=mapClassOf(G.mapi),n2=G.en.filter(e=>e.stage===2).length,n3=G.en.filter(e=>e.stage===3).length;
+      return {raw:GIR_BONUS.cls[cls]*(1+GIR_BONUS.st2*n2+GIR_BONUS.st3*n3),capped:Math.min(GIR_BONUS.maxMult,GIR_BONUS.cls[cls]*(1+GIR_BONUS.st2*n2+GIR_BONUS.st3*n3))}})()""")
+    check("girone 8's raw mult (x2.1) is above the cap and gets clamped to x1.8", r["raw"] > 1.8 and abs(r["capped"] - 1.8) < 1e-9, r)
+    r = p.evaluate("""(()=>{const raw=GIR_BONUS.cls.L*(1+GIR_BONUS.st2*0+GIR_BONUS.st3*20);return{raw,capped:Math.min(GIR_BONUS.maxMult,raw)}})()""")
+    check("a synthetic extreme case (20x stage-3 weight, raw x8.4) still clamps to exactly x1.8, not just near it",
+          r["raw"] > 5 and abs(r["capped"] - 1.8) < 1e-9, r)
+    check("no console errors (cap boundary)", not errs, errs)
 
     # ---------------- clearing a girone adds the bonus exactly once; line shows only when bonus > 0
     for g, wantLine in ((1, False), (2, True), (7, True)):

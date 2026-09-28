@@ -1339,7 +1339,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_25";
+const VERSION="0.4.5_26";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -3721,7 +3721,7 @@ const pickMap=stage=>{
   return mi;
 };
 /* bonus girone (M1b, §10.4): mult = cls[classe] * (1 + st2*n_stage2 + st3*n_stage3), sugli stage reali dei fantasmi appena affrontati (G.en, non un nuovo sorteggio) */
-const GIR_BONUS={cls:{S:1.0,M:1.2,L:1.4},st2:.10,st3:.25};
+const GIR_BONUS={cls:{S:1.0,M:1.2,L:1.4},st2:.10,st3:.25,maxMult:1.8};
 const DX=[0,1,0,-1],DY=[-1,0,1,0];
 /* dimensioni e punti chiave per mappa. Una mappa e' un array di stringhe; se ha .meta sovrascrive i valori di DEFMETA:
    tun = righe con tunnel laterale, start = [x,y] del giocatore, house = [x0,y0,x1,y1] casetta fantasmi, ghosts = 4 posizioni iniziali */
@@ -4576,7 +4576,7 @@ function update(dt){
     for(let i=0;i<4;i++)G.parts.push({x:rx,y:ry,vx:(Math.random()-.5)*4,vy:-Math.random()*3-1,l:.4});
     $("#sc").textContent=G.score;
     if(!G.grid.some(r=>r.includes("."))){G.state="clear";G.t=1.6;G.score+=200;G.girPts=(G.girPts||0)+200;G.pu=null;G.power=0;beep(523,.3,"triangle",.06,1046);if(!G.dev){const c0=S.p.ch[G.char||"roccia"];c0.gir=(c0.gir||0)+1}ach("clear",{ch:G.char,d:G.diff});ach("stage",{ch:G.char,d:G.diff,n:G.stage});
-      {const cls=mapClassOf(G.mapi)||"M",n2=G.en.filter(e=>e.stage===2).length,n3=G.en.filter(e=>e.stage===3).length,mult=GIR_BONUS.cls[cls]*(1+GIR_BONUS.st2*n2+GIR_BONUS.st3*n3),bonus=Math.round((G.girPts||0)*(mult-1));
+      {const cls=mapClassOf(G.mapi)||"M",n2=G.en.filter(e=>e.stage===2).length,n3=G.en.filter(e=>e.stage===3).length,mult=Math.min(GIR_BONUS.maxMult,GIR_BONUS.cls[cls]*(1+GIR_BONUS.st2*n2+GIR_BONUS.st3*n3)),bonus=Math.round((G.girPts||0)*(mult-1));
       G.girBonusTxt=bonus>0?`Bonus girone ×${Math.round(mult*100)/100} +${bonus}`:null;if(bonus>0)G.score+=bonus}
       MPROJ.clear();GREASE.clear();G.en.forEach(E1CancelGhost);PANINO.clear();updateHud();return}
   }

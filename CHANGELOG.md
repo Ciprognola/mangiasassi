@@ -1949,6 +1949,29 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Checks before this release: all test suites green except the known `test_f1` "Esc closes the login" (root-caused, not fixed — 0.5 backlog); `node --check` + smoke test; a save made on the tagged `v0.4` build still loads here with progress, achievements, extras, texts/colours and no console errors; `refs/skins/SKIN_COVERAGE.md` regenerated — every remaining `manca` is one of the grandfathered BK gaps (13 Ferma thrower + 6 Cinghiale frames), nothing new.
 - Not tested: real devices, the live Pages deploy after this release.
 
+## 0.4.5_26 — 2026-09-28 — E6b: girone-bonus cap
+
+- Owner decisions from the E6a report (`docs/releases/0.5-E6a-report.md`), logged in CLAUDE.md §10.9: Flag 1
+  (bonus share up to ~52% at gironi 7–8) → cap the multiplier, nothing else. Flags 2–5 → no code change (girone
+  6's slowness is the L-map/weak-bot combination, not the abilities per the ablation numbers; shooting's low
+  hit rate matches the E3 phone test's own "feels fair" verdict; contact-dominated deaths and chain-driven
+  girPts variance are both by design).
+- **`GIR_BONUS.maxMult: 1.8`** (new field, next to `st2`/`st3`). At girone clear, `mult` is now
+  `Math.min(GIR_BONUS.maxMult, classMult*(1+st2*n2+st3*n3))` — the one line touched. `girPts`, the bonus
+  formula (`bonus=Math.round(girPts*(mult-1))`), the «Bonus girone ×N.N +P» banner and `finishRun`'s own
+  order (limiter → `DIFF.mult` → `.7`, all after the bonus) are unchanged. The Ferma run's own `loopMult`
+  table (§10.6, not built yet) is a separate table and is not touched by this cap.
+- Effect: gironi 1–6 unchanged (their own max is ×1.68, under the cap already); gironi 7+ (and any girone
+  9+ draw with enough stage-3 ghosts) now cap at ×1.8 instead of climbing past it — bonus share tops out
+  around 44% of the girone's own points instead of ~52%.
+- Tests: `test_m1b.py` extended (36/36) — the mult table for gironi 1–12 now expects the capped values
+  (7/8: ×1.8, was ×2.03/×2.1), an explicit uncapped-vs-capped pair (girone 6 vs 8) plus a synthetic
+  far-past-the-cap case (20× stage-3 weight, raw ×8.4) proving it clamps to exactly ×1.8 rather than
+  merely landing near it, and the existing girone-7 clear-line/bonus-amount check now exercises the capped
+  value end to end. `node --check` + headless smoke test green.
+- Not tested: real phone — please clear a girone 7 or 8 and confirm the bonus banner reads «×1.8», not the
+  old higher number.
+
 ## infra/docs — 2026-09-28 — E6a: balance measurement (no game change)
 
 - Owner feedback logged first: 0.4.5_25 (E5b wall-breaking) phone-tested OK. **E5 complete.**
