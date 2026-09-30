@@ -1339,7 +1339,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_27";
+const VERSION="0.4.5_28";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -4274,6 +4274,24 @@ function mazeGFromSave(q){
   const d=mkRun({hard:r.hard});for(const f in d)if(!(f in r))r[f]=d[f];
   q.run=r;return Object.assign(Object.create(RUN_PROTO),q);
 }
+/* FR0b: due momenti del girone, ciascuno legge SOLO la run ricevuta (mai G), cosi' li potra' chiamare anche un piano di Ferma.
+   onGironeClear = l'ultimo pellet (partite giocate, achievement «clear»/«stage» col girone ancora quello vecchio); onGironeAdvance = fine del timer di 1.6s (girone++, sblocchi g5/sec). Ordine e tempi identici a prima */
+function onGironeClear(run){
+  if(!run.dev){const c0=S.p.ch[run.char||"roccia"];c0.gir=(c0.gir||0)+1;ach("clear",{ch:run.char,d:run.diff});ach("stage",{ch:run.char,d:run.diff,n:run.girone})}
+}
+function onGironeAdvance(run){
+  run.girone++;if(!run.dev&&run.girone>=5&&!S.p.g5){S.p.g5=true;persist()}if(!run.dev&&run.girone>=7&&!S.p.sec){S.p.sec=true;persist();setTimeout(()=>toast("Segreto sbloccato: Trasformati! (al posto di Pausa)"),500)}
+}
+/* FR0b: la parte di fine partita che riguarda la sola run (sordi/exp via limiter + DIFF.mult + .7, i 4 achievement, azzera il quicksave). Restituisce cio' che serve alla schermata finale */
+function runPayout(run,o){
+  const D=dfc(),score=run.score,stage=run.girone,p=S.p,ck=run.char||"roccia",cc=p.ch[ck],lim=limiter(cc.lvl),gain=run.dev?0:Math.floor(score*(1-lim)*D.mult*.7),xp=run.dev?0:Math.floor((Math.floor(score*.6)+(stage-1)*20)*D.mult);
+  const oldL=cc.lvl;p.sordi+=gain;if(!run.dev)p.best=Math.max(p.best,score);cc.exp+=xp;
+  while(cc.lvl<100&&cc.exp>=expNeed(cc.lvl)){cc.exp-=expNeed(cc.lvl);cc.lvl++}
+  if(cc.lvl>=100)cc.exp=0;
+  flushTime();{const cx0={ch:ck,d:run.diff||"hard"};ach("sordi",{...cx0,n:gain});ach("run",{...cx0});ach("score",{...cx0,n:score});ach("level",{...cx0,n:maxLevel()})}
+  S.quick=null;persist();cloudFlush();
+  return{D,score,stage,p,ck,cc,gain,xp,oldL};
+}
 function devJump(n,mi){
   cancelAnimationFrame(raf);G=mkMazeG({girone:n,score:1500,lives:3,hard:false,dev:true,mi});
   resetActors();G.parts=[];screen="game";syncMusic();buildGameDOM();
@@ -4551,7 +4569,7 @@ function update(dt){
   G.anim+=dt;
   if(G.state==="ready"){G.t-=dt;if(G.t<=0)G.state="play";return}
   if(G.state==="dying"){G.t-=dt;if(G.t<=0){G.lives--;if(G.lives<=0)finishRun();else{resetActors(true);G.invuln=RESPAWN_INVULN;updateHud()}}return}
-  if(G.state==="clear"){G.t-=dt;if(G.t<=0){G.stage++;if(!G.dev&&G.stage>=5&&!S.p.g5){S.p.g5=true;persist()}if(!G.dev&&G.stage>=7&&!S.p.sec){S.p.sec=true;persist();setTimeout(()=>toast("Segreto sbloccato: Trasformati! (al posto di Pausa)"),500)}if(!G.hard)G.lives=3;G.mapi=pickMap(G.stage);G.grid=freshGrid(G.mapi);if(cv)sizeCanvas();resetActors();G.girPts=0;G.girBonusTxt=null;updateHud();bjAfterClear()}return}
+  if(G.state==="clear"){G.t-=dt;if(G.t<=0){onGironeAdvance(G.run);if(!G.hard)G.lives=3;G.mapi=pickMap(G.stage);G.grid=freshGrid(G.mapi);if(cv)sizeCanvas();resetActors();G.girPts=0;G.girBonusTxt=null;updateHud();bjAfterClear()}return}
   if(G.state==="panintro"){G.t-=dt;if(G.t<=0){PANINO.finishIntro();G.state="play"}return}
   if(G.state!=="play")return;
   G.invuln=Math.max(0,G.invuln-dt);A_t+=dt;if(A_t>=5)flushTime();
@@ -4595,7 +4613,7 @@ function update(dt){
     G.grid[ry][(rx+W)%W]=" ";G.score+=10;G.girPts=(G.girPts||0)+10;P.eat=gcar()==="algidone"?.26:.26;playSnd("eat");ach("eat",{ch:G.char,rk:G.rock,pl:G.plane,d:G.diff});
     for(let i=0;i<4;i++)G.parts.push({x:rx,y:ry,vx:(Math.random()-.5)*4,vy:-Math.random()*3-1,l:.4});
     $("#sc").textContent=G.score;
-    if(!G.grid.some(r=>r.includes("."))){G.state="clear";G.t=1.6;G.score+=200;G.girPts=(G.girPts||0)+200;G.pu=null;G.power=0;beep(523,.3,"triangle",.06,1046);if(!G.dev){const c0=S.p.ch[G.char||"roccia"];c0.gir=(c0.gir||0)+1}ach("clear",{ch:G.char,d:G.diff});ach("stage",{ch:G.char,d:G.diff,n:G.stage});
+    if(!G.grid.some(r=>r.includes("."))){G.state="clear";G.t=1.6;G.score+=200;G.girPts=(G.girPts||0)+200;G.pu=null;G.power=0;beep(523,.3,"triangle",.06,1046);onGironeClear(G.run);
       {const cls=mapClassOf(G.mapi)||"M",n2=G.en.filter(e=>e.stage===2).length,n3=G.en.filter(e=>e.stage===3).length,mult=Math.min(GIR_BONUS.maxMult,GIR_BONUS.cls[cls]*(1+GIR_BONUS.st2*n2+GIR_BONUS.st3*n3)),bonus=Math.round((G.girPts||0)*(mult-1));
       G.girBonusTxt=bonus>0?`Bonus girone ×${Math.round(mult*100)/100} +${bonus}`:null;if(bonus>0)G.score+=bonus}
       MPROJ.clear();GREASE.clear();G.en.forEach(E1CancelGhost);PANINO.clear();updateHud();return}
@@ -4895,12 +4913,8 @@ function quoteFor(ck){
 }
 function finishRun(o){
   cancelAnimationFrame(raf);
-  const D=dfc(),score=G.score,stage=G.stage,p=S.p,ck=G.char||"roccia",cc=p.ch[ck],lim=limiter(cc.lvl),gain=G.dev?0:Math.floor(score*(1-lim)*D.mult*.7),xp=G.dev?0:Math.floor((Math.floor(score*.6)+(stage-1)*20)*D.mult);
-  const oldL=cc.lvl;p.sordi+=gain;if(!G.dev)p.best=Math.max(p.best,score);cc.exp+=xp;
-  while(cc.lvl<100&&cc.exp>=expNeed(cc.lvl)){cc.exp-=expNeed(cc.lvl);cc.lvl++}
-  if(cc.lvl>=100)cc.exp=0;
-  flushTime();{const cx0={ch:ck,d:G.diff||"hard"};ach("sordi",{...cx0,n:gain});ach("run",{...cx0});ach("score",{...cx0,n:score});ach("level",{...cx0,n:maxLevel()})}
-  const hardRun=!!G.hard,runGame=G.game||"maze";S.quick=null;persist();cloudFlush();G=null;
+  const R=G.run,{D,score,stage,p,ck,cc,gain,xp,oldL}=runPayout(R,o);
+  const hardRun=!!R.hard,runGame=R.game||"maze";G=null;
   if(o&&o.quiet){go("menu");toast("Partita abbandonata · +"+gain+" sordi");if(cc.lvl>oldL)celebrate(oldL,cc.lvl,showAchQ,ck);else showAchQ();return}
   screen="over";syncMusic();
   shell(`<div class="screen">${bugBtn("fixr")}<div class="center" style="width:100%"><h2 style="font-size:1.6rem;color:var(--alarm);margin:0 0 4px">Partita finita</h2>
@@ -5082,12 +5096,12 @@ function bjSkip(){if(!B||B.dead||!B.skippable)return false;for(const [id,res] of
 let bjPauseT=0,bjPausedAcc=0,bjGate=Promise.resolve(),bjGateRes=null;
 const bjNow=()=>(bjPauseT||performance.now()/1000)-bjPausedAcc;
 function bjResume(){if(!bjPauseT)return;bjPausedAcc+=performance.now()/1000-bjPauseT;bjPauseT=0;const r=bjGateRes;bjGateRes=null;bjGate=Promise.resolve();if(r)r()}
-const bjScore=()=>B.run?G.score:B.dbgScore;
-function bjSetScore(v){if(B.run)G.score=v;else B.dbgScore=v;bjHud()}
+const bjScore=()=>B.run?B.host.score:B.dbgScore;
+function bjSetScore(v){if(B.run)B.host.score=v;else B.dbgScore=v;bjHud()}
 const bjShown=()=>B.bet||(B.selecting?bjStake():0);
 function bjHud(){const a=document.getElementById("bsc"),b=document.getElementById("bbet"),v=bjShown();if(a)a.textContent=bjScore();if(b)b.textContent=v?"PUNTATA "+v:""}
 function bjMake(o){
-  return{o,run:!!o.run,dbg:!!o.dbg,dbgScore:o.score||0,price:o.price,visits:o.visits||0,shoe:bjNewShoe(),pc:[],dc:[],cards:[],
+  return{o,run:!!o.run,host:o.host||null,dbg:!!o.dbg,dbgScore:o.score||0,price:o.price,visits:o.visits||0,shoe:bjNewShoe(),pc:[],dc:[],cards:[],
     da:{name:"idle",t0:bjNow(),rep:1,hold:0},smoke:[],lt:null,litGlow:1,banner:null,say:null,expr:0,menu:null,cursor:0,timers:new Set(),dead:false,
     confirmRes:null,menuRes:null,presRes:null,vars:{price:o.price},bet:0,raise:0,doubled:false,surr:false,nextLighter:0,waits:new Map(),skippable:false,cigLit:false,cigOutAt:0,lastDealAt:0,lastDealAnim:false,L:null,W:0,H:0,dpr:1,lastTxt:"",auto:o.auto||null,talkT:0};
 }
@@ -5532,9 +5546,9 @@ async function startGamblador(o){
   screen="bj";
   cancelAnimationFrame(raf);cancelAnimationFrame(menuRaf);
   await ensureBJ();await gamMusicInit();
-  const score=o.run?G.score:(o.score||1000),visits=o.run?S.p.gam.visits:0,price=bjPrice(score,visits);
+  const host=o.run?G.run:null,score=o.run?host.score:(o.score||1000),visits=o.run?S.p.gam.visits:0,price=bjPrice(score,visits);
   bjPauseT=0;bjPausedAcc=0;bjGate=Promise.resolve();bjGateRes=null;
-  B=bjMake({run:o.run,dbg:!o.run,score,visits,price,auto:o.auto});
+  B=bjMake({run:o.run,host,dbg:!o.run,score,visits,price,auto:o.auto});
   if(o.run){S.p.gam.visits++;S.p.gam.seen=true;persist()}
   buildBJDOM();bjSize();bjHud();
   bjLoop();
@@ -5649,7 +5663,7 @@ async function startFerma(o){
   cancelAnimationFrame(raf);cancelAnimationFrame(menuRaf);
   await ensureFA();
   if(screen!=="fa")return;
-  FA={lv:FA_LEVELS[o.level||0],level:o.level||0,floorScore:0,extra:!!o.extra,t:0,acc:0,last:performance.now(),raf:0,dead:false,debug:!!o.debug,test:!!o.test||!o.run,enc:o.encounter?{n:Math.min(3,Math.max(1,o.encounter)),run:!!o.run,mult5:!!o.mult5,dev:!!o.dev}:null,floorLives:3,paid:false,p:{},goal:false,lastDmg:null,items:[],nid:0,jumps:0,throws:0,lives:3,score:0,stock:FA_LEVELS[o.level||0].stock,state:"play",paused:false,dyingT:0,inv:0,flash:0,hud:{}};
+  FA={lv:FA_LEVELS[o.level||0],level:o.level||0,floorScore:0,extra:!!o.extra,t:0,acc:0,last:performance.now(),raf:0,dead:false,debug:!!o.debug,test:!!o.test||!o.run,enc:o.encounter?{n:Math.min(3,Math.max(1,o.encounter)),run:!!o.run,mult5:!!o.mult5,dev:!!o.dev,host:o.run&&G?G.run:null}:null,floorLives:3,paid:false,p:{},goal:false,lastDmg:null,items:[],nid:0,jumps:0,throws:0,lives:3,score:0,stock:FA_LEVELS[o.level||0].stock,state:"play",paused:false,dyingT:0,inv:0,flash:0,hud:{}};
   FA.dm=FA_DIFF[(o.run&&G&&G.diff)||S.opts.diff||"medium"]||FA_DIFF.medium;FA.cfg=faCfg();faInitBelts(); // extra = prova dev: carne che rimbalza + griglia/fiamme (piano 3)
   faKeysClear();faRespawn();
   if(o.goal){const g=FA.lv.goal,p=FA.p;p.gi=g.gi;p.x=(g.x1+g.x2)/2;p.y=faGirderY(FA.lv.girders[g.gi],p.x)} // prova dev: uscita di Algidone, il giocatore parte nella zona obiettivo
@@ -5743,7 +5757,7 @@ function faClear(fl){
 }
 function faEncPay(){ // incontro vinto: il punteggio finale (bonus scorta compreso) si somma al punteggio della partita, che la solita fine partita converte in sordi/exp (difficolta' + limiter)
   const e=FA.enc;if(!faReal()||FA.paid||FA.level+1<e.n)return;
-  FA.paid=true;G.score+=FA.cnt.base+FA.cnt.bonus;
+  FA.paid=true;e.host.score+=FA.cnt.base+FA.cnt.bonus;
 }
 function faWinPanel(){
   const bonus=Math.floor(FA.stock)*10;FA.cnt={base:FA.score,bonus,shown:0};FA.state="win";faEncPay();

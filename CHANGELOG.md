@@ -1949,6 +1949,17 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Checks before this release: all test suites green except the known `test_f1` "Esc closes the login" (root-caused, not fixed — 0.5 backlog); `node --check` + smoke test; a save made on the tagged `v0.4` build still loads here with progress, achievements, extras, texts/colours and no console errors; `refs/skins/SKIN_COVERAGE.md` regenerated — every remaining `manca` is one of the grandfathered BK gaps (13 Ferma thrower + 6 Cinghiale frames), nothing new.
 - Not tested: real devices, the live Pages deploy after this release.
 
+## 0.4.5_28 — 2026-10-01 — FR0b: girone hooks, runPayout, host runs, no behaviour change
+
+- 0.4.5_27 phone test OK; FR0a deviations accepted; both logged in CLAUDE.md §10.9 with the step-0 stop and the owner's option-1 decision.
+- **Two girone hooks** in the run-layer block, each reading only its run argument: `onGironeClear(run)` = the last-pellet moment (career gironi +1, `ach("clear")`, `ach("stage",{n:run.girone})` with the OLD girone, all behind `!run.dev`); `onGironeAdvance(run)` = the end of the 1.6 s timer (`run.girone++`, g5 unlock, sec unlock + toast). The pellet code and the "clear" branch now call them where those statements were; every other maze statement stays in place and order. No `ach()` change.
+- **`runPayout(run,o)`** = the run-level half of `finishRun` (sordi/XP, 4 achievements, `S.quick=null`, `persist()`, `cloudFlush()`); `finishRun(o)` keeps its signature and effect order and does the maze-only rest (`G=null`, over screen / menu + toast, «Ancora!»).
+- **Host runs**: `FA.enc.host = G.run` for a real Ferma encounter, `faEncPay` adds to it; `B.host = G.run` for `startGamblador({run:true})`, used by `bjScore`/`bjSetScore` and the buy-in. Practice/non-run tables untouched.
+- `tools/fbstub/sim_e6_results.json` added to `.gitignore`.
+- Size: +936 bytes (`index.html`, LF-normalised).
+- Tests: new `tools/fbstub/test_fr0b.py` (golden comparison against the previous build 0.4.5_27 on: a real girone clear sampled at both moments incl. g5/sec, quitting inside the clear window, `finishRun` quiet/normal + «Ancora!», a `devJump` clear, the Ferma encounter pay-out, El Gamblador win and loss through real hands; plus the hooks and `runPayout` on plain run objects with `G=null`, and a dev run object). Re-run: `test_fr0a`, `test_m1a`, `test_m1b`, `test_f2b`, `test_u1` (forced Ferma invite / `bjAfterClear`), `test_b2`, `test_e5a`, `test_e5b`, `test_s1` (counts in the session report). `node --check` + headless smoke test green.
+- Not tested: real phone; a Ferma encounter played to the end by hand (the pay-out is called directly after a real invite → `startFerma`); El Gamblador's raise/double/surrender paths (only stand hands, win and loss).
+
 ## 0.4.5_27 — 2026-09-30 — FR0a: run layer (G.run + aliases), no behaviour change
 
 - 0.4.5_26 phone test OK (banner ×1.8 at girone 8, ×1.44 at girone 4), logged in CLAUDE.md §10.9 with the owner's FR0 answers (Q1–Q4) and the step-0 audit.

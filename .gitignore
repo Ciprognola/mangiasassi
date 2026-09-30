@@ -1,2 +1,3 @@
 __pycache__/
 *.pyc
+tools/fbstub/sim_e6_results.json
