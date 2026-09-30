@@ -1949,6 +1949,17 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Checks before this release: all test suites green except the known `test_f1` "Esc closes the login" (root-caused, not fixed — 0.5 backlog); `node --check` + smoke test; a save made on the tagged `v0.4` build still loads here with progress, achievements, extras, texts/colours and no console errors; `refs/skins/SKIN_COVERAGE.md` regenerated — every remaining `manca` is one of the grandfathered BK gaps (13 Ferma thrower + 6 Cinghiale frames), nothing new.
 - Not tested: real devices, the live Pages deploy after this release.
 
+## 0.4.5_31 — 2026-10-01 — FA-MUS: Ferma Algidone! soundtrack, bite sound
+
+- 0.4.5_30 phone test OK, all seven FR1a2 deviations accepted (CLAUDE.md §10.9). The earlier ffmpeg stop was correct — no ffmpeg or audio library available in this environment, only an unrelated app's bundled binary; the owner cut the loop in Claude chat (§6 rule 7: 54.4s of the 111s original, beat-aligned, 0.8s equal-power crossfade, MP3 48 kbps mono) and uploaded `refs/ferma_algidone/fa_music_loop.mp3`, embedded as-is.
+- **Ferma Algidone! now has music** (`music.fa`, `FA_MUSIC_B64`): plays in practice, the maze encounter and a Ferma run alike, across intro cards, floors, gironi, deaths and respawns; paused with the game (pause menu and backgrounding, via the existing `faPause`); silent on leaving to the maze, the menu track resumes on leaving to the menu; respects the music on/off/volume options.
+- **Last-bite ending**: the music slows to ×0.3 with the action, then fades out over the same second the screen fades to black, and stops the instant the «Algidone ha finito tutto!» popup shows.
+- **`loopTrack` gained a generic `rate` (playbackRate) property**, alongside the existing `volume` one, reset on `release()` — every other track defaults to rate 1, unaffected.
+- **Dev tools**: upload/reset for `music.fa` (open to every dev, Opzioni › Sviluppatore › Ferma Algidone!), export target `music.fa`; a new SFX slot `sound.fa.bite` (synth placeholder, dev upload/reset/export) plays at every scheduled bite in a run and every eat in practice/encounter.
+- Size: +446 180 bytes (`index.html`, LF-normalised — the embedded MP3, base64, is the entire delta).
+- Tests: new `tools/fbstub/test_famus.py` (34/34: starts in all three modes and survives a floor change/death, pause/resume, exit-to-maze silence vs exit-to-menu, the last-bite rate/fade/stop sequence, the music-off case, dev upload/reset/export, the bite sound on a scheduled bite and on a practice eat, and that the other three tracks still start with rate 1). Re-run green: test_fr1a2 67/67, test_fr1a1 33/33, test_u1 27/27, test_toast_diag (counts in the commit), test_f3b/test_f4a/test_f4b1 (A0/M7 audio-adjacent suites). `node --check` + headless smoke test green.
+- Not tested: real-device audio above all — how the track actually sounds looped, the last-bite slow-down/fade/stop heard live, the bite sound's synth placeholder, and volume levels relative to the other tracks.
+
 ## 0.4.5_30 — 2026-10-01 — Ferma HUD fix + FR1a2: the Ferma run's time bar
 
 - 0.4.5_29 phone test: all OK except «Esci» hidden by the bug icon; FR1a1 deviations accepted (CLAUDE.md §10.9).
