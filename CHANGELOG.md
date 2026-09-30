@@ -1949,6 +1949,20 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Checks before this release: all test suites green except the known `test_f1` "Esc closes the login" (root-caused, not fixed — 0.5 backlog); `node --check` + smoke test; a save made on the tagged `v0.4` build still loads here with progress, achievements, extras, texts/colours and no console errors; `refs/skins/SKIN_COVERAGE.md` regenerated — every remaining `manca` is one of the grandfathered BK gaps (13 Ferma thrower + 6 Cinghiale frames), nothing new.
 - Not tested: real devices, the live Pages deploy after this release.
 
+## 0.4.5_29 — 2026-10-01 — FR1a1: Ferma Algidone! run shell
+
+- 0.4.5_28 phone test OK (FR0 complete); FR0b deviations accepted; FR1a split into FR1a1 / FR1a2 / FA-MUS (CLAUDE.md §10.8/§10.9).
+- **«Ferma Algidone!» is playable as a run** from «Nuovo gioco» / «Hardcore» (Uomo roccia's chooser; Algidone still goes straight to the maze). `startFermaRun` → `FA.run` (G=null), `FA.score`/`FA.lives` aliased onto it; own table `FA_RUN={lives:3,hardRefill:false}`.
+- Girone g plays level (g−1) mod 3, looping after the floor-3 collapse. Floor win → `onGironeClear` (career gironi, girone achievements); «Avanti» → `onGironeAdvance` + lives refill (not in Hardcore). Every run win panel is «Avanti» + «Esci» (no Riprova/Rigioca); the lost panel is «Continua».
+- Soft respawn in a run: a death costs one life only (no 10 s stock loss, no forced eat); bolts/holes, belts, stock, score carry on; items cleared, 2 s invulnerability, throw grace as today.
+- End: 0 lives → lost panel → `runPayout(FA.run)` → «Partita finita» (split out of `finishRun` as `runOverScreen`, shared by both games; «Ancora!» restarts the same game); pause/win-panel «Esci» → quiet end with payout. No quicksave (FR1b).
+- `activeRun()`: `dfc`, `gcar`, `curD`, `ach`'s dev check and `faReal` read the active run (maze values unchanged, golden-tested).
+- Display: intro card «Girone N · <piano>», HUD «Girone N» (run only). Dev: «Partita Ferma dal girone N» next to «Vai al girone».
+- Unchanged: practice, the maze encounter, stock bar, stock bonus, throws/eats, difficulty, `bjAfterClear`, music.
+- Size: +3947 bytes (`index.html`, LF-normalised).
+- Tests: new `tools/fbstub/test_fr1a1.py` (33/33); re-run listed in the session report. `test_s1.py` updated (the only existing test touched): its three «In arrivo» lock checks (option disabled, locked click does nothing, arrow skip) became one check that both options are enabled — the lock is gone by design (18 → 16 checks).
+- Not tested: real phone (touch pad, HUD width with «Girone N» on a real device, audio); a Ferma run played by hand end to end (wins are driven by `faWin`/`faFinalWin` + `faStep`, deaths by `faDie`).
+
 ## 0.4.5_28 — 2026-10-01 — FR0b: girone hooks, runPayout, host runs, no behaviour change
 
 - 0.4.5_27 phone test OK; FR0a deviations accepted; both logged in CLAUDE.md §10.9 with the step-0 stop and the owner's option-1 decision.

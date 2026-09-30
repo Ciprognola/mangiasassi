@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""0.4.5_11 (S1) tests: game chooser at «Nuovo gioco»/«Hardcore» for Uomo roccia only, Ferma option locked («In arrivo»), Algidone straight to the maze,
+"""0.4.5_11 (S1) tests: game chooser at «Nuovo gioco»/«Hardcore» for Uomo roccia only, Ferma option enabled since 0.4.5_29 (was locked «In arrivo»), Algidone straight to the maze,
 overwrite confirm first, nextMinigame follows the run's game. Reuses the harness of test_f2b.py. Run: python tools/fbstub/test_s1.py"""
 import json, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -25,12 +25,8 @@ with sync_playwright() as pw:
     s = p.evaluate(CH)
     check("Uomo roccia: «Nuovo gioco» asks which game first (no run started yet)", s["modal"] and "partita" in s["title"].lower() and not s["run"], s)
     txt = p.evaluate("[...document.querySelectorAll('[data-rg]')].map(b=>({id:b.dataset.rg,t:b.textContent.trim(),dis:b.disabled}))")
-    check("options: «Mangiaroccia» available, «Ferma Algidone!» disabled and marked «In arrivo»", txt == [{"id": "maze", "t": "Mangiaroccia", "dis": False}, {"id": "ferma", "t": "Ferma Algidone! · In arrivo", "dis": True}], txt)
-    p.click("[data-rg=ferma]", force=True); p.wait_for_timeout(300)
-    s = p.evaluate(CH)
-    check("clicking the locked Ferma option does nothing (chooser stays, no run)", s["modal"] and not s["run"], s)
-    p.evaluate("KNAV.off()"); p.keyboard.press("ArrowDown"); p.wait_for_timeout(50)
-    check("(arrow navigation skips the disabled option)", "ferma" not in p.evaluate("[...document.querySelectorAll('.kf')].map(e=>e.dataset.rg||'')"))
+    # 0.4.5_29 (FR1a1): the Ferma run exists now -- the option is enabled, no «In arrivo» (its own flow is tested in test_fr1a1.py)
+    check("options: «Mangiaroccia» and «Ferma Algidone!» both available (FR1a1: no more «In arrivo»)", txt == [{"id": "maze", "t": "Mangiaroccia", "dis": False}, {"id": "ferma", "t": "Ferma Algidone!", "dis": False}], txt)
     p.click("#rgx"); p.wait_for_timeout(200)
     check("«Indietro» closes the chooser without starting anything", not p.evaluate("!!document.querySelector('#modal .ov')") and not p.evaluate("!!G"))
     p.click("[data-tile=new]"); p.wait_for_selector("[data-rg=maze]"); p.click("[data-rg=maze]"); p.wait_for_function("G&&G.state", timeout=8000)
