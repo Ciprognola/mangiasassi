@@ -1949,6 +1949,17 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Checks before this release: all test suites green except the known `test_f1` "Esc closes the login" (root-caused, not fixed — 0.5 backlog); `node --check` + smoke test; a save made on the tagged `v0.4` build still loads here with progress, achievements, extras, texts/colours and no console errors; `refs/skins/SKIN_COVERAGE.md` regenerated — every remaining `manca` is one of the grandfathered BK gaps (13 Ferma thrower + 6 Cinghiale frames), nothing new.
 - Not tested: real devices, the live Pages deploy after this release.
 
+## 0.4.5_30 — 2026-10-01 — Ferma HUD fix + FR1a2: the Ferma run's time bar
+
+- 0.4.5_29 phone test: all OK except «Esci» hidden by the bug icon; FR1a1 deviations accepted (CLAUDE.md §10.9).
+- **Fix — Ferma HUD vs the bug icon**: every panel button was already the topmost element at both phone sizes; the real problem was the run HUD row (score, pile, bar, lives, «Girone N», bug icon, pause) needing 394 px and overflowing screens narrower than that, so the pause button (the way to «Esci») sat under/off the screen beside the icon. The girone label (`#fawv`) moved out of the HUD into the stage (top-left, non-interactive); the HUD now fits 360/390/412. The bug icon stayed where it was on every screen.
+- **FR1a2 — eat-driven time bar, Ferma run only**: `FA_RUN.bar` table (L1 120 s, −15 s/loop, min 75; N1 12 bites, −2/loop, min 6, then ±1 at random). Algidone no longer eats at random in a run: bites fall due every `(L/N)(1±15%)` s of play time (each due time measured from the previous due time), wait for a throw in progress, then the usual eat animation; each bite removes exactly 1/N of the bar, drained smoothly. The clock runs only while playing (not in the intro card, pause, death animation, win sequence or last-bite ending; it runs during the respawn invulnerability). A death costs no bite and no bar. Floor win: bar frozen, bonus = uneaten bites × 100 (replaces `floor(stock)*10` in a run). Last bite: ×0.3 slow motion for 1.5 s, 1 s fade to black, popup «Algidone ha finito tutto!» / «Continua» → `runPayout` → «Partita finita». Game over = 0 lives or empty bar.
+- Dev: readout «morsi X/N · prossimo Ys» under the girone label; «Ultimo morso» in the run's pause menu (one bite left, next in 1 s).
+- Unchanged: practice (Giochi) and the maze encounter (continuous drain, random eat, 10 s death stock loss, `floor(stock)*10`) — golden-tested against 0.4.5_29; maze, music, quicksave, encounters, loop difficulty scaling.
+- Size: +3693 bytes (`index.html`, LF-normalised).
+- Tests: new `tools/fbstub/test_fr1a2.py` (67/67). Re-run green: test_fr1a1 33/33, test_fr0b 29/29, test_fr0a 27/27, test_u1 27/27, test_toast_diag 43/43, test_s1 16/16, test_f6 60/60. `node --check` + headless smoke test green.
+- Not tested: real phone (HUD/tap on a real device, feel of the bite pace and of the slow-motion ending), audio (no eat sound exists today, none added); a whole Ferma run played by hand.
+
 ## 0.4.5_29 — 2026-10-01 — FR1a1: Ferma Algidone! run shell
 
 - 0.4.5_28 phone test OK (FR0 complete); FR0b deviations accepted; FR1a split into FR1a1 / FR1a2 / FA-MUS (CLAUDE.md §10.8/§10.9).
