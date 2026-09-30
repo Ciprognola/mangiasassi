@@ -1339,7 +1339,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_26";
+const VERSION="0.4.5_27";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -4252,17 +4252,37 @@ function resetActors(keep){
   G.st=(keep&&G.st)?{on:false,t:0,tp:0,cd:G.st.cd||0}:null;
   G.fx=[];G.shake=0;G.burn=0;G.inW=false;G.cam=null;
 }
+/* ==== run layer (FR0a, §10.6/§10.0): la partita come oggetto a se', slegato dal gioco (G.run oggi, FA.run in FR1a). Modulo autonomo, dati in cima.
+   RUN_ALIAS = nome su G -> campo della partita. Un G del labirinto nasce da Object.create(RUN_PROTO): G.stage/G.score/... sono get/set EREDITATI che
+   leggono e scrivono G.run (mai proprieta' proprie), quindi JSON.stringify(G) (quicksave) porta solo "run". Il rinomina vero (G.stage -> run.girone) aspetta la build post-1.0 */
+const RUN_ALIAS={stage:"girone",score:"score",girPts:"girPts",girBonusTxt:"girBonusTxt",lives:"lives",hard:"hard",game:"game",char:"char",diff:"diff",dev:"dev"};
+function mkRun(o){o=o||{};return{girone:o.girone||1,score:o.score||0,girPts:0,girBonusTxt:null,lives:o.lives!=null?o.lives:(o.hard?4:3),hard:!!o.hard,game:o.game||"maze",char:o.char||S.p.char||"roccia",diff:o.diff||S.opts.diff||"medium",dev:!!o.dev}}
+const RUN_PROTO={};
+for(const k in RUN_ALIAS){const f=RUN_ALIAS[k];Object.defineProperty(RUN_PROTO,k,{get(){return this.run[f]},set(v){this.run[f]=v},enumerable:false,configurable:true})}
+/* l'UNICO costruttore di un G nuovo del labirinto (startGame e devJump). o = campi della partita (mkRun) + mi = mappa forzata (devJump) */
+function mkMazeG(o){
+  const M0=o.mi!=null?o.mi:pickMap(o.girone||1),g=Object.assign(Object.create(RUN_PROTO),{run:mkRun(o),grid:freshGrid(M0),parts:[],mapi:M0,plane:cs().selP,rock:cs().selR,lastMi:{S:null,M:null,L:null}});
+  if(mapClassOf(M0))g.lastMi[mapClassOf(M0)]=M0;
+  return g;
+}
+/* resume: rimette sul prototipo la copia del quicksave. Quicksave vecchio (stage/score/... sciolti, senza run) -> i valori passano in una run nuova e
+   spariscono come proprieta' proprie; i campi mancanti prendono i default di mkRun (girPts 0, game "maze", ...) */
+function mazeGFromSave(q){
+  const r=q.run||{};
+  if(!q.run)for(const k in RUN_ALIAS)if(k in q)r[RUN_ALIAS[k]]=q[k];
+  for(const k in RUN_ALIAS)delete q[k];
+  const d=mkRun({hard:r.hard});for(const f in d)if(!(f in r))r[f]=d[f];
+  q.run=r;return Object.assign(Object.create(RUN_PROTO),q);
+}
 function devJump(n,mi){
-  cancelAnimationFrame(raf);const M0=mi!=null?mi:pickMap(n);
-  G={stage:n,score:1500,lives:3,hard:false,dev:true,grid:freshGrid(M0),parts:[],diff:S.opts.diff||"medium",char:S.p.char||"roccia",mapi:M0,plane:cs().selP,rock:cs().selR,lastMi:{S:null,M:null,L:null}};
-  if(mapClassOf(M0))G.lastMi[mapClassOf(M0)]=M0;
+  cancelAnimationFrame(raf);G=mkMazeG({girone:n,score:1500,lives:3,hard:false,dev:true,mi});
   resetActors();G.parts=[];screen="game";syncMusic();buildGameDOM();
   toast("Partita di prova · girone "+n+" · nessun progresso salvato");
 }
 function startGame(resume,opt){
   cancelAnimationFrame(raf);
-  if(resume&&S.quick){G=JSON.parse(JSON.stringify(S.quick));G.mapi=G.mapi||0;setDims(G.mapi);G.power=G.power>0?G.power:0;G.pu=G.pu||null;G.since=G.since||0;G.open=G.open||8;G.chain=G.chain||0;G.still=false;G.char=G.char||"roccia";G.game=G.game||"maze";G.mapi=G.mapi||0;G.plane=G.plane||0;G.rock=G.rock||0;G.banner=null;G.lastMi=G.lastMi||{S:null,M:null,L:null};if(mapClassOf(G.mapi)&&!G.lastMi[mapClassOf(G.mapi)])G.lastMi[mapClassOf(G.mapi)]=G.mapi;G.en.forEach(e=>{e.mode=e.mode||"n";e.gt=e.gt||0;e.stage=e.stage||2;if(G.power<=0&&e.mode==="s")e.mode="n";if(!e.ab)E1InitGhost(e)});G.girPts=G.girPts||0;G.girBonusTxt=null;G.state="ready";G.t=1.4;G.invuln=Math.max(0,+G.invuln||0);G.anim=0;G.st=null;G.fx=[];G.shake=0;G.burn=0;G.cam=null}
-  else{const stage0=(opt&&opt.stage)||1,M0=pickMap(stage0);G={game:(opt&&opt.game)||"maze",stage:stage0,score:(opt&&opt.score)||0,lives:opt&&opt.hard?4:3,hard:!!(opt&&opt.hard),grid:freshGrid(M0),parts:[],diff:S.opts.diff||"medium",char:S.p.char||"roccia",mapi:M0,plane:cs().selP,rock:cs().selR,lastMi:{S:null,M:null,L:null}};if(mapClassOf(M0))G.lastMi[mapClassOf(M0)]=M0;resetActors();ach("dbg_new",{ch:G.char,d:G.diff})}
+  if(resume&&S.quick){G=mazeGFromSave(JSON.parse(JSON.stringify(S.quick)));G.mapi=G.mapi||0;setDims(G.mapi);G.power=G.power>0?G.power:0;G.pu=G.pu||null;G.since=G.since||0;G.open=G.open||8;G.chain=G.chain||0;G.still=false;G.char=G.char||"roccia";G.game=G.game||"maze";G.mapi=G.mapi||0;G.plane=G.plane||0;G.rock=G.rock||0;G.banner=null;G.lastMi=G.lastMi||{S:null,M:null,L:null};if(mapClassOf(G.mapi)&&!G.lastMi[mapClassOf(G.mapi)])G.lastMi[mapClassOf(G.mapi)]=G.mapi;G.en.forEach(e=>{e.mode=e.mode||"n";e.gt=e.gt||0;e.stage=e.stage||2;if(G.power<=0&&e.mode==="s")e.mode="n";if(!e.ab)E1InitGhost(e)});G.girPts=G.girPts||0;G.girBonusTxt=null;G.state="ready";G.t=1.4;G.invuln=Math.max(0,+G.invuln||0);G.anim=0;G.st=null;G.fx=[];G.shake=0;G.burn=0;G.cam=null}
+  else{G=mkMazeG({girone:(opt&&opt.stage)||1,score:(opt&&opt.score)||0,hard:!!(opt&&opt.hard),game:(opt&&opt.game)||"maze"});resetActors();ach("dbg_new",{ch:G.char,d:G.diff})}
   G.parts=[];screen="game";syncMusic();buildGameDOM();
 }
 /* ---- abilita' segrete (dal girone 7): Uomo roccia "Trasformati" ---- */

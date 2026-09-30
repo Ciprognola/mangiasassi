@@ -1949,6 +1949,16 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Checks before this release: all test suites green except the known `test_f1` "Esc closes the login" (root-caused, not fixed — 0.5 backlog); `node --check` + smoke test; a save made on the tagged `v0.4` build still loads here with progress, achievements, extras, texts/colours and no console errors; `refs/skins/SKIN_COVERAGE.md` regenerated — every remaining `manca` is one of the grandfathered BK gaps (13 Ferma thrower + 6 Cinghiale frames), nothing new.
 - Not tested: real devices, the live Pages deploy after this release.
 
+## 0.4.5_27 — 2026-09-30 — FR0a: run layer (G.run + aliases), no behaviour change
+
+- 0.4.5_26 phone test OK (banner ×1.8 at girone 8, ×1.44 at girone 4), logged in CLAUDE.md §10.9 with the owner's FR0 answers (Q1–Q4) and the step-0 audit.
+- **Run layer** (new self-contained block before `devJump`): `RUN_ALIAS` (name on `G` → run field, `stage→girone`), `mkRun(o)` (plain run object with today's defaults), `RUN_PROTO` (one get/set pair per alias onto `this.run`), `mkMazeG(o)` (the one builder of a fresh maze `G`, used by `startGame`'s new-game branch and by `devJump`), `mazeGFromSave(q)` (resume). Every maze `G` is `Object.create(RUN_PROTO)`: `G.stage`/`G.score`/`G.lives`/… are inherited accessors onto `G.run`, never own properties, so every existing reader/writer (HUD, `update`, `finishRun`, `bjSetScore`, `faEncPay`, dev UI) is untouched.
+- **Quicksave** unchanged in code: its JSON clone now carries `run` and none of the aliased names. **Resume**: a quicksave with `run` fills any missing run field from `mkRun`; an old-shaped one (loose `stage`/`score`/…) moves them into a new run and deletes them as own props; missing `girPts` → 0, missing `game` → `"maze"`; every other migration default (incl. remaining aura time) unchanged.
+- Deviation from the brief: `newRun(o)` already exists (S1's game chooser), so the run builder is named `mkRun(o)`.
+- Size: +1615 bytes (`index.html`, LF-normalised).
+- Tests: new `tools/fbstub/test_fr0a.py` (27/27: real «Nuovo gioco» click, girone clear via `update`, alias writes, no own aliased props / JSON carries `run`, same run key set from `startGame` and `devJump`, quicksave→resume round trip, old-shaped quicksave, professor-win start, dev jump to girone 8 writing nothing). Re-run unchanged: `test_m1a` 112/112, `test_m1b` 36/36, `test_b2` 99/99, `test_f2b` 117/117, `test_e5b` 35/35. `node --check` + headless smoke test green.
+- Not tested: real phone — please start a new run, clear a girone, save mid-girone from the pause menu and resume it with «Gioco corrente», and resume a quicksave made on 0.4.5_26 (old shape).
+
 ## 0.4.5_26 — 2026-09-28 — E6b: girone-bonus cap
 
 - Owner decisions from the E6a report (`docs/releases/0.5-E6a-report.md`), logged in CLAUDE.md §10.9: Flag 1
