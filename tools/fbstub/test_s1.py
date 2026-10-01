@@ -65,7 +65,7 @@ with sync_playwright() as pw:
     p.evaluate("cancelAnimationFrame(raf)")
     r = p.evaluate("(()=>{const o={};o.maze=nextMinigame().name;G.game='ferma';o.ferma=nextMinigame().name;S.ov['game_3']={label:'Ferma!!'};o.ov=nextMinigame().name;delete S.ov['game_3'];G.game='maze';S.ov['game_0']={label:'Sassi'};o.ov0=nextMinigame().name;delete S.ov['game_0'];G.game=undefined;o.legacy=nextMinigame().name;return o})()")
     check("nextMinigame(): Mangiaroccia for a maze run, Ferma Algidone! for a Ferma run, label overrides respected, old runs (no G.game) = maze", r == {"maze": "Mangiaroccia", "ferma": "Ferma Algidone!", "ov": "Ferma!!", "ov0": "Sassi", "legacy": "Mangiaroccia"}, r)
-    p.evaluate("G.game='ferma';G.state='play';miniInterlude()"); p.wait_for_timeout(200)
+    p.evaluate("G.game='ferma';G.state='play';miniInterlude(G.run)"); p.wait_for_timeout(200)
     check("the interval card names the run's game", "Ferma Algidone!" in p.evaluate("document.querySelector('#modal').innerText"))
     p.evaluate("closeModal();G.game='maze';quicksave();G=null;go('menu')"); p.wait_for_timeout(300)
     p.click("[data-tile=cur]"); p.wait_for_function("G&&G.state", timeout=6000)

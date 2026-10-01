@@ -1342,7 +1342,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_36";
+const VERSION="0.4.5_37";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -2326,6 +2326,12 @@ function renderMenu(){
 const RUN_GAMES=[{id:"maze",idx:0,name:"Mangiaroccia",enabled:true},{id:"ferma",idx:3,name:"Ferma Algidone!",enabled:true}];
 const runGameOf=id=>RUN_GAMES.find(g=>g.id===id)||RUN_GAMES[0];
 const RUN_START={maze:o=>startGame(false,o),ferma:o=>startFermaRun(o)}; // id -> avvio della partita (FR1a1: «ferma» = partita di Ferma Algidone!)
+/* FR2a: tabella del "ritorno" quando un incontro (El Gamblador, carta intervallo) prende lo schermo.
+   RUN_HOLD[game](run) = cosa fa l'host mentre lo schermo passa all'incontro (oggi solo G.state="mini", da bjAfterClear/startGamblador).
+   RUN_BACK[game](run,o) = come l'host si riprende lo schermo (da bjExit/miniInterlude: screen, buildGameDOM, G.state="ready", G.t, G.last, updateHud);
+   o.light=true (miniInterlude) salta la ricostruzione del DOM, mai lasciata lo schermo "game" per cominciare. Solo "maze" per ora: "ferma" arriva con FR2b. */
+const RUN_HOLD={maze:(run)=>{G.state="mini"}};
+const RUN_BACK={maze:(run,o)=>{if(!(o&&o.light)){screen="game";buildGameDOM()}G.state="ready";G.t=1.6;G.last=performance.now();if(!(o&&o.light))updateHud()}};
 function newRun(o){ // «Nuovo gioco» / «Hardcore» (dopo l'eventuale conferma di sovrascrittura)
   if(charKey()!=="roccia"||RUN_GAMES.length<2)return RUN_START.maze(Object.assign({},o,{game:"maze"}));
   const m=openModal(`<h3>Che partita fai?</h3><p>Scegli il gioco da cui partire${o&&o.hard?" (Hardcore)":""}.</p><div class="acts" style="flex-direction:column">${RUN_GAMES.map(g=>{const nm=esc((S.ov["game_"+g.idx]||{}).label||g.name);return g.enabled?`<button class="btn" data-rg="${g.id}">${nm}</button>`:`<button class="btn ghost" data-rg="${g.id}" disabled>${nm} · In arrivo</button>`}).join("")}<button class="btn ghost" id="rgx">Indietro</button></div>`);
@@ -2918,7 +2924,7 @@ function gamDevHTML(){
   const vo=Object.keys(BJ_LINES).map(id=>`<div style="margin-top:12px"><small>${esc(BJ_LINES[id][2])}</small><textarea data-vt="${id}" rows="2" style="margin:4px 0;resize:vertical">${esc(TXT(id))}</textarea><div style="display:flex;gap:6px;align-items:center"><span style="flex:1;font-size:.8rem;color:var(--mute)">Voce: ${SND.vo[id]?"caricata":"nessuna"}</span>${ctl("vo",id)}<button class="btn ghost sm" data-vtr="${id}" title="Ripristina il testo originale">↺ testo</button></div></div>`).join("");
   const mini=`<div class="opt" style="flex-direction:column;align-items:stretch"><div>Minigiochi<small>Provali subito, con gli asset scelti nella lista desideri</small></div>
      <div style="display:flex;gap:8px;align-items:center;margin-top:10px"><span style="flex:1">El Gamblador<small>punti di prova</small></span><input type="text" inputmode="numeric" id="mgscore" value="1000" style="width:84px"><button class="btn sm" id="mggam">Avvia</button></div>
-     <div style="display:flex;gap:8px;align-items:center;margin-top:10px"><span style="flex:1">Ferma Algidone!<small>giocatore e oggetti (M2-M3)</small></span><button class="btn sm" id="mgfa">Avvia</button><button class="btn ghost sm" id="mgfa3">+ carne/griglia</button><button class="btn ghost sm" id="mgfa2">Piano 2 (nastri)</button><button class="btn ghost sm" id="mgfa4">Piano 3 (bulloni)</button><button class="btn ghost sm" id="mgfk">Test uscita Algidone</button><button class="btn ghost sm" id="mgfk2">Test cacciata finale</button><button class="btn ghost sm" id="mgfe1">Incontro 1 piano</button><button class="btn ghost sm" id="mgfe2">Incontro 2 piani</button><button class="btn ghost sm" id="mgfe3">Incontro 3 piani</button><button class="btn ghost sm" id="mgff">Forza incontro: ${FA_FORCE.on?"s\u00ec":"no"}</button><button class="btn ghost sm" id="mgfd">Overlay debug: ${FA_DBG.on?"s\u00ec":"no"}</button></div>
+     <div style="display:flex;gap:8px;align-items:center;margin-top:10px"><span style="flex:1">Ferma Algidone!<small>giocatore e oggetti (M2-M3)</small></span><button class="btn sm" id="mgfa">Avvia</button><button class="btn ghost sm" id="mgfa3">+ carne/griglia</button><button class="btn ghost sm" id="mgfa2">Piano 2 (nastri)</button><button class="btn ghost sm" id="mgfa4">Piano 3 (bulloni)</button><button class="btn ghost sm" id="mgfk">Test uscita Algidone</button><button class="btn ghost sm" id="mgfk2">Test cacciata finale</button><button class="btn ghost sm" id="mgfe1">Incontro 1 piano</button><button class="btn ghost sm" id="mgfe2">Incontro 2 piani</button><button class="btn ghost sm" id="mgfe3">Incontro 3 piani</button><button class="btn ghost sm" id="mgff">Forza incontro: ${FA_FORCE.on?"s\u00ec":"no"}</button><button class="btn ghost sm" id="mgffb">Forza El Gamblador: ${GAM_FORCE.on?"s\u00ec":"no"}</button><button class="btn ghost sm" id="mgfd">Overlay debug: ${FA_DBG.on?"s\u00ec":"no"}</button></div>
      <div style="display:flex;gap:8px;align-items:center;margin-top:10px"><span style="flex:1">Professore<small>prova dialogo, sprite e musica</small></span><button class="btn sm" id="mgrow">Avvia</button></div>
      <div style="display:flex;gap:8px;align-items:center;margin-top:10px"><span style="flex:1">Professore · cacciata<small>solo animazione e suono dello stagno</small></span><button class="btn sm" id="mgrok">Avvia</button></div>
      ${pbTestRow()}</div>`;
@@ -3032,6 +3038,7 @@ function bindDev(){
     const fe=t.closest("#mgfe1,#mgfe2,#mgfe3");if(fe){startFerma({test:true,encounter:+fe.id.slice(-1)});return} // prova dev: incontro (nessun salvataggio), Continua -> menu
     const fdb=t.closest("#mgfd");if(fdb){FA_DBG.on=!FA_DBG.on;fdb.textContent="Overlay debug: "+(FA_DBG.on?"s\u00ec":"no");return}
     const ffz=t.closest("#mgff");if(ffz){FA_FORCE.on=!FA_FORCE.on;ffz.textContent="Forza incontro: "+(FA_FORCE.on?"s\u00ec":"no");return}
+    const ffb=t.closest("#mgffb");if(ffb){GAM_FORCE.on=!GAM_FORCE.on;ffb.textContent="Forza El Gamblador: "+(GAM_FORCE.on?"s\u00ec":"no");return}
     if(t.closest("#mgfa")){startFerma({debug:FA_DBG.on,test:true});return}
     if(t.closest("#mgfa4")){startFerma({debug:FA_DBG.on,test:true,level:2});return}
     if(t.closest("#mgfa2")){startFerma({debug:FA_DBG.on,test:true,level:1});return}
@@ -4514,12 +4521,12 @@ function drawMiniPlaceholder(cv,g){
   x.fillStyle="#f2c230";x.beginPath();x.moveTo(ex+tx*10,ey+ty*10);x.lineTo(ex+px*7,ey+py*7);x.lineTo(ex-px*7,ey-py*7);x.closePath();x.fill();
   x.textAlign="center";x.fillStyle="#fff";x.font="15px Bungee,Impact,sans-serif";x.fillText((g.name||"").toUpperCase(),120,128,200);
 }
-function miniInterlude(){
+function miniInterlude(run){
   const g=nextMinigame();G.state="mini";
-  const m=openModal(`<canvas id="mini" width="240" height="150" style="width:100%;max-width:300px;image-rendering:pixelated;border-radius:10px"></canvas><h3 style="margin-top:12px">Girone ${G.stage}</h3><p>${g.restart?`Il minigioco <b>${esc(g.name)}</b> ricomincia!`:`Inizia il minigioco <b>${esc(g.name)}</b>!`}</p><div class="acts"><button class="btn" id="mgo">Avanti</button></div>`);
+  const m=openModal(`<canvas id="mini" width="240" height="150" style="width:100%;max-width:300px;image-rendering:pixelated;border-radius:10px"></canvas><h3 style="margin-top:12px">Girone ${run.girone}</h3><p>${g.restart?`Il minigioco <b>${esc(g.name)}</b> ricomincia!`:`Inizia il minigioco <b>${esc(g.name)}</b>!`}</p><div class="acts"><button class="btn" id="mgo">Avanti</button></div>`);
   drawMiniPlaceholder(m.querySelector("#mini"),g);
   [392,523,659,784].forEach((f,i)=>setTimeout(()=>beep(f,.1,"square",.05),i*90));
-  m.querySelector("#mgo").onclick=()=>{closeModal();if(G&&G.state==="mini"){G.state="ready";G.t=1.6;G.last=performance.now()}};
+  m.querySelector("#mgo").onclick=()=>{closeModal();if(G&&G.state==="mini")RUN_BACK[run.game](run,{light:true})};
 }
 const terF=e=>{const [x,y]=pos(e),t=terAt(Math.round(x),Math.round(y));return t==="l"?LAVA_SLOW:t==="w"?WATER_SLOW:1};
 function step(e,dt,choose){
@@ -4591,7 +4598,7 @@ function update(dt){
   G.anim+=dt;
   if(G.state==="ready"){G.t-=dt;if(G.t<=0)G.state="play";return}
   if(G.state==="dying"){G.t-=dt;if(G.t<=0){G.lives--;if(G.lives<=0)finishRun();else{resetActors(true);G.invuln=RESPAWN_INVULN;updateHud()}}return}
-  if(G.state==="clear"){G.t-=dt;if(G.t<=0){onGironeAdvance(G.run);if(!G.hard)G.lives=3;G.mapi=pickMap(G.stage);G.grid=freshGrid(G.mapi);if(cv)sizeCanvas();resetActors();G.girPts=0;G.girBonusTxt=null;updateHud();bjAfterClear()}return}
+  if(G.state==="clear"){G.t-=dt;if(G.t<=0){onGironeAdvance(G.run);if(!G.hard)G.lives=3;G.mapi=pickMap(G.stage);G.grid=freshGrid(G.mapi);if(cv)sizeCanvas();resetActors();G.girPts=0;G.girBonusTxt=null;updateHud();bjAfterClear(G.run)}return}
   if(G.state==="panintro"){G.t-=dt;if(G.t<=0){PANINO.finishIntro();G.state="play"}return}
   if(G.state!=="play")return;
   G.invuln=Math.max(0,G.invuln-dt);A_t+=dt;if(A_t>=5)flushTime();
@@ -5535,11 +5542,11 @@ function bjPause(){
 }
 function bjExit(){
   if(!B||B.dead)return;
-  const run=B.run;B.dead=true;for(const id of B.timers)clearTimeout(id);
+  const run=B.run,host=B.host;B.dead=true;for(const id of B.timers)clearTimeout(id);
   cancelAnimationFrame(bjRaf);gamMusic(false);
   if(bgmGam)bgmGam.release();
   B=null;
-  if(run&&G){screen="game";buildGameDOM();G.state="ready";G.t=1.6;G.last=performance.now();updateHud()}
+  if(run){RUN_BACK[host.game](host)}
   else go("opt");
   syncMusic();
 }
@@ -5574,32 +5581,36 @@ async function startGamblador(o){
   screen="bj";
   cancelAnimationFrame(raf);cancelAnimationFrame(menuRaf);
   await ensureBJ();await gamMusicInit();
-  const host=o.run?G.run:null,score=o.run?host.score:(o.score||1000),visits=o.run?S.p.gam.visits:0,price=bjPrice(score,visits);
+  const host=o.run?(o.host||activeRun()):null,score=o.run?host.score:(o.score||1000),visits=o.run?S.p.gam.visits:0,price=bjPrice(score,visits);
+  const dv=(host&&host.dev)||SIM(); // FR2a: una partita/host dev (o SIM) non scrive mai su S.p.gam
   bjPauseT=0;bjPausedAcc=0;bjGate=Promise.resolve();bjGateRes=null;
   B=bjMake({run:o.run,host,dbg:!o.run,score,visits,price,auto:o.auto});
-  if(o.run){S.p.gam.visits++;S.p.gam.seen=true;persist()}
+  if(o.run&&!dv){S.p.gam.visits++;S.p.gam.seen=true;persist()}
   buildBJDOM();bjSize();bjHud();
   bjLoop();
   bjMain();
 }
 let FA_DBG={on:false}; // overlay di debug di Ferma Algidone! (dev): solo in memoria, spento di default
 let FA_FORCE={on:false,n:0}; // dev "Forza incontro": il prossimo intervallo di una partita di prova (o SIM) lancia Ferma Algidone! al 100% (una volta); n = numero d'incontro simulato (1, 2, 3+)
-function bjAfterClear(){
+let GAM_FORCE={on:false}; // FR2a: dev "Forza El Gamblador" -- il prossimo intervallo di una partita dev forza il tentativo (ancora soggetto a bjPrice>=50; una volta sola)
+function bjAfterClear(run){
   // guaranteed at girone 5, then a flat, low 15% chance every girone after
   // (owner wants it to stay rare -- 0.2_45's higher/checkpoint-based odds
   // were reverted).
   // M8a: Ferma Algidone! usa gli stessi intervalli (un solo minigioco per intervallo): 15% dal girone 5 in poi
   // (quando El Gamblador non parte), FORZATA se enc===0 dal girone 8; la forzata batte El Gamblador casuale.
-  const st=G.stage,mult5=st%5===0,dv=!!G.dev||SIM();
-  const want=st===5||(st>5&&Math.random()<.15);
+  const st=run.girone,mult5=st%5===0,dv=!!run.dev||SIM();
+  const gamForce=dv&&GAM_FORCE.on;if(gamForce)GAM_FORCE.on=false; // FR2a: one-shot, consumato subito (che il tentativo riesca o no)
+  const want=st===5||(st>5&&Math.random()<.15)||gamForce;
   let gam=false;
-  if(want){const price=bjPrice(G.score,S.p.gam.visits);gam=price>=50}
+  if(want){const price=bjPrice(run.score,S.p.gam.visits);gam=price>=50}
+  if(gamForce&&!gam)toast("El Gamblador: punti insufficienti");
   let fgo=false,forced=false,fn=1;
   if(dv){if(FA_FORCE.on){fgo=true;FA_FORCE.on=false;fn=Math.min(++FA_FORCE.n,3)}}
   else if(st>=5){forced=S.p.fa.enc===0&&st>=8;fgo=forced||(!gam&&Math.random()<.15)}
   if(fgo){faInvite({forced,dev:dv,n:fn,mult5});return}
-  if(gam){G.state="mini";startGamblador({run:true});return}
-  if(mult5)miniInterlude();
+  if(gam){RUN_HOLD[run.game](run);startGamblador({run:true,host:run});return}
+  if(mult5)miniInterlude(run);
 }
 /* invito a Ferma Algidone! (stesso schema dell'invito di El Gamblador: "Non ora" tranne alla prima volta forzata) */
 let faInvShow=false;

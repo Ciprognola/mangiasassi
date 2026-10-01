@@ -88,9 +88,9 @@ with sync_playwright() as pw:
     p.evaluate("cancelAnimationFrame(raf);window.__fi=null;faInvite=function(o){window.__fi=o};Math.random=()=>0.99;S.p.fa.enc=0;0")
     res = {}
     for st in (5, 7, 8, 9):
-        p.evaluate("G.stage=%d;G.dev=false;window.__fi=null;G.state='clear';bjAfterClear();0" % st); res[st] = p.evaluate("window.__fi&&window.__fi.forced")
+        p.evaluate("G.stage=%d;G.dev=false;window.__fi=null;G.state='clear';bjAfterClear(G.run);0" % st); res[st] = p.evaluate("window.__fi&&window.__fi.forced")
     check("forced Ferma invite: not at girone 5 or 7, yes at 8 (and later) when never met", not res[5] and not res[7] and res[8] is True and res[9] is True, res)
-    p.evaluate("S.p.fa.enc=1;G.stage=8;window.__fi=null;bjAfterClear();0")
+    p.evaluate("S.p.fa.enc=1;G.stage=8;window.__fi=null;bjAfterClear(G.run);0")
     check("not forced once the player has met Ferma (random chance only, stubbed to none)", p.evaluate("window.__fi") is None)
     check("no console errors (forced encounter)", not errs, errs); ctx.close()
     b.close()
