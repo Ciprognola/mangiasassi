@@ -39,6 +39,25 @@ CLIMB = """(dir)=>{
   return {gi:FA.p.gi,reached:FA.p.gi===toGi,climbing:!!FA.p.climbing};
 }"""
 FIXED_WAIT = "Object.assign(FA.cfg,{throwMin:1,throwMax:1});FA.dm.pause=1;0"  # deterministic faThrowWait(): base always 1
+# same as CLIMB, but on an arbitrary (non-broken) ladder index, for the "different ladders in a row" check
+CLIMB_N = """([idx,dir])=>{
+  const l=FA.lv.ladders[idx];
+  const fromGi=dir==='u'?l.gBot:l.gTop, toGi=dir==='u'?l.gTop:l.gBot;
+  FA.p.gi=fromGi;FA.p.x=l.x;FA.p.onGround=true;FA.p.climbing=null;FA.p.airY=null;FA.p.vy=0;FA.p.y=faGirderY(FA.lv.girders[fromGi],l.x);
+  FA_TOUCH.u=0;FA_TOUCH.d=0;FA_TOUCH[dir]=1;
+  for(let i=0;i<10&&FA.p.climbing===null;i++)faStep(1/600);
+  for(let i=0;i<4000&&FA.p.climbing!==null;i++)faStep(1/600);
+  FA_TOUCH[dir]=0;
+  return {gi:FA.p.gi,reached:FA.p.gi===toGi,climbing:!!FA.p.climbing,outT:FA.ang.outT};
+}"""
+# falls through a genuine hole (same mechanism as a popped bolt) from the given girder to the one below it
+FALL = """(gi)=>{
+  const g=FA.lv.girders[gi],x=(g.x1+g.x2)/2;
+  FA.gaps[gi].push(x); // un buco vero a quella x, come un bullone appena tolto (faInGap)
+  FA.p.gi=gi;FA.p.x=x;FA.p.onGround=false;FA.p.climbing=null;FA.p.vy=30;FA.p.airY=faGirderY(g,x);FA.p.y=FA.p.airY;
+  for(let i=0;i<300&&!FA.p.onGround;i++)faStep(1/60);
+  return {gi:FA.p.gi,onGround:FA.p.onGround};
+}"""
 
 
 def to_menu(p):
@@ -172,7 +191,85 @@ with sync_playwright() as pw:
     check("g) ...and the other way round", r2g["prac"] == r0["prac"] and r2g["enc"] == r0["enc"] and r2g["run"] == 0.2, (r0, r2g))
     p.evaluate("FA_RUN.anger.outK=%r;0" % r0["run"])
     check("no console errors (g)", not errs, errs)
+
+    # ================= i) climb A -> outburst; let it expire; climb down and up A again -> outburst again
+    start_dev_run(p, 1); p.evaluate(QUIET); p.evaluate(FIXED_WAIT); p.evaluate("FA.inv=1e9;0")
+    i1 = p.evaluate(CLIMB, "u")
+    check("i) first climb up: reaches the top, outburst active", i1["reached"] and p.evaluate("FA.ang.outT") == 3.5, (i1, p.evaluate("FA.ang.outT")))
+    p.evaluate(STEP + "(" + str(int(3.6 * 60)) + ")")  # let the outburst fully expire
+    check("i) outburst expired", p.evaluate("FA.ang.outT") == 0, p.evaluate("FA.ang.outT"))
+    p.evaluate(CLIMB, "d")
+    i2 = p.evaluate(CLIMB, "u")
+    check("i) same ladder, climbed down and up again: outburst triggers again", i2["reached"] and p.evaluate("FA.ang.outT") == 3.5, (i2, p.evaluate("FA.ang.outT")))
+    check("no console errors (i)", not errs, errs)
+
+    # ================= j) climb A -> outburst; die; respawn; climb A again -> outburst
+    start_dev_run(p, 1); p.evaluate(QUIET); p.evaluate(FIXED_WAIT); p.evaluate("FA.inv=1e9;0")
+    j1 = p.evaluate(CLIMB, "u")
+    check("j) first climb up: outburst active", j1["reached"] and p.evaluate("FA.ang.outT") == 3.5)
+    p.evaluate("FA.inv=0;faDie('x',true);0")
+    p.evaluate("for(let i=0;i<200&&FA.state==='dying';i++)faStep(1/60)")
+    check("j) death/respawn clears the outburst", p.evaluate("FA.ang.outT") == 0 and p.evaluate("FA.state") == "play", (p.evaluate("FA.ang.outT"), p.evaluate("FA.state")))
+    p.evaluate("FA.inv=1e9;0")
+    j2 = p.evaluate(CLIMB, "u")
+    check("j) same ladder climbed again after death/respawn: outburst triggers", j2["reached"] and p.evaluate("FA.ang.outT") == 3.5, (j2, p.evaluate("FA.ang.outT")))
+    check("no console errors (j)", not errs, errs)
+
+    # ================= k) climb, fall through a hole to the girder below, climb again -> outburst
+    start_dev_run(p, 1); p.evaluate(QUIET); p.evaluate(FIXED_WAIT); p.evaluate("FA.inv=1e9;0")
+    k1 = p.evaluate(CLIMB, "u")
+    check("k) first climb up: outburst active", k1["reached"] and p.evaluate("FA.ang.outT") == 3.5)
+    p.evaluate(STEP + "(" + str(int(3.6 * 60)) + ")")  # let it expire before the fall
+    fell = p.evaluate(FALL, 1)  # falls from girder 1 down to girder 0 (one floor, survivable)
+    check("k) fell one girder down, alive", fell["onGround"] and fell["gi"] < 1, fell)
+    k2 = p.evaluate(CLIMB, "u")
+    check("k) climbing again after the fall: outburst triggers", k2["reached"] and p.evaluate("FA.ang.outT") == 3.5, (k2, p.evaluate("FA.ang.outT")))
+    check("no console errors (k)", not errs, errs)
+
+    # ================= l) three climbs in a row on different ladders -> three outbursts, each restarting outDur
+    start_dev_run(p, 1); p.evaluate(QUIET); p.evaluate(FIXED_WAIT); p.evaluate("FA.inv=1e9;0")
+    l1 = p.evaluate(CLIMB_N, [0, "u"])  # ladder 0: gi 0 -> 1
+    o1 = p.evaluate("FA.ang.outT")
+    p.evaluate(STEP + "(30)")  # half a second, still well within the outburst
+    l2 = p.evaluate(CLIMB_N, [1, "u"])  # ladder 1: gi 1 -> 2
+    o2 = p.evaluate("FA.ang.outT")
+    p.evaluate(STEP + "(30)")
+    l3 = p.evaluate(CLIMB_N, [2, "u"])  # ladder 2: gi 2 -> 3
+    o3 = p.evaluate("FA.ang.outT")
+    check("l) three climbs on three different ladders: each reaches the top", l1["reached"] and l2["reached"] and l3["reached"], (l1, l2, l3))
+    check("l) each climb (re)starts the outburst near its full duration", o1 == 3.5 and o2 == 3.5 and o3 == 3.5, (o1, o2, o3))
+    check("no console errors (l)", not errs, errs)
+
+    # ================= n) downward climbs still never trigger (even right after an upward one, or stacked)
+    start_dev_run(p, 1); p.evaluate(QUIET); p.evaluate(FIXED_WAIT); p.evaluate("FA.inv=1e9;0")
+    p.evaluate(CLIMB, "u")
+    p.evaluate(STEP + "(" + str(int(3.6 * 60)) + ")")  # expire it first so a stray leftover outT can't mask a false trigger
+    nd = p.evaluate(CLIMB, "d")
+    check("n) a downward climb reaches the bottom but never triggers an outburst", nd["reached"] and p.evaluate("FA.ang.outT") == 0, (nd, p.evaluate("FA.ang.outT")))
+    nd2 = p.evaluate(CLIMB, "d")  # climbing down again (already at the bottom's ladder context) -- still nothing
+    check("n) repeated downward attempts: still nothing", p.evaluate("FA.ang.outT") == 0, p.evaluate("FA.ang.outT"))
+    check("no console errors (n)", not errs, errs)
     ctx.close()
+
+    # ================= m) i-k hold in practice and in an encounter too
+    for mode, starter in (("practice", start_practice), ("encounter", lambda pp: start_enc(pp, 2))):
+        ctxm3, pm3, errsm3 = page(b, site="stable", local=save(), toggle=False, dev=True)
+        settle(pm3, 600)
+        starter(pm3); pm3.evaluate(QUIET); pm3.evaluate(FIXED_WAIT); pm3.evaluate("FA.inv=1e9;0")
+        m1 = pm3.evaluate(CLIMB, "u")
+        check("m) %s: first climb up triggers the outburst" % mode, m1["reached"] and pm3.evaluate("FA.ang.outT") == 3.5, (mode, m1))
+        pm3.evaluate(STEP + "(" + str(int(3.6 * 60)) + ")")
+        pm3.evaluate(CLIMB, "d")
+        m2 = pm3.evaluate(CLIMB, "u")
+        check("m) %s: re-climbing the same ladder after it expired triggers again" % mode, m2["reached"] and pm3.evaluate("FA.ang.outT") == 3.5, (mode, m2))
+        pm3.evaluate("FA.inv=0;faDie('x',true);0")
+        pm3.evaluate("for(let i=0;i<200&&FA.state==='dying';i++)faStep(1/60)")
+        check("m) %s: death/respawn clears the outburst" % mode, pm3.evaluate("FA.ang.outT") == 0, (mode, pm3.evaluate("FA.ang.outT")))
+        pm3.evaluate("FA.inv=1e9;0")
+        m3 = pm3.evaluate(CLIMB, "u")
+        check("m) %s: climbing again after death/respawn triggers" % mode, m3["reached"] and pm3.evaluate("FA.ang.outT") == 3.5, (mode, m3))
+        check("no console errors (m, %s)" % mode, not errsm3, errsm3)
+        ctxm3.close()
 
     # ================= h) no climb, off the last girder: throw waits match BASE_REF; the maze untouched
     SCEN_RUN = """(async()=>{

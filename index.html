@@ -1342,7 +1342,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_35";
+const VERSION="0.4.5_36";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -6023,7 +6023,7 @@ function faStep(dt){
     const l=p.climbing,yTop=faLadderTopY(lv,l),yBot=faGirderY(G[l.gBot],l.x);
     if(faIn("u")){p.y-=K.climb*dt;p.moving=true;p.cdir=1}else if(faIn("d")){p.y+=K.climb*dt;p.moving=true;p.cdir=2} // cdir: ultima direzione, resta da fermi
     p.x=l.x;
-    if(p.y<=yTop){p.y=yTop;if(!l.broken){p.gi=l.gTop;p.climbing=null;p.onGround=true;if(p.cdir===1)faAngerOutburst()}} // scala rotta: resta appeso al buco; FR1d: salita completata (mai una discesa) = esplosione d'ira
+    if(p.y<=yTop){p.y=yTop;if(!l.broken){p.gi=l.gTop;p.climbing=null;p.onGround=true;faAngerOutburst()}} // scala rotta: resta appeso al buco; FR1d-fix: salita in cima = sempre una salita (gTop e' sempre la trave piu' alta), mai una condizione su p.cdir (fragile: dipendeva dal tasto premuto esattamente nel fotogramma del completamento)
     else if(p.y>=yBot){p.y=yBot;p.gi=l.gBot;p.climbing=null;p.onGround=true}
     if(p.moving){p.anim+=dt;p.stepT=(p.stepT||0)+dt;if(p.stepT>=.16){p.stepT=0;faSnd("climb")}} // un tic ogni ~0,16 s di salita/discesa
   }else{
