@@ -174,8 +174,8 @@ with sync_playwright() as pw:
     ctx, p, errs = page(b, site="stable", local=norm(b, save()), toggle=False, dev=False)
     settle(p, 600)
     r = p.evaluate("({hold:Object.keys(RUN_HOLD),back:Object.keys(RUN_BACK)})")
-    check("f) RUN_HOLD has exactly the \"maze\" key (no \"ferma\" entry yet, FR2b)", r["hold"] == ["maze"], r)
-    check("f) RUN_BACK has exactly the \"maze\" key (no \"ferma\" entry yet, FR2b)", r["back"] == ["maze"], r)
+    check("f) RUN_HOLD has exactly the \"maze\" + \"ferma\" keys (\"ferma\" added by FR2b, 0.4.5_38)", r["hold"] == ["maze", "ferma"], r)
+    check("f) RUN_BACK has exactly the \"maze\" + \"ferma\" keys (\"ferma\" added by FR2b, 0.4.5_38)", r["back"] == ["maze", "ferma"], r)
     check("no console errors (f)", not errs, errs)
     ctx.close()
 

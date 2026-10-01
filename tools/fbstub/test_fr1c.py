@@ -131,7 +131,8 @@ with sync_playwright() as pw:
     p.evaluate("FA.run.dev=false;0")  # a real (non-dev) run, discarded after this check
     win_floor(p)
     check("b) girone 7 not yet reached: S.p.sec still false", p.evaluate("S.p.sec") is False, p.evaluate("S.p.sec"))
-    p.click("#fapanel [data-fa=next]"); p.evaluate("faIntroEnd();0")  # onGironeAdvance runs here: girone -> 7
+    p.evaluate("window.__fgr=faGapRoll;window.faGapRoll=()=>null;0")  # FR2b: a real run's girone 6->7 rolls El Gamblador at 15% -- this check is the secret toast only
+    p.click("#fapanel [data-fa=next]"); p.evaluate("faIntroEnd();window.faGapRoll=window.__fgr;0")  # onGironeAdvance runs here: girone -> 7
     tnow = p.evaluate(TOAST_NOW)
     check("b) girone 7 reached (Avanti clicked): S.p.sec set, no toast shown yet (still in a Ferma run)",
           p.evaluate("S.p.sec") is True and p.evaluate("FA.run.girone") == 7 and tnow is None, (p.evaluate("S.p.sec"), p.evaluate("FA.run.girone"), tnow))
@@ -164,6 +165,7 @@ with sync_playwright() as pw:
     check("no console errors (b, maze new)", not mres["new"]["errs"], mres["new"]["errs"])
 
     # ================= c) win panel "Salva ed esci" == the state "Avanti" would start the next girone with
+    p.evaluate("window.__fgr=faGapRoll;window.faGapRoll=()=>null;0")  # FR2b: girone 4->5 would roll El Gamblador (Avanti plays it, Salva ed esci saves it unplayed) -- this check is the save state only; test_fr2b covers the gap
     p.evaluate(SEED % 777)  # same seed before each branch's own floor load, so the bar's own random N jitter matches (fair comparison)
     start_dev_run(p, 4)
     p.evaluate("FA.run.dev=false;S.ach={prog:{},done:{}};0")
@@ -193,6 +195,7 @@ with sync_playwright() as pw:
     r2 = p.evaluate("({girone:FA.run.girone,level:FA.level})")
     check("c) «Gioco corrente» resumes at that next girone", r2["girone"] == json.loads(wantRun)["girone"] and r2["level"] == (json.loads(wantRun)["girone"] - 1) % 3, r2)
     check("no console errors (c, floors 1-2)", not errs, errs)
+    p.evaluate("window.faGapRoll=window.__fgr;0")
     # dev run: no "savewin" button; floor 3 panel included
     start_dev_run(p, 3)
     p.evaluate(QUIET); p.evaluate("Object.assign(FA.cfg,{sausage:0,porchetta:0,meat:0,ladderP:0});FA.alg.wait=1e9;faFinalWin();for(let i=0;i<1000&&FA.state!=='win';i++)faStep(1/60)")

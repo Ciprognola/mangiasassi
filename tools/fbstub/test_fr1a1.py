@@ -60,9 +60,11 @@ with sync_playwright() as pw:
 
     # ---------------- b) gironi 1..7 load levels 1,2,3,1,2,3,1
     start_ferma_run(p)
+    p.evaluate("window.__fgr=faGapRoll;window.faGapRoll=()=>null;0")  # FR2b: no encounter gap here (crossing girone 5 would play one) -- this check is the level loop only
     lv = [p.evaluate("FA.level")]
     for _ in range(6):
         p.evaluate(WIN); click_panel(p, "next"); lv.append(p.evaluate("FA.level"))
+    p.evaluate("window.faGapRoll=window.__fgr;0")
     girone = p.evaluate("FA.run.girone")
     check("b) gironi 1..7 play levels 1,2,3,1,2,3,1 (the loop continues after the floor-3 collapse)", [x + 1 for x in lv] == [1, 2, 3, 1, 2, 3, 1] and girone == 7, (lv, girone))
     check("no console errors (b)", not errs, errs)

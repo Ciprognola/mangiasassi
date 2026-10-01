@@ -103,7 +103,8 @@ with sync_playwright() as pw:
     # girPts resets when the next level loads
     start_dev_run(p, 4); p.evaluate(QUIET); p.evaluate("FA.score=200;FA.run.girPts=200"); win_floor(p); p.evaluate(STEP + "(90)")
     before_advance = p.evaluate("FA.run.girPts")
-    p.click("#fapanel [data-fa=next]"); p.evaluate("faIntroEnd();0")
+    p.evaluate("window.__fgr=faGapRoll;window.faGapRoll=()=>null;0")  # FR2b: girone 4->5 would play the x5 card first -- this check is the girPts reset only
+    p.click("#fapanel [data-fa=next]"); p.evaluate("faIntroEnd();window.faGapRoll=window.__fgr;0")
     after_advance = p.evaluate("({girPts:FA.run.girPts,txt:FA.run.girBonusTxt})")
     check("b) girPts (and the bonus text) reset when the next level loads", before_advance > 0 and after_advance == {"girPts": 0, "txt": None}, (before_advance, after_advance))
     check("no console errors (b, girPts reset)", not errs, errs)
@@ -130,7 +131,8 @@ with sync_playwright() as pw:
     win_floor(p); p.evaluate(STEP + "(90)")
     p.click("#fapanel [data-fa=next]"); p.evaluate("faIntroEnd();0")  # girone 4
     win_floor(p); p.evaluate(STEP + "(90)")
-    p.click("#fapanel [data-fa=next]"); p.evaluate("faIntroEnd();0")  # girone 5 (loop 1, level index 1 = Piano 2)
+    p.evaluate("window.__fgr=faGapRoll;window.faGapRoll=()=>null;0")  # FR2b: no El Gamblador at girone 5 here -- this check is the quicksave only
+    p.click("#fapanel [data-fa=next]"); p.evaluate("faIntroEnd();window.faGapRoll=window.__fgr;0")  # girone 5 (loop 1, level index 1 = Piano 2)
     snap = p.evaluate("({girone:FA.run.girone,level:FA.level,score:FA.score,lives:FA.lives})")
     check("c) girone 5, level index 1 (Piano 2) after 4 advances", snap["girone"] == 5 and snap["level"] == 1, snap)
     p.evaluate("FA.score+=777;FA.jumps++;0")  # mid-floor progress the snapshot must NOT carry

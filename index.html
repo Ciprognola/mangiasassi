@@ -1342,7 +1342,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_37";
+const VERSION="0.4.5_38";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -2329,9 +2329,9 @@ const RUN_START={maze:o=>startGame(false,o),ferma:o=>startFermaRun(o)}; // id ->
 /* FR2a: tabella del "ritorno" quando un incontro (El Gamblador, carta intervallo) prende lo schermo.
    RUN_HOLD[game](run) = cosa fa l'host mentre lo schermo passa all'incontro (oggi solo G.state="mini", da bjAfterClear/startGamblador).
    RUN_BACK[game](run,o) = come l'host si riprende lo schermo (da bjExit/miniInterlude: screen, buildGameDOM, G.state="ready", G.t, G.last, updateHud);
-   o.light=true (miniInterlude) salta la ricostruzione del DOM, mai lasciata lo schermo "game" per cominciare. Solo "maze" per ora: "ferma" arriva con FR2b. */
-const RUN_HOLD={maze:(run)=>{G.state="mini"}};
-const RUN_BACK={maze:(run,o)=>{if(!(o&&o.light)){screen="game";buildGameDOM()}G.state="ready";G.t=1.6;G.last=performance.now();if(!(o&&o.light))updateHud()}};
+   o.light=true (miniInterlude) salta la ricostruzione del DOM, mai lasciata lo schermo "game" per cominciare. FR2b: "ferma" = niente da tenere (Ferma smontata), ritorno = startFerma o.frun dalla run viva. */
+const RUN_HOLD={maze:(run)=>{G.state="mini"},ferma:(run)=>{}}; // FR2b: ferma = niente da tenere, Ferma e' gia' smontata (faPlayGap)
+const RUN_BACK={maze:(run,o)=>{if(!(o&&o.light)){screen="game";buildGameDOM()}G.state="ready";G.t=1.6;G.last=performance.now();if(!(o&&o.light))updateHud()},ferma:(run,o)=>{startFerma({frun:run,level:(run.girone-1)%FA_LEVELS.length})}}; // FR2b: ferma = il piano del girone corrente dalla run VIVA (punteggio del tavolo compreso), vite gia' ricaricate all'avanzamento
 function newRun(o){ // «Nuovo gioco» / «Hardcore» (dopo l'eventuale conferma di sovrascrittura)
   if(charKey()!=="roccia"||RUN_GAMES.length<2)return RUN_START.maze(Object.assign({},o,{game:"maze"}));
   const m=openModal(`<h3>Che partita fai?</h3><p>Scegli il gioco da cui partire${o&&o.hard?" (Hardcore)":""}.</p><div class="acts" style="flex-direction:column">${RUN_GAMES.map(g=>{const nm=esc((S.ov["game_"+g.idx]||{}).label||g.name);return g.enabled?`<button class="btn" data-rg="${g.id}">${nm}</button>`:`<button class="btn ghost" data-rg="${g.id}" disabled>${nm} · In arrivo</button>`}).join("")}<button class="btn ghost" id="rgx">Indietro</button></div>`);
@@ -4285,7 +4285,7 @@ for(const k in RUN_ALIAS){const f=RUN_ALIAS[k];Object.defineProperty(RUN_PROTO,k
 /* l'UNICO costruttore di un G nuovo del labirinto (startGame e devJump). o = campi della partita (mkRun) + mi = mappa forzata (devJump) */
 /* FR1a1: la partita in corso, qualunque sia il gioco: il labirinto (G.run; un G di prova senza run vale per se') o una partita di Ferma Algidone! (FA.run, con G=null).
    dfc/gcar/curD/ach/faReal leggono da qui: col labirinto danno esattamente i valori di prima */
-function activeRun(){if(G)return G.run||G;try{return (FA&&FA.run)||null}catch(e){return null}}
+function activeRun(){if(G)return G.run||G;try{return (FA&&FA.run)||(B&&!B.dead&&B.host)||null}catch(e){return null}} // FR2b: B.host = la partita di Ferma durante il tavolo tra due gironi (G e FA nulli)
 function mkMazeG(o){
   const M0=o.mi!=null?o.mi:pickMap(o.girone||1),g=Object.assign(Object.create(RUN_PROTO),{run:mkRun(o),grid:freshGrid(M0),parts:[],mapi:M0,plane:cs().selP,rock:cs().selR,lastMi:{S:null,M:null,L:null}});
   if(mapClassOf(M0))g.lastMi[mapClassOf(M0)]=M0;
@@ -4507,7 +4507,7 @@ function quicksave(){
   PANINO.snapshotSplit(c.en);
   S.quick=c;persist();
 }
-function nextMinigame(){const g=runGameOf(G&&G.game),o=S.ov["game_"+g.idx]||{};return{name:o.label||g.name,restart:true}} // la carta dell'intervallo segue il gioco della partita in corso
+function nextMinigame(run){const g=runGameOf(run?run.game:G&&G.game),o=S.ov["game_"+g.idx]||{};return{name:o.label||g.name,restart:true}} // la carta dell'intervallo segue il gioco della partita in corso
 function drawMiniPlaceholder(cv,g){
   const x=cv.getContext("2d");x.imageSmoothingEnabled=false;
   const gr=x.createLinearGradient(0,0,0,150);gr.addColorStop(0,"#23364c");gr.addColorStop(1,"#0f1a28");x.fillStyle=gr;x.fillRect(0,0,240,150);
@@ -4522,11 +4522,11 @@ function drawMiniPlaceholder(cv,g){
   x.textAlign="center";x.fillStyle="#fff";x.font="15px Bungee,Impact,sans-serif";x.fillText((g.name||"").toUpperCase(),120,128,200);
 }
 function miniInterlude(run){
-  const g=nextMinigame();G.state="mini";
+  const g=nextMinigame(run);RUN_HOLD[run.game](run);
   const m=openModal(`<canvas id="mini" width="240" height="150" style="width:100%;max-width:300px;image-rendering:pixelated;border-radius:10px"></canvas><h3 style="margin-top:12px">Girone ${run.girone}</h3><p>${g.restart?`Il minigioco <b>${esc(g.name)}</b> ricomincia!`:`Inizia il minigioco <b>${esc(g.name)}</b>!`}</p><div class="acts"><button class="btn" id="mgo">Avanti</button></div>`);
   drawMiniPlaceholder(m.querySelector("#mini"),g);
   [392,523,659,784].forEach((f,i)=>setTimeout(()=>beep(f,.1,"square",.05),i*90));
-  m.querySelector("#mgo").onclick=()=>{closeModal();if(G&&G.state==="mini")RUN_BACK[run.game](run,{light:true})};
+  m.querySelector("#mgo").onclick=()=>{closeModal();if(run.game==="maze"?G&&G.state==="mini":!FA)RUN_BACK[run.game](run,{light:true})};
 }
 const terF=e=>{const [x,y]=pos(e),t=terAt(Math.round(x),Math.round(y));return t==="l"?LAVA_SLOW:t==="w"?WATER_SLOW:1};
 function step(e,dt,choose){
@@ -5577,6 +5577,7 @@ addEventListener("keydown",e=>{
 });
 addEventListener("resize",()=>{if(screen==="bj"&&B&&!B.dead)bjSize()});
 async function startGamblador(o){
+  if(FA&&FA.raf)cancelAnimationFrame(FA.raf); // FR2b: difesa -- mai un ciclo di Ferma vivo sotto il tavolo
   o=o||{};
   screen="bj";
   cancelAnimationFrame(raf);cancelAnimationFrame(menuRaf);
@@ -5592,6 +5593,7 @@ async function startGamblador(o){
 }
 let FA_DBG={on:false}; // overlay di debug di Ferma Algidone! (dev): solo in memoria, spento di default
 let FA_FORCE={on:false,n:0}; // dev "Forza incontro": il prossimo intervallo di una partita di prova (o SIM) lancia Ferma Algidone! al 100% (una volta); n = numero d'incontro simulato (1, 2, 3+)
+const GAM_ODDS=.15; // FR2b: probabilita' di El Gamblador per girone dopo il 5 (stesso valore di prima, ora con un nome: la usano labirinto e partita di Ferma)
 let GAM_FORCE={on:false}; // FR2a: dev "Forza El Gamblador" -- il prossimo intervallo di una partita dev forza il tentativo (ancora soggetto a bjPrice>=50; una volta sola)
 function bjAfterClear(run){
   // guaranteed at girone 5, then a flat, low 15% chance every girone after
@@ -5601,7 +5603,7 @@ function bjAfterClear(run){
   // (quando El Gamblador non parte), FORZATA se enc===0 dal girone 8; la forzata batte El Gamblador casuale.
   const st=run.girone,mult5=st%5===0,dv=!!run.dev||SIM();
   const gamForce=dv&&GAM_FORCE.on;if(gamForce)GAM_FORCE.on=false; // FR2a: one-shot, consumato subito (che il tentativo riesca o no)
-  const want=st===5||(st>5&&Math.random()<.15)||gamForce;
+  const want=st===5||(st>5&&Math.random()<GAM_ODDS)||gamForce;
   let gam=false;
   if(want){const price=bjPrice(run.score,S.p.gam.visits);gam=price>=50}
   if(gamForce&&!gam)toast("El Gamblador: punti insufficienti");
@@ -5710,13 +5712,15 @@ for(const k in FA_RUN_ALIAS){const f=FA_RUN_ALIAS[k];Object.defineProperty(FA_RU
 function startFermaRun(o){ // «Nuovo gioco»/«Hardcore» (Uomo roccia) e il pulsante dev «Partita Ferma dal girone N»
   o=o||{};cancelAnimationFrame(raf);G=null;
   const run=mkRun({girone:o.girone||1,game:"ferma",char:"roccia",lives:FA_RUN.lives,hard:!!o.hard,diff:o.diff,dev:!!o.dev});
+  if(run.dev&&run.score<50)run.score=1500; // FR2b (D5): partita dev, come il salto di girone del labirinto
   return startFerma({frun:run,level:(run.girone-1)%FA_LEVELS.length});
 }
 /* FR1b1: «Gioco corrente» su un salvataggio di Ferma -- stesso livello del girone, punteggio/vite del salvataggio, scorta piena, nuova schedula dei morsi (il progresso dentro il piano interrotto si perde, per scelta) */
 function resumeFermaRun(){
   const q=S.quick;if(!q||q.game!=="ferma"||!q.run)return;
   cancelAnimationFrame(raf);G=null;
-  const run=JSON.parse(JSON.stringify(q.run));
+  const run=JSON.parse(JSON.stringify(q.run));run.gap=run.gap||null; // FR2b: salvataggi vecchi senza gap
+  if(run.gap){q.run.gap=null;persist();return faPlayGap(run)} // FR2b (D1): l'incontro dovuto parte prima del piano, e un secondo «Gioco corrente» non lo ripete
   return startFerma({frun:run,level:(run.girone-1)%FA_LEVELS.length});
 }
 /* FR1b1: l'istantanea del salvataggio -- SOLO la run (mai la mappa/gli oggetti in volo), presa a inizio girone (qui e in faRunAdvance) e tenuta finche' il giocatore non sceglie «Salva ed esci»: cosi' un salvataggio a meta' piano torna all'inizio del girone, mai a meta' */
@@ -5753,15 +5757,35 @@ function faBite(){ // Algidone mangia (animazione di sempre): la barra perde esa
 function faLastBiteEnd(){faMusicStop();FA.lb.a=1;FA.state="over";FA.lastDmg="morsi finiti";faPanel("Algidone ha finito tutto!","Punti: "+FA.score,FA.enc||FA.run?[["exit","Continua"]]:[["retry","Riprova"],["exit","Esci"]])} // FR1b2: allenamento come faOver (Riprova/Esci), incontro/partita solo Continua
 function faRunAdvance(){ // «Avanti»: girone successivo (dopo il crollo del piano 3 si riparte dal piano 1), vite ricaricate tranne in Hardcore
   const r=FA.run,sc=FA.cnt?FA.cnt.base+FA.cnt.bonus:FA.score;
-  onGironeAdvance(r);if(!r.hard||FA_RUN.hardRefill)r.lives=FA_RUN.lives;
+  onGironeAdvance(r);r.score=sc;r.gap=faGapRoll(r);if(!r.hard||FA_RUN.hardRefill)r.lives=FA_RUN.lives; // FR2b: intervallo tirato una volta sola, subito dopo l'avanzamento
   r.girPts=0;r.girBonusTxt=null; // FR1b1: qui e non in onGironeAdvance (il girone appena chiuso deve ancora leggerli quando il piano vince)
+  if(r.gap)return faPlayGap(r); // FR2b: prima l'incontro, poi il piano (RUN_BACK.ferma)
   faLoadFloor((r.girone-1)%FA_LEVELS.length,r.lives,sc);
   faQuickSnap();
+}
+/* FR2b: incontri tra due gironi della partita di Ferma (D1-D3). faGapRoll = l'intervallo, tirato UNA volta subito dopo onGironeAdvance e tenuto in run.gap:
+   "gamb" = El Gamblador (girone 5 obbligato, poi GAM_ODDS, sempre col cancello bjPrice>=50 come il labirinto), altrimenti "inter" ogni 5 gironi, altrimenti null.
+   Mai Ferma dentro Ferma: FA_FORCE ignorato e lasciato com'e'. Dev/SIM: nessun tiro proprio, solo «Forza El Gamblador» (una volta, stesso avviso del labirinto); la carta x5 come nel labirinto */
+function faGapRoll(run){
+  const st=run.girone,dv=!!run.dev||SIM();let gam=false;
+  if(dv){if(GAM_FORCE.on){GAM_FORCE.on=false;gam=bjPrice(run.score,S.p.gam.visits)>=50;if(!gam)toast("El Gamblador: punti insufficienti")}}
+  else if(st===5||(st>5&&Math.random()<GAM_ODDS))gam=bjPrice(run.score,S.p.gam.visits)>=50;
+  return gam?"gamb":st%5===0?"inter":null;
+}
+/* faPlayGap: consuma run.gap (null prima che l'incontro parta), smonta Ferma con le stesse righe di faWinSaveExit (senza scrivere S.quick), poi il tavolo (host = la run viva) o la carta; il ritorno passa da RUN_BACK.ferma */
+function faPlayGap(run){
+  const g=run.gap;run.gap=null;
+  if(FA){faMusicStop();cancelAnimationFrame(FA.raf);faPanelHide();FA.dead=true;FA=null;faKeysClear();
+    root.onpointerdown=root.onpointerup=root.onpointercancel=root.oncontextmenu=root.onclick=null}
+  RUN_HOLD[run.game](run);
+  if(g==="gamb")startGamblador({run:true,host:run});
+  else if(g==="inter")miniInterlude(run);
+  else RUN_BACK[run.game](run);
 }
 function faWinSaveExit(){ // FR1c: «Salva ed esci» sul pannello di vittoria -- salva esattamente lo stato con cui «Avanti» avvierebbe il girone successivo
   if(!FA||!FA.run||FA.run.dev)return;
   const r=FA.run;r.score=FA.cnt?FA.cnt.base+FA.cnt.bonus:FA.score;
-  onGironeAdvance(r);if(!r.hard||FA_RUN.hardRefill)r.lives=FA_RUN.lives;
+  onGironeAdvance(r);r.gap=faGapRoll(r);if(!r.hard||FA_RUN.hardRefill)r.lives=FA_RUN.lives; // FR2b: salvato non giocato, «Gioco corrente» lo gioca prima del piano
   r.girPts=0;r.girBonusTxt=null;
   faMusicStop();cancelAnimationFrame(FA.raf);
   faQuickSnap();S.quick=FA.quick;persist();
