@@ -173,7 +173,7 @@ with sync_playwright() as pw:
     p.evaluate("(()=>{S.ach=JSON.parse(%s).ach;A_t=0;FA.run.girone=3;FA.score=2000;FA.inv=1e9;0})()" % json.dumps(base))
     p.evaluate("faPause(true)")
     btns = p.evaluate("[...document.querySelectorAll('#fapanel [data-fa]')].map(b=>b.textContent.trim())")
-    check("g) dev session: the pause menu has «Ultimo morso» between «Riprendi» and «Esci»", btns == ["Riprendi", "Ultimo morso", "Esci"], btns)
+    check("g) dev session: the pause menu has «Salva ed esci» (FR1b1) and «Ultimo morso» between «Riprendi» and «Esci»", btns == ["Riprendi", "Salva ed esci", "Ultimo morso", "Esci"], btns)
     p.click("#fapanel [data-fa=lastbite]"); p.evaluate(FREEZE)
     r = p.evaluate("(()=>{faHud();return{left:FA.bar.left,gap:+(FA.bar.due-FA.bar.clock).toFixed(3),paused:FA.paused,dev:document.querySelector('#fadev').textContent}})()")
     check("g) «Ultimo morso»: one bite left, next bite due in 1 s, game resumed; the dev readout shows «morsi 1/N · prossimo 1.0s»",
@@ -203,7 +203,7 @@ with sync_playwright() as pw:
     ctx2, p2, errs2 = fresh(b, 390, 844, dev=False)
     start_run(p2); p2.evaluate("faIntroEnd();faHud();faPause(true)")
     r = p2.evaluate("({btns:[...document.querySelectorAll('#fapanel [data-fa]')].map(b=>b.textContent.trim()),dev:!!document.querySelector('#fadev'),wv:(document.querySelector('#fawv')||{}).textContent})")
-    check("g) player session: no «Ultimo morso», no dev readout; the girone label is there", r == {"btns": ["Riprendi", "Esci"], "dev": False, "wv": "Girone 1"}, r)
+    check("g) player session: «Salva ed esci» (FR1b1) but no «Ultimo morso», no dev readout; the girone label is there", r == {"btns": ["Riprendi", "Salva ed esci", "Esci"], "dev": False, "wv": "Girone 1"}, r)
     check("no console errors (g)", not errs and not errs2, (errs, errs2))
     ctx2.close(); ctx.close()
 

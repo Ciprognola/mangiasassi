@@ -1949,6 +1949,16 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Checks before this release: all test suites green except the known `test_f1` "Esc closes the login" (root-caused, not fixed — 0.5 backlog); `node --check` + smoke test; a save made on the tagged `v0.4` build still loads here with progress, achievements, extras, texts/colours and no console errors; `refs/skins/SKIN_COVERAGE.md` regenerated — every remaining `manca` is one of the grandfathered BK gaps (13 Ferma thrower + 6 Cinghiale frames), nothing new.
 - Not tested: real devices, the live Pages deploy after this release.
 
+## 0.4.5_32 — 2026-10-01 — FR1b1: Ferma loop difficulty, loop bonus, quicksave
+
+- 0.4.5_31 phone test OK, all four FA-MUS deviations accepted (CLAUDE.md §10.9).
+- **Loop difficulty, Ferma run only**: from loop 1 on (every 3 gironi), Algidone throws faster (throw wait ×0.9 per loop, floor ×0.6) and items move quicker (×1.05 per loop, cap ×1.3), on top of the difficulty setting. Practice and the maze encounter unchanged.
+- **Girone loop bonus**: the same idea as the maze's own bonus (§10.4), with its own cap ×2.0. `girPts` tracks every point scored in the girone, including the floor-end bite bonus; the bonus counts up in the same animated number as the floor bonus, and shows as a second panel line «Bonus girone ×M +P» when positive.
+- **Quicksave for the Ferma run**: a snapshot (girone, score, lives — nothing about the level in progress) is taken at the start of every girone. The run's pause menu gets «Salva ed esci» (same spot as the maze's); «Gioco corrente» now recognises a Ferma save and resumes that girone fresh (full time bar, new bite schedule). A dev run never saves. Cloud save carries a Ferma `S.quick` exactly like a maze one, no changes needed there.
+- Size: +3064 bytes (`index.html`, LF-normalised).
+- Tests: new `tools/fbstub/test_fr1b1.py` (50/50: loop factors at 7 gironi incl. the caps, the girone bonus math and its reset, that «Partita finita»'s payout reflects the bonus-inflated score, a save/resume round trip losing mid-floor progress by design, a golden check that the maze's own quicksave/resume is untouched, a dev run never writing `S.quick`, and a Ferma `S.quick` surviving the cloud-save string round trip). Re-run green: test_fr1a2 67/67 (two pre-existing button-list checks updated for the new «Salva ed esci» entry), test_fr1a1 33/33, test_famus 34/34, test_fr0a 27/27, test_fr0b 29/29, test_f2b 117/117, test_u1 27/27, test_s1 16/16. `node --check` + headless smoke test green.
+- Not tested: real phone; a Ferma run played by hand through several loops to feel the difficulty ramp and the bonus sizes.
+
 ## 0.4.5_31 — 2026-10-01 — FA-MUS: Ferma Algidone! soundtrack, bite sound
 
 - 0.4.5_30 phone test OK, all seven FR1a2 deviations accepted (CLAUDE.md §10.9). The earlier ffmpeg stop was correct — no ffmpeg or audio library available in this environment, only an unrelated app's bundled binary; the owner cut the loop in Claude chat (§6 rule 7: 54.4s of the 111s original, beat-aligned, 0.8s equal-power crossfade, MP3 48 kbps mono) and uploaded `refs/ferma_algidone/fa_music_loop.mp3`, embedded as-is.
