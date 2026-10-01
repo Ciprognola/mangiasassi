@@ -172,14 +172,20 @@ with sync_playwright() as pw:
 
     # ---------------- h) the other tracks: unchanged start/stop, rate defaults to 1
     # (calling each track's own init/play directly rather than the full screen flow, which the existing
-    # suites already cover end to end -- here only the shared loopTrack `rate` addition is in scope)
+    # suites already cover end to end -- here only the shared loopTrack `rate` addition is in scope.
+    # FR1c gave every loopTrack cross-track exclusivity (starting one stops every other); the real
+    # startGamblador/prIntro flows always move `screen` off "menu" BEFORE starting their own track, so
+    # the menu's own periodic "resume bgm if wanted and paused" interval (musicWanted() keyed on `screen`)
+    # never fights them for it. This direct-call test must do the same or that interval can resume bgm
+    # moments later and bounce the other track right back off, same as real navigation would avoid.)
     p.evaluate("(()=>{" + UNF + "S.opts.music=true;if(FA){FA.dead=true;FA=null}go('menu')})()"); p.wait_for_timeout(600)
     r = p.evaluate("({playing:bgm&&!bgm.paused,rate:bgm&&bgm.rate})")
     check("h) menu track: still plays on the menu, rate defaults to 1", r["playing"] and r["rate"] == 1, r)
-    r = p.evaluate("(async()=>{await gamMusicInit();gamMusic(true);await new Promise(res=>setTimeout(res,300));return{playing:bgmGam&&!bgmGam.paused,rate:bgmGam&&bgmGam.rate}})()")
+    r = p.evaluate("(async()=>{screen='bj';await gamMusicInit();gamMusic(true);await new Promise(res=>setTimeout(res,300));return{playing:bgmGam&&!bgmGam.paused,rate:bgmGam&&bgmGam.rate}})()")
     check("h) El Gamblador track: still starts (gamMusicInit/gamMusic), rate defaults to 1", r["playing"] and r["rate"] == 1, r)
-    r = p.evaluate("(async()=>{await prMusic('intro',{});return{slot:PRM.slot,playing:PRM.a&&!PRM.a.paused,rate:PRM.a&&PRM.a.rate}})()")
+    r = p.evaluate("(async()=>{screen='pr';await prMusic('intro',{});return{slot:PRM.slot,playing:PRM.a&&!PRM.a.paused,rate:PRM.a&&PRM.a.rate}})()")
     check("h) professor track: still starts (prMusic), rate defaults to 1", r["playing"] and r["rate"] == 1, r)
+    p.evaluate("screen='menu';0")
     check("no console errors (h)", not errs, errs)
     ctx.close(); b.close()
 print("%d / %d passed" % (sum(RES), len(RES)))

@@ -1342,7 +1342,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_34";
+const VERSION="0.4.5_35";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -5690,9 +5690,10 @@ let FA=null;
 const FA_RUN={lives:3,hardRefill:false,
   bar:{L1:120,dL:15,Lmin:75,N1:12,dN:2,Nmin:6,nRand:1,jitter:.15,biteBonus:100,lastSlow:.3,lastSlowDur:1.5,fade:1,drainT:.6}, // FR1a2
   loop:{multK:.2,multMax:2}, // FR1c: il bonus girone (§10.4) resta sul giro vero floor((girone-1)/3), mai scalato dalla difficolta' -- i premi non cambiano
-  diff:{easy:{rate:1.0,throwK:.85,throwMin:.55,itemK:1.06,itemMax:1.35},medium:{rate:1.3,throwK:.82,throwMin:.50,itemK:1.08,itemMax:1.45},hard:{rate:1.6,throwK:.80,throwMin:.45,itemK:1.10,itemMax:1.60}}}; // FR1c: difficolta' per giro, per difficolta' scelta (ids reali di DIFF): e=(girone-1)/3*rate, continuo (ogni girone un po' piu' difficile, le difficolta' piu' alte progrediscono piu' in fretta); throw wait x throwK^e (mai sotto throwMin x base), oggetti x itemK^e (tetto itemMax); la barra e il piano 3 leggono e allo stesso modo (sotto)
-const FA_PRAC={bar:{L:120,N:12,nRand:1,jitter:.15,biteBonus:100,lastSlow:.3,lastSlowDur:1.5,fade:1,drainT:.6}}; // FR1b2: barra dell'allenamento (valori del giro 1 della partita), tabella propria e indipendente (§10.0)
-const FA_ENC={bar:{L:120,N:12,nRand:1,jitter:.15,biteBonus:100,lastSlow:.3,lastSlowDur:1.5,fade:1,drainT:.6}}; // FR1b2: barra dell'incontro, stessi valori di partenza ma tabella propria e indipendente
+  anger:{outDur:3.5,outK:.5,topK:.65}, // FR1d: ira di Algidone (§4) -- tabella propria della partita, indipendente da allenamento/incontro (§10.0)
+  diff:{easy:{rate:1.0,throwK:.85,throwMin:.55,itemK:1.06,itemMax:1.35,bolts:[0,0,1,2]},medium:{rate:1.3,throwK:.82,throwMin:.50,itemK:1.08,itemMax:1.45,bolts:[0,1,2]},hard:{rate:1.6,throwK:.80,throwMin:.45,itemK:1.10,itemMax:1.60,bolts:[1,2]}}}; // FR1c: difficolta' per giro, per difficolta' scelta (ids reali di DIFF): e=(girone-1)/3*rate, continuo (ogni girone un po' piu' difficile, le difficolta' piu' alte progrediscono piu' in fretta); throw wait x throwK^e (mai sotto throwMin x base), oggetti x itemK^e (tetto itemMax), la barra legge e allo stesso modo (sotto); FR1d: bolts = sequenza della disposizione del piano 3 indicizzata dal giro vero floor((girone-1)/3) (l'ultima voce si ripete oltre la fine della lista) -- il piano 3 ricorre solo ogni 3 gironi, quindi e continuo e sequenza discreta sono scelte apposta separate (§10.9)
+const FA_PRAC={bar:{L:120,N:12,nRand:1,jitter:.15,biteBonus:100,lastSlow:.3,lastSlowDur:1.5,fade:1,drainT:.6},anger:{outDur:3.5,outK:.5,topK:.65}}; // FR1b2: barra dell'allenamento (valori del giro 1 della partita), tabella propria e indipendente (§10.0); FR1d: ira, stessi valori di partenza, tabella propria
+const FA_ENC={bar:{L:120,N:12,nRand:1,jitter:.15,biteBonus:100,lastSlow:.3,lastSlowDur:1.5,fade:1,drainT:.6},anger:{outDur:3.5,outK:.5,topK:.65}}; // FR1b2: barra dell'incontro, stessi valori di partenza ma tabella propria e indipendente; FR1d: ira, idem
 const FA_RUN_ALIAS={score:"score",lives:"lives"},FA_RUN_PROTO={};
 for(const k in FA_RUN_ALIAS){const f=FA_RUN_ALIAS[k];Object.defineProperty(FA_RUN_PROTO,k,{get(){return this.run[f]},set(v){this.run[f]=v},enumerable:false,configurable:true})}
 function startFermaRun(o){ // «Nuovo gioco»/«Hardcore» (Uomo roccia) e il pulsante dev «Partita Ferma dal girone N»
@@ -5718,6 +5719,8 @@ function faQuickSaveExit(){
   go("menu");toast("Partita salvata");
 }
 const faBarTable=()=>FA.run?FA_RUN.bar:FA.enc?FA_ENC.bar:FA_PRAC.bar; // FR1b2: tabella della barra della modalita' in corso (§10.0: ognuna la propria, mai condivisa)
+const faAngerTable=()=>FA.run?FA_RUN.anger:FA.enc?FA_ENC.anger:FA_PRAC.anger; // FR1d: idem, per l'ira di Algidone
+const faBoltLayoutIdx=()=>{const seq=faRunDiff().bolts;return seq[Math.min(faLoopN(),seq.length-1)]}; // FR1d: disposizione del piano 3 dalla sequenza della difficolta', indicizzata dal giro vero (non da e: il piano 3 ricorre ogni 3 gironi soltanto)
 function faBiteGap(){const b=FA.bar;return(b.L/b.N)*(1+faBarTable().jitter*(2*Math.random()-1))} // intervallo tra due morsi: (L/N) +-jitter, a caso ogni volta
 function faBarInit(){ // a ogni piano caricato, in ogni modalita' (FR1b2): L/N del giro in partita, L/N fissi altrove; barra piena, orologio a zero
   const B=faBarTable();let L,N;
@@ -5844,6 +5847,7 @@ function faRespawn(){
   Object.assign(p,{cdir:1,x:s.x,gi:s.gi,y:faGirderY(lv.girders[s.gi],s.x),vx:0,vy:0,onGround:true,climbing:null,face:1,airY:null,coyote:1e9,buf:1e9,moving:false,anim:0});
   FA.goal=false;FA.inv=0;FA.state="play";FA.dyingT=0; // la scorta NON si riempie alla ripartenza (0.3_27): solo a inizio piano / Riprova / Rigioca
   FA.fx={flare:0,parts:[]};FA.items=[];FA.alg={state:"idle",t:0,wait:2.5,released:false,pick:null}; // la morte svuota TUTTI gli oggetti/fiamme; i lanci riprendono dopo una pausa (D2: 2.5 s)
+  FA.ang={outT:0,onLast:false}; // FR1d: la morte/ripartenza chiude sia l'esplosione d'ira che lo stato "ultima trave"
 }
 /* ---- M4: vite, morte, scorta, punti, pausa (regole di morte CLAUDE.md 10.9) ---- */
 const FA_DYING=.8,FA_INV=2,FA_SCORE={sausage:10,porchetta:30,meat:10,flame:20}; // D5: 10 a salto; porchetta 3x (FR1b2: la morte non costa piu' scorta in nessuna modalita', FA_DEATH_STOCK rimossa)
@@ -5981,7 +5985,7 @@ function faHud(){
   const fr=FA.stock<=0?3:pct>.67?0:pct>.34?1:2; // pila di scorte: piena -> 2/3 -> 1/3 -> vuota
   if(h.fr!==fr){h.fr=fr;g("fasp").src=FA_IMG_SRC["scorte"+fr]}
   {const nb=FA.bolts?FA.bolts.filter(b=>b.st==="on").length:0,bt=FA.lv.bolts?1:0;if(h.nb!==nb||h.bt!==bt){h.nb=nb;h.bt=bt;g("fabolt").hidden=!bt;g("fabn").textContent=nb}} // bulloni rimasti (solo piano 3)
-  if(FA.run&&devOn){const d=g("fadev"),bl=FA.level===2?" \u00b7 bulloni L"+(Math.min(2,Math.floor(faLoopE()))+1):"",t="morsi "+FA.bar.left+"/"+FA.bar.N+" \u00b7 e "+faLoopE().toFixed(1)+" \u00b7 prossimo "+Math.max(0,FA.bar.due-FA.bar.clock).toFixed(1)+"s"+bl;if(d&&h.dev!==t){h.dev=t;d.textContent=t}}
+  if(FA.run&&devOn){const d=g("fadev"),bl=FA.level===2?" \u00b7 bulloni L"+(faBoltLayoutIdx()+1):"",ag=FA.ang.outT>0?" \u00b7 rabbia "+FA.ang.outT.toFixed(1)+"s":FA.ang.onLast?" \u00b7 rabbia \u221e":"",t="morsi "+FA.bar.left+"/"+FA.bar.N+" \u00b7 e "+faLoopE().toFixed(1)+" \u00b7 prossimo "+Math.max(0,FA.bar.due-FA.bar.clock).toFixed(1)+"s"+bl+ag;if(d&&h.dev!==t){h.dev=t;d.textContent=t}}
   if(FA.run&&h.gir!==FA.run.girone){h.gir=FA.run.girone;const e=g("fawv");if(e)e.textContent="Girone "+FA.run.girone}
   if(h.lives!==FA.lives){h.lives=FA.lives;g("fali").querySelectorAll("canvas").forEach((c,i)=>{const x=c.getContext("2d");x.clearRect(0,0,48,44);x.globalAlpha=i<FA.lives?1:.22;x.imageSmoothingEnabled=false;drawFace(x,24,22,46,2,false)})}
 }
@@ -6019,7 +6023,7 @@ function faStep(dt){
     const l=p.climbing,yTop=faLadderTopY(lv,l),yBot=faGirderY(G[l.gBot],l.x);
     if(faIn("u")){p.y-=K.climb*dt;p.moving=true;p.cdir=1}else if(faIn("d")){p.y+=K.climb*dt;p.moving=true;p.cdir=2} // cdir: ultima direzione, resta da fermi
     p.x=l.x;
-    if(p.y<=yTop){p.y=yTop;if(!l.broken){p.gi=l.gTop;p.climbing=null;p.onGround=true}} // scala rotta: resta appeso al buco
+    if(p.y<=yTop){p.y=yTop;if(!l.broken){p.gi=l.gTop;p.climbing=null;p.onGround=true;if(p.cdir===1)faAngerOutburst()}} // scala rotta: resta appeso al buco; FR1d: salita completata (mai una discesa) = esplosione d'ira
     else if(p.y>=yBot){p.y=yBot;p.gi=l.gBot;p.climbing=null;p.onGround=true}
     if(p.moving){p.anim+=dt;p.stepT=(p.stepT||0)+dt;if(p.stepT>=.16){p.stepT=0;faSnd("climb")}} // un tic ogni ~0,16 s di salita/discesa
   }else{
@@ -6073,7 +6077,7 @@ const FA_ITEM={sausage:{speed:70,r:8,h:14,cause:"salsiccia"},porchetta:{speed:34
 const FA_MEAT_HOP=200; // rimbalzo: apice 200^2/(2*588)=34 px, sempre sotto la trave sopra (varco minimo 62 - trave - carne)
 const FA_ALG_FT=.14,FA_ART=.6,FA_LADDER_V=90,FA_ITEM_G=700,FA_MAX_ITEMS=14; // FA_ART: oggetti a x0.5 (§10.7)
 const faDown=g=>g.flow||(g.y2>g.y1?1:-1); // verso in cui una trave scende = verso in cui rotola un oggetto
-function faInitBelts(){FA.belt=FA.lv.girders.map(g=>g.conveyor?{dir:g.conveyor.dir||1,t:0,off:0}:null);const bl=FA.lv.bolts?FA_BOLTS[FA.run?Math.min(2,Math.floor(faLoopE())):0]:null;FA.bolts=(bl||[]).map(b=>({g:b.g,x:b.x,st:"on",t:0}));FA.gaps=FA.lv.girders.map(()=>[])} // nastri + bulloni/buchi del piano (FR1b2: disposizione per giro in partita, sempre L1 altrove)
+function faInitBelts(){FA.belt=FA.lv.girders.map(g=>g.conveyor?{dir:g.conveyor.dir||1,t:0,off:0}:null);const bl=FA.lv.bolts?FA_BOLTS[FA.run?faBoltLayoutIdx():0]:null;FA.bolts=(bl||[]).map(b=>({g:b.g,x:b.x,st:"on",t:0}));FA.gaps=FA.lv.girders.map(()=>[])} // nastri + bulloni/buchi del piano (FR1b2: disposizione per giro in partita, sempre L1 altrove)
 const faBeltV=gi=>{const b=FA.belt&&FA.belt[gi];return b?b.dir*FA.lv.girders[gi].conveyor.v:0}; // px/s con segno (+ = verso destra)
 function faBeltStep(dt){FA.belt.forEach((b,i)=>{if(!b)return;const c=FA.lv.girders[i].conveyor;b.off+=b.dir*c.v*dt;if(c.rev){const t0=b.t;b.t+=dt;if(t0<c.rev-.7&&b.t>=c.rev-.7)faSnd("belt");if(b.t>=c.rev){b.t=0;b.dir=-b.dir}}})} // il suono parte insieme al lampeggio rosso dei chevron
 function faBoltsStep(dt){for(const b of FA.bolts)if(b.st==="pop"){b.t+=dt;if(b.t>=FA_BOLT_DELAY){b.st="gone";FA.gaps[b.g].push(b.x)}}} // il buco si apre 0,5 s dopo aver preso il bullone
@@ -6100,22 +6104,31 @@ function faPick(){
   let r=Math.random()*tot;for(const [t,n] of w){if((r-=n)<0)return t}return "sausage";
 }
 const FA_EAT_T=1.65; // durata dell'animazione del morso (fa_alg_eat0-2) -- FR1b2: il morso e' sempre programmato dalla barra, in ogni modalita' (22% casuale rimosso, FA_EAT_P)
-const faAngry=()=>FA.p.gi>=FA.lv.girders.length-2||FA.stock<FA.lv.stock*.25; // il giocatore e' nelle due travi alte, o la scorta e' sotto il 25%
+function faAngerOutburst(){FA.ang.outT=faAngerTable().outDur} // FR1d: avvia O riavvia (restart = la stessa assegnazione)
+const faIsAngry=()=>FA.ang.outT>0||FA.ang.onLast; // FR1d: posa arrabbiata, durante un'esplosione o sull'ultima trave (sotto Algidone)
+function faThrowWait(){ // FR1d: attesa di un lancio -- difficolta' e barra come prima, l'ira sopra tutto il resto
+  const c=FA.cfg,ang=FA.ang,AT=faAngerTable(),base=(c.throwMin+Math.random()*(c.throwMax-c.throwMin))*FA.dm.pause;
+  return base*(ang.outT>0?AT.outK:ang.onLast?AT.topK:1);
+}
 function faAlgStep(dt){
-  const a=FA.alg,c=FA.cfg;a.t+=dt;
+  const a=FA.alg,c=FA.cfg,ang=FA.ang,AT=faAngerTable();a.t+=dt;
+  if(ang.outT>0)ang.outT=Math.max(0,ang.outT-dt);
+  ang.onLast=FA.p.onGround&&!FA.p.climbing&&FA.p.gi===FA.lv.girders.length-2; // FR1d: l'unica trave subito sotto Algidone, su ogni piano (non piu' le due travi alte, ne' la scorta sotto il 25%)
   if(a.state==="idle"){if(FA.bar.pending&&!FA.lb){faBite();return} // morso dovuto (barra in ogni modalita', FR1b2): a meta' lancio aspetta la fine dell'animazione, poi mangia
-    a.wait-=dt;if(a.wait<=0){a.state="throw";a.t=0;a.released=false;a.pick=faPick()}}
-  else if(a.state==="eat"){if(a.t>=FA_EAT_T){a.state="idle";a.wait=(c.throwMin+Math.random()*(c.throwMax-c.throwMin))*FA.dm.pause}}
+    a.wait-=dt;
+    if(a.wait<=0){a.state="throw";a.t=0;a.released=false;a.pick=faPick()}
+    else if(ang.outT>0){const maxOut=c.throwMax*FA.dm.pause*AT.outK;if(a.wait>maxOut)a.wait=faThrowWait()}} // FR1d: l'attesa gia' in corso, se troppo lunga per l'esplosione appena scattata, si ridisegna subito
+  else if(a.state==="eat"){if(a.t>=FA_EAT_T){a.state="idle";a.wait=faThrowWait()}}
   else{
     if(a.t>=2*FA_ALG_FT&&!a.released){a.released=true;FA.throws++;if(a.pick&&FA.items.length<FA_MAX_ITEMS){faSpawn(a.pick);faSnd("throw")}} // l'oggetto nasce sul fotogramma di rilascio
-    if(a.t>=4*FA_ALG_FT){a.state="idle";a.wait=(c.throwMin+Math.random()*(c.throwMax-c.throwMin))*FA.dm.pause}
+    if(a.t>=4*FA_ALG_FT){a.state="idle";a.wait=faThrowWait()}
   }
 }
 function faAlgFrame(){ // {key,im}: key serve all'aggancio skin (F4a2), im e' comunque FAIMG[key]
   const a=FA.alg;let key;
   if(a.state==="throw")key="alg_throw"+Math.min(3,Math.floor(a.t/FA_ALG_FT));
   else if(a.state==="eat")key="alg_eat"+Math.min(2,Math.floor(a.t/.55)); // presa -> morso -> mastica (eat1/eat2 hanno il viso diverso: arte da migliorare in futuro, CLAUDE.md 8)
-  else key=faAngry()?"alg_angry"+(Math.floor(FA.t*4)%2):"alg_idle"+(Math.floor(FA.t*2)%2);
+  else key=faIsAngry()?"alg_angry"+(Math.floor(FA.t*4)%2):"alg_idle"+(Math.floor(FA.t*2)%2);
   return{key,im:FAIMG[key]};
 }
 const FA_GRILL_W=54,FA_GRILL_H=40,FA_GAP=13,FA_BOLT_DELAY=.5,FA_BOLT_SCORE=50,FA_FLAME_CLIMB=42; // griglia x1.2 (45x33 -> 54x40); FA_GAP = mezza larghezza del buco di un bullone

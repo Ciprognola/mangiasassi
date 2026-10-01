@@ -102,13 +102,14 @@ with sync_playwright() as pw:
     check("d) L3 shortest route > L1's", stats["l3"]["route"] > stats["l1"]["route"], (stats["l3"]["route"], stats["l1"]["route"]))
     check("no console errors (A, bolt validator)", not errs, errs)
 
-    # e) run at gironi 3/6/9/12 loads L1/L2/L3/L3 on floor 3; practice/encounter always L1
-    # FR1c superseded the layout-selection formula: floor(e) with e=(girone-1)/3*rate, not the flat discrete loop.
-    # On "easy" (rate 1.0) this still lands exactly on L1/L2/L3/L3 at 3/6/9/12 (e=0.67/1.67/2.67/3.67); medium's
-    # faster rate (1.3) jumps straight from e=0.87 (girone 3) to e=2.17 (girone 6), skipping the L2 window
-    # entirely for floor-3-landing gironi -- a real, difficulty-dependent consequence, not a bug (see test_fr1c.py
-    # for the full per-difficulty table). Set diff explicitly here so this check still exercises all three layouts.
-    want = {3: 0, 6: 1, 9: 2, 12: 2}
+    # e) run at gironi 3/6/9/12 on floor 3; practice/encounter always L1
+    # SUPERSEDED TWICE since this check was written: FR1c first moved layout selection to floor(e) (continuous,
+    # e=(girone-1)/3*rate); FR1d (0.4.5_35) replaced that with an explicit per-difficulty sequence indexed by the
+    # real discrete loop (FA_RUN.diff[id].bolts, since floor 3 only recurs every 3rd girone, floor(e) could skip a
+    # whole tier on faster difficulties -- see CLAUDE.md FR1d). On "easy" (bolts:[0,0,1,2]) gironi 3/6/9/12 ->
+    # loop 0/1/2/3 -> L1/L1/L2/L3 (not L1/L2/L3/L3 as this check's name still says; kept as the clearest difficulty
+    # to exercise all three layouts, see test_fr1d.py for the full per-difficulty table).
+    want = {3: 0, 6: 0, 9: 1, 12: 2}
     for g, li in want.items():
         p.evaluate("(()=>{" + UNF + "if(FA){FA.dead=true;FA=null}G=null;S.quick=null;go('menu');startFermaRun({girone:%d,dev:true,diff:'easy'});0})()" % g)
         p.wait_for_function("FA&&FA.run&&FA.state==='intro'", timeout=15000); p.evaluate(FREEZE)
