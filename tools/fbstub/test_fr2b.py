@@ -24,6 +24,9 @@ SPIES = """(()=>{if(window.__spied)return 0;window.__spied=1;window.__gamb=0;win
   const gr=faGapRoll;window.__rolls=[];window.faGapRoll=r=>{const v=gr(r);window.__rolls.push(v);return v};0})()""" % (SHOE, BJ_AUTO)
 
 
+NEWRUN = "(()=>{cancelAnimationFrame(raf);if(FA){FA.dead=true;FA=null}G=null;S.quick=null;startGame(false,%s);cancelAnimationFrame(raf);return 1})()"
+
+
 def to_menu(p, keep_quick=False):
     p.evaluate(UNF)
     p.evaluate("(()=>{if(FA){FA.dead=true;cancelAnimationFrame(FA.raf);FA=null}if(typeof B!=='undefined'&&B&&!B.dead){B.dead=true;B=null}cancelAnimationFrame(raf);G=null;%sgo('menu');0})()" % ("" if keep_quick else "S.quick=null;persist();"))
@@ -98,6 +101,7 @@ with sync_playwright() as pw:
     check("a) lives = the refill value (1 -> 3)", a2["lives"] == a2["ref"] == 3, a2)
     check("a) girone-start snapshot taken from the post-table run", a2["quick"] == a2["score"], a2)
     check("a) no Ferma invite, FA_FORCE left set", a2["inv"] == 0 and a2["force"] is True, a2)
+    check("a) real run: the won hand counted (S.p.gam.won 0 -> 1; the dev gate is not over-blocking)", p.evaluate("S.p.gam.won") == 1 and a2["end"] == 5100, (p.evaluate("S.p.gam.won"), a2["end"]))
     p.wait_for_function("musicFa&&!musicFa.paused", timeout=8000)
     check("a) music.fa playing again", p.evaluate("!musicFa.paused") is True, "")
     p.evaluate(FREEZE)
@@ -191,17 +195,30 @@ with sync_playwright() as pw:
     to_menu(p)
     p.evaluate("startFermaRun({girone:1});0"); p.wait_for_function("FA&&FA.run", timeout=15000); p.evaluate(FREEZE)
     check("h) a real Ferma run still starts at 0", p.evaluate("FA.run.score") == 0, p.evaluate("FA.run.score"))
-    # no own rolls: girone 4 -> 5 with Math.random 0 -> no table, the x5 card (mirrors the maze dev branch)
+    # FR2-tidy step 2: a dev Ferma run rolls like a dev maze run -- girone 5 = El Gamblador (no random needed), FA_FORCE ignored and unconsumed
     start_dev_run(p, 4)
     win_floor(p, 5000)
-    p.evaluate("window.__gamb=0;window.__mr=Math.random;Math.random=()=>0;FA_FORCE.on=true;0")
+    gam_before = p.evaluate("JSON.stringify(S.p.gam)")
+    p.evaluate("window.__gamb=0;window.__bjEnd=null;window.__mr=Math.random;Math.random=()=>0.99;FA_FORCE.on=true;0")
+    click_next(p)
+    p.evaluate("Math.random=window.__mr;0")
+    p.wait_for_function("typeof B!=='undefined'&&B&&B.run", timeout=15000)
+    h1 = p.evaluate("({rolls:window.__rolls.slice(),gamb:window.__gamb,force:FA_FORCE.on,dev:B.host.dev,bdev:B.dev})")
+    check("h) dev: girone 5 rolls El Gamblador (like the maze dev run), table starts with host dev, FA_FORCE unconsumed", h1["rolls"] == ["gamb"] and h1["gamb"] == 1 and h1["force"] is True and h1["dev"] is True and h1["bdev"] is True, h1)
+    wait_level(p, 5); p.evaluate(FREEZE)
+    p.evaluate("FA_FORCE.on=false;0")
+    gam_after = p.evaluate("JSON.stringify(S.p.gam)")
+    check("k) dev Ferma run: a WON dev hand leaves S.p.gam byte-identical (visits/seen/won) and plays the hand (score 5000 -> 5100)", gam_before == gam_after and p.evaluate("window.__bjEnd") == 5100, (gam_before, gam_after, p.evaluate("window.__bjEnd")))
+    # dev girone 9 -> 10: no table at random 0.99 -> the x5 card, like the maze dev branch
+    start_dev_run(p, 9)
+    win_floor(p, 5000)
+    p.evaluate("window.__gamb=0;window.__mr=Math.random;Math.random=()=>0.99;0")
     click_next(p)
     p.evaluate("Math.random=window.__mr;0")
     p.wait_for_selector("#mgo", timeout=5000)
-    h1 = p.evaluate("({rolls:window.__rolls.slice(),gamb:window.__gamb,force:FA_FORCE.on})")
-    check("h) dev: no own El Gamblador roll at girone 5, x5 card shown, FA_FORCE unconsumed", h1["rolls"] == ["inter"] and h1["gamb"] == 0 and h1["force"] is True, h1)
-    p.click("#mgo"); wait_level(p, 5); p.evaluate(FREEZE)
-    p.evaluate("FA_FORCE.on=false;0")
+    hx = p.evaluate("({rolls:window.__rolls.slice(),gamb:window.__gamb,t:document.querySelector('#modal h3').textContent})")
+    check("h) dev: girone 10 (no table at random .99): the x5 card", hx["rolls"] == ["inter"] and hx["gamb"] == 0 and hx["t"] == "Girone 10", hx)
+    p.click("#mgo"); wait_level(p, 10); p.evaluate(FREEZE)
     # GAM_FORCE: fires once at girone 3, never touches S.p.gam, blocks achievements through the host
     start_dev_run(p, 2)
     win_floor(p, 5000)
@@ -222,6 +239,72 @@ with sync_playwright() as pw:
     h3 = p.evaluate("({rolls:window.__rolls.slice(),gamb:window.__gamb,force:GAM_FORCE.on,t:window.__t})")
     check("h) dev: GAM_FORCE under the gate -> toast, consumed, no table, level loads", h3["rolls"] == [None] and h3["gamb"] == 0 and h3["force"] is False and h3["t"] == "El Gamblador: punti insufficienti", h3)
     p.evaluate(FREEZE)
+
+    # ================= j) dev parity sweep: faGapRoll(dev ferma run) === what bjAfterClear does for a dev maze run, same (girone, score, random, GAM_FORCE)
+    j = p.evaluate("""(()=>{
+      const G0=G,sg=window.startGamblador,mi=window.miniInterlude,fi=window.faInvite,mr=Math.random,tw=window.toast;let cur=null,bad=[],n=0,forceKept=true;
+      window.startGamblador=()=>{cur='gamb'};window.miniInterlude=()=>{cur='inter'};window.faInvite=()=>{cur='invite'};window.toast=()=>{};
+      S.p.gam.visits=0;FA_FORCE.on=false;
+      for(let g=1;g<=20;g++)for(const score of [20,5000])for(const r of [0.01,0.5,0.99])for(const force of [false,true]){
+        Math.random=()=>r;
+        G={state:''};cur=null;GAM_FORCE.on=force;bjAfterClear(mkRun({girone:g,score,game:'maze',dev:true}));const m=cur;GAM_FORCE.on=false;
+        GAM_FORCE.on=force;FA_FORCE.on=true;const f=faGapRoll(mkRun({girone:g,score,game:'ferma',dev:true}));if(!FA_FORCE.on)forceKept=false;FA_FORCE.on=false;
+        const ff=GAM_FORCE.on===false;n++;
+        if((m||null)!==f||!ff)bad.push([g,score,r,force,m,f]);
+      }
+      Math.random=mr;window.startGamblador=sg;window.miniInterlude=mi;window.faInvite=fi;window.toast=tw;G=G0;
+      return{n,bad:bad.slice(0,5),nbad:bad.length,forceKept}})()""")
+    check("j) dev Ferma gap == dev maze decision over gironi 1-20 x score {20,5000} x random {.01,.5,.99} x GAM_FORCE {off,on}", j["nbad"] == 0 and j["n"] == 240, j)
+    check("j) FA_FORCE ignored and left unconsumed by every dev Ferma roll", j["forceKept"] is True, j)
+    p.evaluate("FA_FORCE.on=false;GAM_FORCE.on=false;0")
+
+    # ================= k2) maze dev run: a won dev hand leaves S.p.gam untouched too (shared table code)
+    to_menu(p)
+    p.evaluate("S.p.gam.visits=0;S.p.gam.seen=false;S.p.gam.won=0;persist();0")
+    p.evaluate(NEWRUN % "{dev:true}")
+    gm_before = p.evaluate("JSON.stringify(S.p.gam)")
+    p.evaluate("window.__bjEnd=null;window.__gamb=0;S.p.fa.enc=5;G.stage=3;G.score=5000;G.dev=true;GAM_FORCE.on=true;bjAfterClear(G.run);0")
+    p.wait_for_function("typeof B!=='undefined'&&B&&B.run", timeout=15000)
+    p.wait_for_function("screen==='game'", timeout=90000)
+    gm_after = p.evaluate("JSON.stringify(S.p.gam)")
+    check("k) dev MAZE run: a won dev hand leaves S.p.gam byte-identical and plays the hand (5000 -> 5100)", gm_before == gm_after and p.evaluate("window.__bjEnd") == 5100, (gm_before, gm_after, p.evaluate("window.__bjEnd")))
+    to_menu(p)
+
+    # ================= l) owed gap from «Gioco corrente»: menu track stopped, opaque backdrop, no menu behind
+    p.evaluate("S.opts.music=true;S.p.gam.won=0;persist();0")
+    start_run(p, 9, 0)
+    win_floor(p, 5000)
+    p.evaluate("window.__mr=Math.random;Math.random=()=>0.99;0")
+    p.evaluate(UNF)
+    p.click("#fapanel [data-fa=savewin]"); p.wait_for_timeout(600)
+    p.evaluate("Math.random=window.__mr;closeModal();0")
+    check("l) setup: girone-10 gap \"inter\" saved unplayed", p.evaluate("S.quick&&S.quick.run.gap") == "inter", p.evaluate("S.quick&&S.quick.run.gap"))
+    p.evaluate("syncMusic();0")
+    p.wait_for_function("bgm && !bgm.paused", timeout=8000)
+    p.click("[data-tile=cur]")
+    p.wait_for_selector("#mgo", timeout=5000)
+    l = p.evaluate("""(()=>{const bg=document.querySelector('#root > div[style*="background"]'),cs=bg?getComputedStyle(bg):null,rr=root.getBoundingClientRect(),br=bg?bg.getBoundingClientRect():null;
+      const m=cs&&cs.backgroundColor.match(/rgba?\(([^)]+)\)/),parts=m?m[1].split(',').map(Number):[];
+      return{bgmPaused:bgm.paused,tiles:document.querySelectorAll('[data-tile]').length,brand:!!document.querySelector('.brand'),
+        alpha:parts.length>3?parts[3]:(parts.length===3?1:null),covers:!!br&&Math.abs(br.width-rr.width)<1&&Math.abs(br.height-rr.height)<1,screen,FA:FA,musicFaPlaying:!!(musicFa&&!musicFa.paused),
+        title:document.querySelector('#modal h3').textContent,txt:document.querySelector('#modal p').textContent}})()""")
+    check("l) owed interlude on resume: menu track not playing, no menu tiles behind the card", l["bgmPaused"] is True and l["tiles"] == 0 and l["brand"] is False, l)
+    check("l) owed interlude on resume: backdrop is a fully opaque element covering the whole root", l["alpha"] == 1 and l["covers"] is True, l)
+    check("l) the card is the same as a live gap (Girone 10, names Ferma Algidone!), Ferma not running, no Ferma music", l["title"] == "Girone 10" and "Ferma Algidone!" in l["txt"] and l["FA"] is None and l["musicFaPlaying"] is False, l)
+    p.wait_for_timeout(1700)  # past the menu's 800 ms bgm-resume interval (twice): the menu track must stay stopped
+    check("l) menu track stays stopped under the card (the 800 ms resume interval does not restart it)", p.evaluate("bgm.paused") is True, p.evaluate("bgm.paused"))
+    p.click("#mgo"); wait_level(p, 10)
+    check("l) «Avanti» loads girone 10's level from the live run, gap null", p.evaluate("FA.level===0&&FA.run.gap===null") is True, "")
+    p.evaluate(FREEZE)
+    # same for an owed El Gamblador table: the menu is gone the moment the resume starts (synchronous part of startGamblador)
+    to_menu(p)
+    p.evaluate("(()=>{const r=mkRun({girone:5,score:5000,game:'ferma',char:'roccia',lives:3});r.gap='gamb';S.quick={game:'ferma',run:r};persist();go('menu');0})()")
+    p.wait_for_timeout(400); p.evaluate("closeModal();syncMusic();0")
+    p.wait_for_function("bgm && !bgm.paused", timeout=8000)
+    lg = p.evaluate("(()=>{resumeFermaRun();return{bgmPaused:bgm.paused,tiles:document.querySelectorAll('[data-tile]').length,screen}})()")
+    check("l) owed El Gamblador on resume: menu track stopped and no menu behind at once", lg["bgmPaused"] is True and lg["tiles"] == 0 and lg["screen"] == "bj", lg)
+    p.wait_for_function("typeof B!=='undefined'&&B&&B.run", timeout=15000)
+    wait_level(p, 5); p.evaluate(FREEZE)
 
     # ================= RUN tables
     k = p.evaluate("({hold:Object.keys(RUN_HOLD),back:Object.keys(RUN_BACK)})")

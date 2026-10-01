@@ -107,7 +107,10 @@ with sync_playwright() as pw:
     to_menu(p); p.wait_for_function("bgm && !bgm.paused", timeout=5000)
     check("a) back on the menu after the encounter: only the menu track plays", p.evaluate("!bgm.paused && (!musicFa || musicFa.paused)"))
     # a direct, deterministic unit check of the race on two fresh tracks (no bgm/musicFa involved)
+    # (screen must be off the menu: while it is "menu" the menu's own 800 ms interval calls bgm.play() whenever bgm is paused, and play() stops every OTHER
+    # track -- including the one under test. FR2-tidy: that was the whole cause of this check being red; the game code is right)
     r3 = p.evaluate("""(async()=>{
+      const scr0=screen;screen="fa";
       const url="data:audio/mpeg;base64,"+FA_MUSIC_B64;
       const origFetch=window.fetch;
       let delay=true;
@@ -116,7 +119,7 @@ with sync_playwright() as pw:
       const pa=A.play(); delay=false; const pb=B.play();
       await pa; await pb; await new Promise(r=>setTimeout(r,30));
       const out={aPaused:A.paused,bPaused:B.paused};
-      A.release();B.release();window.fetch=origFetch;
+      A.release();B.release();window.fetch=origFetch;screen=scr0;
       return out
     })()""")
     check("a) unit: a track whose async start resolves late is dropped once another track has started", r3["aPaused"] and not r3["bPaused"], r3)

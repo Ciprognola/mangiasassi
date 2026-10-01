@@ -1342,7 +1342,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_38";
+const VERSION="0.4.5_39";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -5136,7 +5136,7 @@ function bjSetScore(v){if(B.run)B.host.score=v;else B.dbgScore=v;bjHud()}
 const bjShown=()=>B.bet||(B.selecting?bjStake():0);
 function bjHud(){const a=document.getElementById("bsc"),b=document.getElementById("bbet"),v=bjShown();if(a)a.textContent=bjScore();if(b)b.textContent=v?"PUNTATA "+v:""}
 function bjMake(o){
-  return{o,run:!!o.run,host:o.host||null,dbg:!!o.dbg,dbgScore:o.score||0,price:o.price,visits:o.visits||0,shoe:bjNewShoe(),pc:[],dc:[],cards:[],
+  return{o,run:!!o.run,host:o.host||null,dbg:!!o.dbg,dev:!!o.dev,dbgScore:o.score||0,price:o.price,visits:o.visits||0,shoe:bjNewShoe(),pc:[],dc:[],cards:[],
     da:{name:"idle",t0:bjNow(),rep:1,hold:0},smoke:[],lt:null,litGlow:1,banner:null,say:null,expr:0,menu:null,cursor:0,timers:new Set(),dead:false,
     confirmRes:null,menuRes:null,presRes:null,vars:{price:o.price},bet:0,raise:0,doubled:false,surr:false,nextLighter:0,waits:new Map(),skippable:false,cigLit:false,cigOutAt:0,lastDealAt:0,lastDealAnim:false,L:null,W:0,H:0,dpr:1,lastTxt:"",auto:o.auto||null,talkT:0};
 }
@@ -5474,7 +5474,7 @@ async function bjHand(){
   const r=bjSettle(B.bet,B.pc,B.dc,{surrender:B.surr,doubled:B.doubled});
   bjSetScore(bjScore()+r.ret);
   const net=r.ret-B.bet,win=r.kind==="win"||r.kind==="dbust"||r.kind==="bj";
-  if(win&&!B.dbg){S.p.gam.won=(S.p.gam.won||0)+1;persist();ach("bjwon",{n:S.p.gam.won})}
+  if(win&&!B.dbg&&!B.dev){S.p.gam.won=(S.p.gam.won||0)+1;persist();ach("bjwon",{n:S.p.gam.won})} // FR2-tidy: una mano di una partita dev (o SIM) non conta mai, come visits/seen in startGamblador
   const map={bj:["BLACKJACK +"+net,"#ffd84a","bj","playerbj"],win:["VINCI +"+net,"#7bd88f","win","win"],dbust:["VINCI +"+net,"#7bd88f","win","dealerbust"],lose:["PERDI "+net,"#ff8a8a","lose","lose"],bust:["SBALLATO "+net,"#ff8a8a","bust","bust"],dbj:["PERDI "+net,"#ff8a8a","lose","dealerbj"],push:["PAREGGIO","#e8dcc0","push","push"],sur:["ARRESA "+net,"#e8dcc0","lose",null]}[r.kind];
   B.banner={text:map[0],col:map[1],t0:bjNow()};playSnd(map[2],"gam");B.last=r;
   B.skippable=true;
@@ -5585,7 +5585,7 @@ async function startGamblador(o){
   const host=o.run?(o.host||activeRun()):null,score=o.run?host.score:(o.score||1000),visits=o.run?S.p.gam.visits:0,price=bjPrice(score,visits);
   const dv=(host&&host.dev)||SIM(); // FR2a: una partita/host dev (o SIM) non scrive mai su S.p.gam
   bjPauseT=0;bjPausedAcc=0;bjGate=Promise.resolve();bjGateRes=null;
-  B=bjMake({run:o.run,host,dbg:!o.run,score,visits,price,auto:o.auto});
+  B=bjMake({run:o.run,host,dbg:!o.run,dev:dv,score,visits,price,auto:o.auto});
   if(o.run&&!dv){S.p.gam.visits++;S.p.gam.seen=true;persist()}
   buildBJDOM();bjSize();bjHud();
   bjLoop();
@@ -5764,19 +5764,24 @@ function faRunAdvance(){ // «Avanti»: girone successivo (dopo il crollo del pi
   faQuickSnap();
 }
 /* FR2b: incontri tra due gironi della partita di Ferma (D1-D3). faGapRoll = l'intervallo, tirato UNA volta subito dopo onGironeAdvance e tenuto in run.gap:
-   "gamb" = El Gamblador (girone 5 obbligato, poi GAM_ODDS, sempre col cancello bjPrice>=50 come il labirinto), altrimenti "inter" ogni 5 gironi, altrimenti null.
-   Mai Ferma dentro Ferma: FA_FORCE ignorato e lasciato com'e'. Dev/SIM: nessun tiro proprio, solo «Forza El Gamblador» (una volta, stesso avviso del labirinto); la carta x5 come nel labirinto */
+   "gamb" = El Gamblador (girone 5 obbligato, poi GAM_ODDS, sempre col cancello bjPrice>=50), altrimenti "inter" ogni 5 gironi, altrimenti null.
+   FR2-tidy: una partita dev (o SIM) tira ESATTAMENTE come una partita dev del labirinto (stessi tiri, stesso cancello); «Forza El Gamblador» (GAM_FORCE) vale solo in dev, una volta, con lo stesso avviso.
+   Mai Ferma dentro Ferma: FA_FORCE ignorato e lasciato com'e' */
 function faGapRoll(run){
-  const st=run.girone,dv=!!run.dev||SIM();let gam=false;
-  if(dv){if(GAM_FORCE.on){GAM_FORCE.on=false;gam=bjPrice(run.score,S.p.gam.visits)>=50;if(!gam)toast("El Gamblador: punti insufficienti")}}
-  else if(st===5||(st>5&&Math.random()<GAM_ODDS))gam=bjPrice(run.score,S.p.gam.visits)>=50;
+  const st=run.girone,dv=!!run.dev||SIM();
+  const gamForce=dv&&GAM_FORCE.on;if(gamForce)GAM_FORCE.on=false;
+  const want=st===5||(st>5&&Math.random()<GAM_ODDS)||gamForce;
+  const gam=want&&bjPrice(run.score,S.p.gam.visits)>=50;
+  if(gamForce&&!gam)toast("El Gamblador: punti insufficienti");
   return gam?"gamb":st%5===0?"inter":null;
 }
 /* faPlayGap: consuma run.gap (null prima che l'incontro parta), smonta Ferma con le stesse righe di faWinSaveExit (senza scrivere S.quick), poi il tavolo (host = la run viva) o la carta; il ritorno passa da RUN_BACK.ferma */
 function faPlayGap(run){
   const g=run.gap;run.gap=null;
-  if(FA){faMusicStop();cancelAnimationFrame(FA.raf);faPanelHide();FA.dead=true;FA=null;faKeysClear();
-    root.onpointerdown=root.onpointerup=root.onpointercancel=root.oncontextmenu=root.onclick=null}
+  if(FA){faMusicStop();cancelAnimationFrame(FA.raf);faPanelHide();FA.dead=true;FA=null;faKeysClear()}
+  else{cancelAnimationFrame(menuRaf);screen="fa";shell('<div style="position:absolute;top:0;right:0;bottom:0;left:0;background:#0b1320"></div>')} // FR2-tidy: gap dovuto da «Gioco corrente» (nessun Ferma vivo): sfondo opaco al posto del menu, come lo schermo fermo di Ferma in un gap dal vivo
+  root.onpointerdown=root.onpointerup=root.onpointercancel=root.oncontextmenu=root.onclick=null;
+  syncMusic(); // la traccia del menu si ferma subito (screen non e' piu' una schermata col menu); dal vivo e' gia' ferma
   RUN_HOLD[run.game](run);
   if(g==="gamb")startGamblador({run:true,host:run});
   else if(g==="inter")miniInterlude(run);

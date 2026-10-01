@@ -1949,6 +1949,18 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Checks before this release: all test suites green except the known `test_f1` "Esc closes the login" (root-caused, not fixed — 0.5 backlog); `node --check` + smoke test; a save made on the tagged `v0.4` build still loads here with progress, achievements, extras, texts/colours and no console errors; `refs/skins/SKIN_COVERAGE.md` regenerated — every remaining `manca` is one of the grandfathered BK gaps (13 Ferma thrower + 6 Cinghiale frames), nothing new.
 - Not tested: real devices, the live Pages deploy after this release.
 
+## 0.4.5_39 — 2026-10-02 — FR2-tidy: brief-integrity rule, dev El Gamblador parity, S.p.gam dev gate, owed-gap backdrop, test_fr1c
+
+- 0.4.5_38 (FR2b) phone test OK — FR2 complete; the owner accepted all FR2b deviations and the own test h) (CLAUDE.md §10.9).
+- **CLAUDE.md §1, first rule — brief integrity**: every brief from Claude chat ends with the exact line "END OF BRIEF — if this line is missing, the message was cut: stop and tell me."; check it before anything else; missing → do nothing and ask for a resend, never fill in missing parts. (Prompted by the FR2b brief, which arrived cut off mid-test and was built anyway.)
+- **Dev parity**: a dev/SIM Ferma run now rolls El Gamblador exactly like a dev maze run (girone 5, then `GAM_ODDS`, price gate) instead of «no own rolls»; `GAM_FORCE` still forces once with the same toast; `FA_FORCE` stays ignored and unconsumed in a Ferma run; no `S.p` writes (a sweep test compares it with the maze's decision over 240 cases).
+- **`S.p.gam` dev gate**: the only ungated persistent write in the table code was the won-hand counter — `S.p.gam.won++` + `persist()` + `ach("bjwon")` — gated only by `!B.dbg`, so a won hand in any dev/SIM RUN table (maze too) counted toward «Il banco trema». Now also `!B.dev` (`bjMake` gets `dev:dv`). `visits`/`seen` were already gated (FR2a). Both games (shared table code).
+- **Owed gap from «Gioco corrente»**: no menu behind the interlude card or the El Gamblador screen any more — `faPlayGap` with no live Ferma swaps the menu for an opaque dark shell, sets `screen="fa"`, cancels the menu scene loop and calls `syncMusic()` so the menu track stops at once and stays stopped. A live gap is unchanged (its frozen Ferma stage is the backdrop).
+- **`test_fr1c` «a track whose async start resolves late is dropped…»**: cause found — the test's own assumption, not the game. It ran on the menu screen, where the menu's 800 ms interval restarts `bgm`, and `loopTrack.play()` stops every other track (FR1c exclusivity), so the track under test was stopped by it. Fixed in the test (`screen="fa"` for the unit check); the game code is right.
+- Size: +602 bytes (`index.html`, LF-normalised).
+- Tests: `test_fr2b.py` extended to 48/48 (h1 now dev parity; new j — dev Ferma gap == dev maze decision, 240 cases; k — a won dev hand leaves `S.p.gam` byte-identical in a dev Ferma run and a dev maze run, and a real run still counts it; l — owed interlude/El Gamblador on resume: menu track stopped and kept stopped, opaque full-size backdrop, no menu tiles). Mutation-checked: without the `!B.dev` gate k fails twice, without the backdrop l fails three times. `test_fr1c.py` unit check fixed. Full regression: see the session report.
+- Not tested: real phone, touch, audio (the menu track stopping when resuming into an owed gap wants an ear on a device).
+
 ## 0.4.5_38 — 2026-10-02 — FR2b: encounters between Ferma-run gironi
 
 - 0.4.5_37 (FR2a) phone test OK; all FR2a deviations accepted (`o.light` on `RUN_BACK.maze`, the dev/SIM `S.p.gam` leak fix, `&&G` dropped in `bjExit`, dev jump at 1500) — CLAUDE.md §10.9.
