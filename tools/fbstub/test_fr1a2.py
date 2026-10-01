@@ -97,13 +97,14 @@ with sync_playwright() as pw:
     res = {}
     for g in (1, 4, 7, 10):
         start_dev_run(p, g); res[g] = p.evaluate("({L:FA.bar.L,N:FA.bar.N,left:FA.bar.left,shown:FA.bar.shown,stock:FA.stock,full:FA.lv.stock,girone:FA.run.girone})")
-    want = {1: (120, 12), 4: (105, 10), 7: (90, 8), 10: (75, 6)}
-    check("b) gironi 1/4/7/10: L = 120/105/90/75 and N within 12±1 / 10±1 / 8±1 / 6±1, bar full",
+    # FR1c: L/N now scale with the continuous, per-difficulty e=(girone-1)/3*rate (medium rate=1.3 here, the default), not the flat discrete loop
+    want = {1: (120, 12), 4: (100.5, 9), 7: (81, 7), 10: (75, 6)}
+    check("b) gironi 1/4/7/10 (medium, FR1c e): L = 120/100.5/81/75 and N within 12±1 / 9±1 / 7±1 / 6±1, bar full",
           all(res[g]["L"] == want[g][0] and abs(res[g]["N"] - want[g][1]) <= 1 and res[g]["left"] == res[g]["N"] and res[g]["stock"] == res[g]["full"] for g in want), res)
     ns = set()
     for i in range(40):
         start_dev_run(p, 4); ns.add(p.evaluate("FA.bar.N"))
-    check("b) N is random in [−1,+1] around the loop value (girone 4: 9, 10 and 11 all show up, nothing else)", ns == {9, 10, 11}, sorted(ns))
+    check("b) N is random in [−1,+1] around the e-scaled value (girone 4, medium: 8, 9 and 10 all show up, nothing else)", ns == {8, 9, 10}, sorted(ns))
     check("no console errors (b)", not errs, errs)
 
     # ================= c) bites only on schedule, over a whole level

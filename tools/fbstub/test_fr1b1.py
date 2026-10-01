@@ -47,10 +47,14 @@ with sync_playwright() as pw:
     ctx, p, errs = page(b, site="stable", local=save(), toggle=False, dev=True)
     settle(p, 600)
 
-    # ---------------- a) loop factors at gironi 1,4,7,10,13,16,19
+    # ---------------- a) loop factors at gironi 1,4,7,10,13,16,19 -- SUPERSEDED by FR1c (0.4.5_34): the flat
+    # per-loop FA_RUN.loop.throwK/itemK table is gone, replaced by a per-difficulty one (FA_RUN.diff) read through
+    # a continuous e=(girone-1)/3*rate; a dev run defaults to medium (rate 1.3, throwK .82/throwMin .50, itemK
+    # 1.08/itemMax 1.45) since none is set here. See CLAUDE.md FR1c and tools/fbstub/test_fr1c.py for its own coverage.
     GIRONI_A = [1, 4, 7, 10, 13, 16, 19]
-    WANT_THROW = {g: max(0.6, 0.9 ** ((g - 1) // 3)) for g in GIRONI_A}
-    WANT_ITEM = {g: min(1.3, 1.05 ** ((g - 1) // 3)) for g in GIRONI_A}
+    E_MED = lambda g: (g - 1) / 3 * 1.3
+    WANT_THROW = {g: max(0.50, 0.82 ** E_MED(g)) for g in GIRONI_A}
+    WANT_ITEM = {g: min(1.45, 1.08 ** E_MED(g)) for g in GIRONI_A}
     for g in sorted(WANT_THROW):
         start_dev_run(p, g)
         base = p.evaluate("FA_LEVELS[FA.level].items")

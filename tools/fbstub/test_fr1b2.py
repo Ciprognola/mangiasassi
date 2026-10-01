@@ -103,12 +103,17 @@ with sync_playwright() as pw:
     check("no console errors (A, bolt validator)", not errs, errs)
 
     # e) run at gironi 3/6/9/12 loads L1/L2/L3/L3 on floor 3; practice/encounter always L1
+    # FR1c superseded the layout-selection formula: floor(e) with e=(girone-1)/3*rate, not the flat discrete loop.
+    # On "easy" (rate 1.0) this still lands exactly on L1/L2/L3/L3 at 3/6/9/12 (e=0.67/1.67/2.67/3.67); medium's
+    # faster rate (1.3) jumps straight from e=0.87 (girone 3) to e=2.17 (girone 6), skipping the L2 window
+    # entirely for floor-3-landing gironi -- a real, difficulty-dependent consequence, not a bug (see test_fr1c.py
+    # for the full per-difficulty table). Set diff explicitly here so this check still exercises all three layouts.
     want = {3: 0, 6: 1, 9: 2, 12: 2}
     for g, li in want.items():
-        p.evaluate("(()=>{" + UNF + "if(FA){FA.dead=true;FA=null}G=null;S.quick=null;go('menu');startFermaRun({girone:%d,dev:true});0})()" % g)
+        p.evaluate("(()=>{" + UNF + "if(FA){FA.dead=true;FA=null}G=null;S.quick=null;go('menu');startFermaRun({girone:%d,dev:true,diff:'easy'});0})()" % g)
         p.wait_for_function("FA&&FA.run&&FA.state==='intro'", timeout=15000); p.evaluate(FREEZE)
         bolts = p.evaluate("({level:FA.level,bolts:FA.bolts.map(b=>({g:b.g,x:b.x}))})")
-        check("e) run girone %d: floor index %d, bolt layout L%d" % (g, bolts["level"], li + 1),
+        check("e) run girone %d (easy): floor index %d, bolt layout L%d" % (g, bolts["level"], li + 1),
               bolts["level"] == 2 and bolts["bolts"] == a_data[["L1", "L2", "L3"][li]], bolts)
     start_practice_floor3(p)
     pbolts = p.evaluate("FA.bolts.map(b=>({g:b.g,x:b.x}))")

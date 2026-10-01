@@ -75,7 +75,7 @@ with sync_playwright() as pw:
           r["g1"] == r["g0"] + 1 and r["girone"] == 1 and 1 in r["prog"].values(), r)
     p.evaluate("(()=>{let i=0;while(FA.state!=='win'&&i<1000){faStep(1/60);i++}})()")
     btns = p.evaluate("[...document.querySelectorAll('#fapanel [data-fa]')].map(b=>b.dataset.fa)")
-    check("c) floor-1 win panel in a run: «Avanti» + «Esci»", btns == ["next", "exit"], btns)
+    check("c) floor-1 win panel in a run: «Avanti» + «Salva ed esci» (FR1c) + «Esci»", btns == ["next", "savewin", "exit"], btns)
     g_mid = p.evaluate("[FA.run.girone,S.p.ch.roccia.gir]")
     click_panel(p, "next")
     g_after = p.evaluate("[FA.run.girone,S.p.ch.roccia.gir]")
@@ -83,7 +83,7 @@ with sync_playwright() as pw:
     # floor 3's panel shows «Avanti» too
     p.evaluate(WIN); click_panel(p, "next"); p.evaluate(WIN)
     btns = p.evaluate("[...document.querySelectorAll('#fapanel [data-fa]')].map(b=>b.dataset.fa)")
-    check("c) floor-3 (collapse) panel in a run: «Avanti» + «Esci», no «Rigioca»", btns == ["next", "exit"] and p.evaluate("FA.level") == 2, btns)
+    check("c) floor-3 (collapse) panel in a run: «Avanti» + «Salva ed esci» (FR1c) + «Esci», no «Rigioca»", btns == ["next", "savewin", "exit"] and p.evaluate("FA.level") == 2, btns)
     # quitting between the two moments
     start_ferma_run(p)
     r = p.evaluate("(()=>{const g0=S.p.ch.roccia.gir,s0=S.p.sordi;FA.score=1500;faIntroEnd();FA.alg.wait=1e9;faWin();let i=0;while(FA.state!=='win'&&i<1000){faStep(1/60);i++}return{g0,s0}})()")
