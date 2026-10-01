@@ -163,9 +163,10 @@ with sync_playwright() as pw:
     start_run(p); p.evaluate(QUIET); p.evaluate("FA.inv=1e9;window.__snd=[]")
     p.evaluate("FA.bar.left=3;FA.bar.pending=true"); p.evaluate(STEP + "(65)")
     check("g) scheduled bite (run) plays sound.fa.bite", p.evaluate("window.__snd.some(([s,c])=>s==='bite'&&c==='fa')"), p.evaluate("window.__snd"))
-    start_practice(p); p.evaluate(QUIET); p.evaluate("window.__snd=[];FA.alg.state='idle';FA.alg.wait=0;Math.random=()=>0")  # forces the random-eat branch (< FA_EAT_P)
-    p.evaluate(STEP + "(3)")
-    check("g) a random eat (practice) plays sound.fa.bite", p.evaluate("window.__snd.some(([s,c])=>s==='bite'&&c==='fa')") and p.evaluate("FA.alg.state") == "eat", p.evaluate("window.__snd"))
+    start_practice(p); p.evaluate(QUIET); p.evaluate("window.__snd=[];FA.inv=1e9")
+    p.evaluate("FA.bar.left=3;FA.bar.pending=true")  # FR1b2: practice has no random eat any more, only scheduled bites (same as a run)
+    p.evaluate("FA.alg.state='idle';FA.alg.wait=0"); p.evaluate(STEP + "(3)")
+    check("g) a scheduled bite (practice, FR1b2) plays sound.fa.bite", p.evaluate("window.__snd.some(([s,c])=>s==='bite'&&c==='fa')") and p.evaluate("FA.alg.state") == "eat", p.evaluate("window.__snd"))
     p.evaluate("playSnd=window.__orig_playSnd")
     check("no console errors (g)", not errs, errs)
 

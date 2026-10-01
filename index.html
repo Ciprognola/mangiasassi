@@ -1342,7 +1342,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_32";
+const VERSION="0.4.5_33";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -5684,6 +5684,8 @@ let FA=null;
 const FA_RUN={lives:3,hardRefill:false,
   bar:{L1:120,dL:15,Lmin:75,N1:12,dN:2,Nmin:6,nRand:1,jitter:.15,biteBonus:100,lastSlow:.3,lastSlowDur:1.5,fade:1,drainT:.6}, // FR1a2
   loop:{throwK:.9,throwMin:.6,itemK:1.05,itemMax:1.3,multK:.2,multMax:2}}; // FR1b1: difficolta' per giro (loop=floor((girone-1)/3), a ogni piano caricato) e bonus girone (come nel labirinto, ma con questo tetto): barra del tempo = morsi (L secondi, N morsi per piano; L cala di dL e N di dN a ogni giro, N poi +-nRand); bonus fine piano = morsi non mangiati x biteBonus; ultimo morso: moviola lastSlow per lastSlowDur s reali, poi nero in fade s; drainT = durata del calo dolce di un morso
+const FA_PRAC={bar:{L:120,N:12,nRand:1,jitter:.15,biteBonus:100,lastSlow:.3,lastSlowDur:1.5,fade:1,drainT:.6}}; // FR1b2: barra dell'allenamento (valori del giro 1 della partita), tabella propria e indipendente (§10.0)
+const FA_ENC={bar:{L:120,N:12,nRand:1,jitter:.15,biteBonus:100,lastSlow:.3,lastSlowDur:1.5,fade:1,drainT:.6}}; // FR1b2: barra dell'incontro, stessi valori di partenza ma tabella propria e indipendente
 const FA_RUN_ALIAS={score:"score",lives:"lives"},FA_RUN_PROTO={};
 for(const k in FA_RUN_ALIAS){const f=FA_RUN_ALIAS[k];Object.defineProperty(FA_RUN_PROTO,k,{get(){return this.run[f]},set(v){this.run[f]=v},enumerable:false,configurable:true})}
 function startFermaRun(o){ // «Nuovo gioco»/«Hardcore» (Uomo roccia) e il pulsante dev «Partita Ferma dal girone N»
@@ -5708,23 +5710,26 @@ function faQuickSaveExit(){
   root.onpointerdown=root.onpointerup=root.onpointercancel=root.oncontextmenu=null;
   go("menu");toast("Partita salvata");
 }
-function faBiteGap(){const b=FA.bar;return(b.L/b.N)*(1+FA_RUN.bar.jitter*(2*Math.random()-1))} // intervallo tra due morsi: (L/N) +-jitter, a caso ogni volta
-function faBarInit(){ // a ogni piano caricato in una partita di Ferma: L ed N del giro, barra piena, orologio a zero
-  const B=FA_RUN.bar,loop=Math.floor((FA.run.girone-1)/3),L=Math.max(B.Lmin,B.L1-B.dL*loop);
-  const N=Math.max(1,Math.max(B.Nmin,B.N1-B.dN*loop)+Math.floor(Math.random()*(2*B.nRand+1))-B.nRand);
+const faBarTable=()=>FA.run?FA_RUN.bar:FA.enc?FA_ENC.bar:FA_PRAC.bar; // FR1b2: tabella della barra della modalita' in corso (§10.0: ognuna la propria, mai condivisa)
+function faBiteGap(){const b=FA.bar;return(b.L/b.N)*(1+faBarTable().jitter*(2*Math.random()-1))} // intervallo tra due morsi: (L/N) +-jitter, a caso ogni volta
+function faBarInit(){ // a ogni piano caricato, in ogni modalita' (FR1b2): L/N del giro in partita, L/N fissi altrove; barra piena, orologio a zero
+  const B=faBarTable();let L,N;
+  if(FA.run){const loop=Math.floor((FA.run.girone-1)/3);L=Math.max(B.Lmin,B.L1-B.dL*loop);N=Math.max(B.Nmin,B.N1-B.dN*loop)}
+  else{L=B.L;N=B.N}
+  N=Math.max(1,N+Math.floor(Math.random()*(2*B.nRand+1))-B.nRand);
   FA.bar={L,N,left:N,clock:0,due:0,pending:false,shown:1};FA.bar.due=faBiteGap();FA.lb=null;FA.stock=FA.lv.stock;
 }
-function faBarStep(dt){ // solo nel gioco vero (non in intro/pausa/morte/vittoria: faStep non ci arriva): orologio di gioco, morso dovuto, calo dolce della barra
+function faBarStep(dt){ // in ogni modalita' (non in intro/pausa/morte/vittoria: faStep non ci arriva): orologio di gioco, morso dovuto, calo dolce della barra
   const b=FA.bar;b.clock+=dt;
   if(!FA.lb&&b.left>0&&b.clock>=b.due)b.pending=true; // il morso aspetta che Algidone sia libero (faAlgStep); la prossima scadenza parte dalla scadenza precedente, non dal morso
-  const tgt=b.left/b.N;if(b.shown>tgt)b.shown=Math.max(tgt,b.shown-dt*(1/b.N)/FA_RUN.bar.drainT);
+  const tgt=b.left/b.N;if(b.shown>tgt)b.shown=Math.max(tgt,b.shown-dt*(1/b.N)/faBarTable().drainT);
   FA.stock=FA.lv.stock*b.shown;
 }
 function faBite(){ // Algidone mangia (animazione di sempre): la barra perde esattamente 1/N; l'ultimo morso avvia la moviola
   const b=FA.bar;b.left--;b.pending=false;b.due+=faBiteGap();FA.alg.state="eat";FA.alg.t=0;faSnd("bite");
   if(b.left<=0)FA.lb={t:0,a:0};
 }
-function faLastBiteEnd(){faMusicStop();FA.lb.a=1;FA.state="over";FA.lastDmg="morsi finiti";faPanel("Algidone ha finito tutto!","Punti: "+FA.score,[["exit","Continua"]])}
+function faLastBiteEnd(){faMusicStop();FA.lb.a=1;FA.state="over";FA.lastDmg="morsi finiti";faPanel("Algidone ha finito tutto!","Punti: "+FA.score,FA.enc||FA.run?[["exit","Continua"]]:[["retry","Riprova"],["exit","Esci"]])} // FR1b2: allenamento come faOver (Riprova/Esci), incontro/partita solo Continua
 function faRunAdvance(){ // «Avanti»: girone successivo (dopo il crollo del piano 3 si riparte dal piano 1), vite ricaricate tranne in Hardcore
   const r=FA.run,sc=FA.cnt?FA.cnt.base+FA.cnt.bonus:FA.score;
   onGironeAdvance(r);if(!r.hard||FA_RUN.hardRefill)r.lives=FA_RUN.lives;
@@ -5759,9 +5764,10 @@ async function startFerma(o){
   await ensureFA();await faMusicInit();
   if(screen!=="fa")return;
   FA={lv:FA_LEVELS[o.level||0],level:o.level||0,floorScore:0,extra:!!o.extra,t:0,acc:0,last:performance.now(),raf:0,dead:false,debug:!!o.debug,test:o.frun?!!o.frun.dev:(!!o.test||!o.run),enc:o.encounter?{n:Math.min(3,Math.max(1,o.encounter)),run:!!o.run,mult5:!!o.mult5,dev:!!o.dev,host:o.run&&G?G.run:null}:null,floorLives:3,paid:false,p:{},goal:false,lastDmg:null,items:[],nid:0,jumps:0,throws:0,lives:3,score:0,stock:FA_LEVELS[o.level||0].stock,state:"play",paused:false,dyingT:0,inv:0,flash:0,hud:{}};
-  if(o.frun){const f=Object.create(FA_RUN_PROTO);f.run=o.frun;delete FA.score;delete FA.lives;FA=Object.assign(f,FA);FA.floorLives=FA.lives;faBarInit()}
+  if(o.frun){const f=Object.create(FA_RUN_PROTO);f.run=o.frun;delete FA.score;delete FA.lives;FA=Object.assign(f,FA);FA.floorLives=FA.lives}
   FA.dm=FA_DIFF[(o.run&&G&&G.diff)||(o.frun&&o.frun.diff)||S.opts.diff||"medium"]||FA_DIFF.medium;FA.cfg=faCfg();faInitBelts(); // extra = prova dev: carne che rimbalza + griglia/fiamme (piano 3)
   if(FA.run){const k=faLoopThrowK();FA.cfg.throwMin*=k;FA.cfg.throwMax*=k}
+  faBarInit(); // FR1b2: la barra a morsi e' sempre attiva, in ogni modalita'
   faKeysClear();faRespawn();
   if(o.goal){const g=FA.lv.goal,p=FA.p;p.gi=g.gi;p.x=(g.x1+g.x2)/2;p.y=faGirderY(FA.lv.girders[g.gi],p.x)} // prova dev: uscita di Algidone, il giocatore parte nella zona obiettivo
   buildFaDOM();faSize();
@@ -5820,11 +5826,10 @@ function faRespawn(){
   FA.fx={flare:0,parts:[]};FA.items=[];FA.alg={state:"idle",t:0,wait:2.5,released:false,pick:null}; // la morte svuota TUTTI gli oggetti/fiamme; i lanci riprendono dopo una pausa (D2: 2.5 s)
 }
 /* ---- M4: vite, morte, scorta, punti, pausa (regole di morte CLAUDE.md 10.9) ---- */
-const FA_DYING=.8,FA_INV=2,FA_DEATH_STOCK=10,FA_SCORE={sausage:10,porchetta:30,meat:10,flame:20}; // D5: 10 a salto e bonus scorta = secondi x10; porchetta 3x
+const FA_DYING=.8,FA_INV=2,FA_SCORE={sausage:10,porchetta:30,meat:10,flame:20}; // D5: 10 a salto; porchetta 3x (FR1b2: la morte non costa piu' scorta in nessuna modalita', FA_DEATH_STOCK rimossa)
 function faDie(cause,force){ // urto/caduta/scorta finita: pausa+lampeggio, poi (faFinishDeath) via tutto, ripartenza, invulnerabilita'
   if(FA.state!=="play"||FA.lb||(FA.inv>0&&!force))return; // (durante l'ultimo morso niente morti: il finale e' gia' deciso) // l'invulnerabilita' blocca gli urti (non le cadute e la scorta finita)
-  faSnd("hit");FA.lastDmg=cause;FA.state="dying";FA.dyingT=FA_DYING;FA.flash=.18;FA.p.vx=0;
-  if(!FA.run){FA.stock=Math.max(0,FA.stock-FA_DEATH_STOCK);FA.alg.state="eat";FA.alg.t=0;FA.alg.wait=0;faSnd("bite")} // Algidone si mangia 10 s di scorta durante la pausa (non nella partita di Ferma: la morte costa solo una vita)
+  faSnd("hit");FA.lastDmg=cause;FA.state="dying";FA.dyingT=FA_DYING;FA.flash=.18;FA.p.vx=0; // FR1b2: la morte costa solo una vita, in ogni modalita' (nessun morso/calo di scorta)
 }
 function faOver(){FA.state="over";faPanel("Scorte perse!","Algidone si \u00e8 mangiato tutto...<br>Punti: "+FA.score,FA.enc||FA.run?[["exit","Continua"]]:[["retry","Riprova"],["exit","Esci"]])}
 function faFinishDeath(){
@@ -5853,7 +5858,7 @@ function faClimbStep(dt){
 }
 /* M8b: incontro VERO (mai prova dev, SIM o allenamento dalla carta): piano superato -> obiettivi (subito, anche se l'incontro poi si perde) e tessera 10; l'ultimo piano vinto paga il punteggio dell'incontro al labirinto */
 const faReal=()=>{if(!FA||SIM())return false;const r=activeRun();return FA.run?!!(r&&!r.dev):!!(FA.enc&&FA.enc.run&&!FA.enc.dev&&r&&!r.dev)}; // incontro vero, o partita di Ferma vera (FR1a1)
-function faBarFreeze(){if(FA.run){FA.bar.shown=FA.bar.left/FA.bar.N;FA.stock=FA.lv.stock*FA.bar.shown}} // la barra si ferma sul valore vero (senza il calo dolce a meta')
+function faBarFreeze(){FA.bar.shown=FA.bar.left/FA.bar.N;FA.stock=FA.lv.stock*FA.bar.shown} // la barra si ferma sul valore vero (senza il calo dolce a meta'), in ogni modalita' (FR1b2)
 /* FR1b1: bonus girone di una partita di Ferma (come il labirinto, §10.4, con il proprio tetto multMax) -- girPts include il bonus scorta appena calcolato */
 function faGirBonus(floorBonus){
   if(!FA.run)return 0;
@@ -5862,7 +5867,7 @@ function faGirBonus(floorBonus){
   FA.run.girBonusTxt=gb>0?`Bonus girone \u00d7${Math.round(mult*100)/100} +${gb}`:null;
   return gb>0?gb:0;
 }
-const faBonus=()=>FA.run?FA.bar.left*FA_RUN.bar.biteBonus:Math.floor(FA.stock)*10; // bonus fine piano: in una partita di Ferma = morsi non mangiati x biteBonus
+const faBonus=()=>FA.bar.left*faBarTable().biteBonus; // FR1b2: bonus fine piano = morsi non mangiati x biteBonus, in ogni modalita' (tutte hanno una barra ora)
 function faClear(fl){
   if(FA.run)onGironeClear(FA.run); // FR1a1: piano vinto = girone ripulito (partite giocate, obiettivi del girone), nel momento in cui parte la vittoria
   if(!faReal())return;
@@ -5933,13 +5938,13 @@ function faPanelHide(){const el=document.getElementById("fapanel");if(el){el.cla
 function faPause(on){
   if(!FA||FA.dead||FA.state==="over"||FA.state==="win"||FA.paused===on)return;
   FA.paused=on;faKeysClear();faMusic(!on);
-  if(on)faPanel("Pausa","Scorte, oggetti e tempo sono fermi.",[["resume","Riprendi"]].concat(FA.run&&!FA.run.dev?[["save","Salva ed esci"]]:[],devOn&&FA.run?[["lastbite","Ultimo morso"]]:[],[["exit","Esci"]]));else if(FA.state==="intro")faIntro();else faPanelHide();
+  if(on)faPanel("Pausa","Scorte, oggetti e tempo sono fermi.",[["resume","Riprendi"]].concat(FA.run&&!FA.run.dev?[["save","Salva ed esci"]]:[],devOn?[["lastbite","Ultimo morso"]]:[],[["exit","Esci"]]));else if(FA.state==="intro")faIntro();else faPanelHide();
 }
 function faLoadFloor(i,lives,score){ // carica un piano: punteggio/vite passati, scorta piena, oggetti e nastri da capo, carta d'ingresso
   FA.level=i;FA.lv=FA_LEVELS[i];FA.cfg=faCfg();faInitBelts();
   if(FA.run){const k=faLoopThrowK();FA.cfg.throwMin*=k;FA.cfg.throwMax*=k}
   FA.lives=lives;FA.floorLives=lives;FA.score=score;FA.floorScore=score;FA.lastDmg=null;FA.paused=false;FA.hud={};FA.stock=FA.lv.stock;FA.kick=null;FA.cnt=null;FA.state="play";
-  if(FA.run)faBarInit();
+  faBarInit(); // FR1b2: in ogni modalita'
   faRespawn();faPanelHide();faIntro();
 }
 function faRestart(){faLoadFloor(0,3,0)} // Riprova (game over): SEMPRE dal piano 1, punteggio azzerato (0.3_33; prima: il piano in corso)
@@ -5956,7 +5961,7 @@ function faHud(){
   const fr=FA.stock<=0?3:pct>.67?0:pct>.34?1:2; // pila di scorte: piena -> 2/3 -> 1/3 -> vuota
   if(h.fr!==fr){h.fr=fr;g("fasp").src=FA_IMG_SRC["scorte"+fr]}
   {const nb=FA.bolts?FA.bolts.filter(b=>b.st==="on").length:0,bt=FA.lv.bolts?1:0;if(h.nb!==nb||h.bt!==bt){h.nb=nb;h.bt=bt;g("fabolt").hidden=!bt;g("fabn").textContent=nb}} // bulloni rimasti (solo piano 3)
-  if(FA.run&&devOn){const d=g("fadev"),t="morsi "+FA.bar.left+"/"+FA.bar.N+" \u00b7 prossimo "+Math.max(0,FA.bar.due-FA.bar.clock).toFixed(1)+"s";if(d&&h.dev!==t){h.dev=t;d.textContent=t}}
+  if(FA.run&&devOn){const d=g("fadev"),bl=FA.level===2?" \u00b7 bulloni L"+(Math.min(faLoopN(),2)+1):"",t="morsi "+FA.bar.left+"/"+FA.bar.N+" \u00b7 prossimo "+Math.max(0,FA.bar.due-FA.bar.clock).toFixed(1)+"s"+bl;if(d&&h.dev!==t){h.dev=t;d.textContent=t}}
   if(FA.run&&h.gir!==FA.run.girone){h.gir=FA.run.girone;const e=g("fawv");if(e)e.textContent="Girone "+FA.run.girone}
   if(h.lives!==FA.lives){h.lives=FA.lives;g("fali").querySelectorAll("canvas").forEach((c,i)=>{const x=c.getContext("2d");x.clearRect(0,0,48,44);x.globalAlpha=i<FA.lives?1:.22;x.imageSmoothingEnabled=false;drawFace(x,24,22,46,2,false)})}
 }
@@ -5976,7 +5981,7 @@ function faLadderFor(p,dir){ // scala piu' vicina, con il centro del giocatore e
 function faStep(dt){
   if(FA.paused||FA.state==="over")return;
   FA.t+=dt;if(FA.flash>0)FA.flash-=dt;
-  if(FA.lb){const B=FA_RUN.bar;FA.lb.t+=dt;if(musicFa)musicFa.rate=B.lastSlow;
+  if(FA.lb){const B=faBarTable();FA.lb.t+=dt;if(musicFa)musicFa.rate=B.lastSlow;
     if(FA.lb.t>=B.lastSlowDur){FA.lb.a=Math.min(1,(FA.lb.t-B.lastSlowDur)/B.fade);if(musicFa)musicFa.volume=FA_MUS_VOL*(1-FA.lb.a);if(FA.lb.a>=1)faLastBiteEnd();return}
     dt*=B.lastSlow} // ultimo morso: moviola, poi tutto fermo e nero
   if(FA.state==="win"){faCountStep(dt);return}
@@ -5985,8 +5990,7 @@ function faStep(dt){
   if(FA.state==="collapse"){faFxStep(dt);faCollapseStep(dt);return}
   if(FA.state==="dying"){FA.alg.t+=dt;if((FA.dyingT-=dt)<=0)faFinishDeath();return} // pausa: tutto fermo, il giocatore lampeggia
   if(FA.inv>0)FA.inv-=dt;
-  if(FA.run)faBarStep(dt); // partita di Ferma: la barra cala solo a morsi (FR1a2)
-  else if((FA.stock-=dt*FA.dm.drain)<=0){FA.stock=0;FA.lastDmg="scorte finite";return faOver()} // scorta a zero = fine partita subito, a prescindere dalle vite
+  faBarStep(dt); // FR1b2: la barra cala solo a morsi, in ogni modalita' (il calo continuo della scorta e' sparito)
   if(FA.stock<FA.lv.stock*.25){FA.lowT=(FA.lowT||0)-dt;if(FA.lowT<=0){FA.lowT=2;faSnd("low")}}else FA.lowT=0; // avviso sotto il 25 percento: un beep ogni 2 s
   faAlgStep(dt);faItemsStep(dt);faFxStep(dt);faBeltStep(dt);faBoltsStep(dt);
   const p=FA.p,lv=FA.lv,G=lv.girders,K=FA_PHYS;
@@ -6049,7 +6053,7 @@ const FA_ITEM={sausage:{speed:70,r:8,h:14,cause:"salsiccia"},porchetta:{speed:34
 const FA_MEAT_HOP=200; // rimbalzo: apice 200^2/(2*588)=34 px, sempre sotto la trave sopra (varco minimo 62 - trave - carne)
 const FA_ALG_FT=.14,FA_ART=.6,FA_LADDER_V=90,FA_ITEM_G=700,FA_MAX_ITEMS=14; // FA_ART: oggetti a x0.5 (§10.7)
 const faDown=g=>g.flow||(g.y2>g.y1?1:-1); // verso in cui una trave scende = verso in cui rotola un oggetto
-function faInitBelts(){FA.belt=FA.lv.girders.map(g=>g.conveyor?{dir:g.conveyor.dir||1,t:0,off:0}:null);FA.bolts=(FA.lv.bolts||[]).map(b=>({g:b.g,x:b.x,st:"on",t:0}));FA.gaps=FA.lv.girders.map(()=>[])} // nastri + bulloni/buchi del piano
+function faInitBelts(){FA.belt=FA.lv.girders.map(g=>g.conveyor?{dir:g.conveyor.dir||1,t:0,off:0}:null);const bl=FA.lv.bolts?FA_BOLTS[FA.run?Math.min(faLoopN(),2):0]:null;FA.bolts=(bl||[]).map(b=>({g:b.g,x:b.x,st:"on",t:0}));FA.gaps=FA.lv.girders.map(()=>[])} // nastri + bulloni/buchi del piano (FR1b2: disposizione per giro in partita, sempre L1 altrove)
 const faBeltV=gi=>{const b=FA.belt&&FA.belt[gi];return b?b.dir*FA.lv.girders[gi].conveyor.v:0}; // px/s con segno (+ = verso destra)
 function faBeltStep(dt){FA.belt.forEach((b,i)=>{if(!b)return;const c=FA.lv.girders[i].conveyor;b.off+=b.dir*c.v*dt;if(c.rev){const t0=b.t;b.t+=dt;if(t0<c.rev-.7&&b.t>=c.rev-.7)faSnd("belt");if(b.t>=c.rev){b.t=0;b.dir=-b.dir}}})} // il suono parte insieme al lampeggio rosso dei chevron
 function faBoltsStep(dt){for(const b of FA.bolts)if(b.st==="pop"){b.t+=dt;if(b.t>=FA_BOLT_DELAY){b.st="gone";FA.gaps[b.g].push(b.x)}}} // il buco si apre 0,5 s dopo aver preso il bullone
@@ -6075,14 +6079,12 @@ function faPick(){
   if(!tot)return null; // nessun peso = niente lanci (prove)
   let r=Math.random()*tot;for(const [t,n] of w){if((r-=n)<0)return t}return "sausage";
 }
-const FA_EAT_P=.22,FA_EAT_T=1.65; // ogni tanto, tra un lancio e l'altro, Algidone mangia un prosciutto (fa_alg_eat0-2)
+const FA_EAT_T=1.65; // durata dell'animazione del morso (fa_alg_eat0-2) -- FR1b2: il morso e' sempre programmato dalla barra, in ogni modalita' (22% casuale rimosso, FA_EAT_P)
 const faAngry=()=>FA.p.gi>=FA.lv.girders.length-2||FA.stock<FA.lv.stock*.25; // il giocatore e' nelle due travi alte, o la scorta e' sotto il 25%
 function faAlgStep(dt){
   const a=FA.alg,c=FA.cfg;a.t+=dt;
-  if(a.state==="idle"){if(FA.run&&FA.bar.pending&&!FA.lb){faBite();return} // morso dovuto: a meta' lancio aspetta la fine dell'animazione, poi mangia
-    a.wait-=dt;if(a.wait<=0){
-    if(!FA.run&&!faAngry()&&Math.random()<FA_EAT_P){a.state="eat";a.t=0;faSnd("bite")}
-    else{a.state="throw";a.t=0;a.released=false;a.pick=faPick()}}}
+  if(a.state==="idle"){if(FA.bar.pending&&!FA.lb){faBite();return} // morso dovuto (barra in ogni modalita', FR1b2): a meta' lancio aspetta la fine dell'animazione, poi mangia
+    a.wait-=dt;if(a.wait<=0){a.state="throw";a.t=0;a.released=false;a.pick=faPick()}}
   else if(a.state==="eat"){if(a.t>=FA_EAT_T){a.state="idle";a.wait=(c.throwMin+Math.random()*(c.throwMax-c.throwMin))*FA.dm.pause}}
   else{
     if(a.t>=2*FA_ALG_FT&&!a.released){a.released=true;FA.throws++;if(a.pick&&FA.items.length<FA_MAX_ITEMS){faSpawn(a.pick);faSnd("throw")}} // l'oggetto nasce sul fotogramma di rilascio
@@ -6102,6 +6104,98 @@ function faGrill(){ // griglia SUL piano terra, all'estremo basso (destro): x1 d
   return {x1,x2:x1+FA_GRILL_W,cx,w:FA_GRILL_W,h:FA_GRILL_H,top:bot-FA_GRILL_H,bot};
 }
 function faInGap(gi,x){const a=FA.gaps&&FA.gaps[gi];if(!a)return false;for(const g of a)if(x>g-FA_GAP&&x<g+FA_GAP)return true;return false}
+/* ==== FR1b2: disposizioni dei bulloni del piano 3 per giro + validatore (trasferibile: nessun DOM, nessuno stato di FA, §10.0) ====
+   FA_BOLTS[0]=L1=la disposizione di sempre (stesso riferimento di FA_LEVELS[2].bolts); FA_BOLTS[1]=L2 (8, giro 2); FA_BOLTS[2]=L3 (10, giro 3+).
+   faInitBelts sceglie FA_BOLTS[min(loop,2)] in partita, sempre FA_BOLTS[0] in allenamento/incontro. */
+const FA_BOLTS=[FA_LEVELS[2].bolts,
+  [{g:1,x:130},{g:1,x:255},{g:2,x:125},{g:2,x:245},{g:3,x:125},{g:3,x:245},{g:4,x:145},{g:4,x:265}], // L2
+  [{g:1,x:130},{g:1,x:255},{g:2,x:36},{g:2,x:125},{g:2,x:245},{g:3,x:36},{g:3,x:125},{g:3,x:245},{g:4,x:145},{g:4,x:265}]]; // L3 (= L2 + un bullone in piu' sulle travi 2 e 3)
+const FA_JUMP_SPAN=Math.round(2*Math.abs(FA_PHYS.jump)/FA_PHYS.g*FA_PHYS.walk*.85); // scatto massimo in orizzontale con un salto pieno (atterraggio alla stessa altezza), margine del 15%
+const FA_BOLT_PW=FA_PHYS.hitw/2; // mezza larghezza del giocatore: l'unica definita in FA_PHYS (area di contatto con gli oggetti)
+function faBoltSegs(x1,x2,holes){ // trave divisa in segmenti dai buchi aperti (stessa logica di faDrawGirder)
+  const segs=[];let x=x1;for(const gx of holes){if(gx>x)segs.push([x,gx-FA_GAP]);x=Math.max(x,gx+FA_GAP)}if(x2>x)segs.push([x,x2]);return segs;
+}
+function faBoltGirderX2(lv,gi){ // limite destro praticabile: sul piano terra la griglia blocca il passaggio (faStep, "wall"), altrove e' la trave stessa
+  const g=lv.girders[gi];return gi===lv.wallGirder&&lv.grill?Math.min(g.x2,lv.grill.x1-8):g.x2;
+}
+function faBoltReach(lv,bolts,picked){ // segmenti raggiungibili dal via, dato l'insieme di bulloni gia' presi (BFS su trave+scala+salto)
+  const byG={};bolts.forEach((b,i)=>{if(picked.has(i))(byG[b.g]=byG[b.g]||[]).push(b.x)});
+  const segsByG=lv.girders.map((g,gi)=>faBoltSegs(g.x1,faBoltGirderX2(lv,gi),(byG[gi]||[]).slice().sort((a,b)=>a-b)));
+  const segOf=(gi,x)=>segsByG[gi].findIndex(([a,b])=>x>=a&&x<=b);
+  const s0=segOf(lv.start.gi,lv.start.x);if(s0<0)return{reach:new Set(),segOf};
+  const reach=new Set([lv.start.gi+":"+s0]),q=[[lv.start.gi,s0]];
+  while(q.length){
+    const [gi,si]=q.shift(),seg=segsByG[gi][si];if(!seg)continue;const [a,b]=seg;
+    for(const l of lv.ladders){ // scala non rotta, con la x dentro QUESTO segmento sia sopra che sotto
+      if(l.broken)continue;
+      let other=null;if(l.gBot===gi&&l.x>=a&&l.x<=b)other=l.gTop;else if(l.gTop===gi&&l.x>=a&&l.x<=b)other=l.gBot;
+      if(other==null)continue;const os=segOf(other,l.x);if(os<0)continue;const k=other+":"+os;if(!reach.has(k)){reach.add(k);q.push([other,os])}
+    }
+    if(si>0){const gap=a-segsByG[gi][si-1][1];if(gap<=FA_JUMP_SPAN){const k=gi+":"+(si-1);if(!reach.has(k)){reach.add(k);q.push([gi,si-1])}}} // salto sul buco a sinistra
+    if(si<segsByG[gi].length-1){const gap=segsByG[gi][si+1][0]-b;if(gap<=FA_JUMP_SPAN){const k=gi+":"+(si+1);if(!reach.has(k)){reach.add(k);q.push([gi,si+1])}}} // salto sul buco a destra
+  }
+  return{reach,segOf};
+}
+function faBoltCheck(bolts){ // pura: nessun DOM, nessuno stato di FA -- R1-R5 di CLAUDE.md §10.6/10.8 FR1b2
+  const lv=FA_LEVELS[2],errs=[];
+  bolts.forEach((b,i)=>{ // R1: dentro la trave, al netto di meta' buco
+    const g=lv.girders[b.g];
+    if(!g){errs.push("bullone "+i+": trave "+b.g+" inesistente");return}
+    if(b.x<g.x1+FA_GAP||b.x>g.x2-FA_GAP)errs.push("bullone "+i+" (trave "+b.g+", x"+b.x+"): fuori dalla trave")
+  });
+  const byG={};bolts.forEach((b,i)=>{(byG[b.g]=byG[b.g]||[]).push({x:b.x,i})});
+  for(const gi in byG){ // R2: lontano da OGNI scala che tocca questa trave (anche rotta, per sicurezza)
+    const touch=lv.ladders.filter(l=>String(l.gTop)===gi||String(l.gBot)===gi);
+    for(const b of byG[gi])for(const l of touch)if(Math.abs(b.x-l.x)<FA_GAP+FA_BOLT_PW)errs.push("bullone "+b.i+" (trave "+gi+"): troppo vicino alla scala x"+l.x);
+  }
+  for(const gi in byG){ // R3: buchi non sovrapposti, piattaforma residua praticabile
+    const xs=byG[gi].map(b=>b.x).sort((a,b)=>a-b);
+    for(let k=0;k<xs.length-1;k++){const plat=(xs[k+1]-FA_GAP)-(xs[k]+FA_GAP);
+      if(plat<0)errs.push("trave "+gi+": buchi sovrapposti (x"+xs[k]+", x"+xs[k+1]+")");
+      else if(plat<2*FA_BOLT_PW)errs.push("trave "+gi+": piattaforma troppo stretta tra x"+xs[k]+" e x"+xs[k+1]);
+    }
+  }
+  (byG[lv.start.gi]||[]).forEach(b=>{if(b.x-FA_GAP<lv.safeXEnd)errs.push("bullone "+b.i+" (trave "+lv.start.gi+"): dentro la zona di partenza sicura")}); // R4
+  const n=bolts.length,seen=new Set([""]),stack=[new Set()];
+  while(stack.length){ // R5: nessun vicolo cieco -- ogni stato raggiungibile ha sempre un prossimo bullone raggiungibile, finche' non sono tutti presi
+    const picked=stack.pop();
+    if(picked.size===n)continue;
+    const{reach,segOf}=faBoltReach(lv,bolts,picked),next=[];
+    bolts.forEach((b,i)=>{if(picked.has(i))return;const si=segOf(b.g,b.x);if(si>=0&&reach.has(b.g+":"+si))next.push(i)});
+    if(!next.length){errs.push("vicolo cieco: con i bulloni "+[...picked].join(",")+" presi, nessun bullone restante e' raggiungibile");continue}
+    for(const i of next){const s2=new Set(picked);s2.add(i);const key=[...s2].sort((a,b)=>a-b).join(",");if(!seen.has(key)){seen.add(key);stack.push(s2)}}
+  }
+  return{ok:errs.length===0,errs,stats:faBoltStats(bolts)};
+}
+const FA_LADDER_HOP=70; // FR1b2, solo per la statistica "percorso": costo convenzionale di una scala (non e' una regola di validazione)
+function faBoltLadderDist(lv,a,b){ // distanza approssimata via scale non rotte (BFS sulle travi, per la statistica "percorso")
+  const seen=new Set([a.g]),q=[{g:a.g,x:a.x,d:0}];
+  while(q.length){
+    const cur=q.shift();if(cur.g===b.g)return cur.d+Math.abs(cur.x-b.x);
+    for(const l of lv.ladders){if(l.broken)continue;
+      if(l.gBot===cur.g&&!seen.has(l.gTop)){seen.add(l.gTop);q.push({g:l.gTop,x:l.x,d:cur.d+Math.abs(cur.x-l.x)+FA_LADDER_HOP})}
+      if(l.gTop===cur.g&&!seen.has(l.gBot)){seen.add(l.gBot);q.push({g:l.gBot,x:l.x,d:cur.d+Math.abs(cur.x-l.x)+FA_LADDER_HOP})}
+    }
+  }
+  return 1e5; // non collegate (non dovrebbe succedere su questo piano)
+}
+function faBoltStats(bolts){ // statistiche informative (non pass/fail): distanza dalla scala piu' vicina, bulloni lato fiamma, percorso approssimato, coppie con ordine forzato
+  const lv=FA_LEVELS[2];
+  const nearLadder=b=>{const touch=lv.ladders.filter(l=>l.gTop===b.g||l.gBot===b.g);return touch.length?Math.min(...touch.map(l=>Math.abs(b.x-l.x))):Infinity};
+  const dists=bolts.map(nearLadder),meanLadderDist=dists.reduce((a,c)=>a+c,0)/dists.length,minLadderDist=Math.min(...dists);
+  const flameBolts=bolts.filter(b=>b.x>=lv.flameMinX).length;
+  const dist=(a,b)=>a.g===b.g?Math.abs(a.x-b.x):faBoltLadderDist(lv,a,b);
+  let cur={x:lv.start.x,g:lv.start.gi},left=bolts.map((b,i)=>i),route=0;
+  while(left.length){let bi=left[0],bd=dist(cur,bolts[bi]);for(const i of left){const d=dist(cur,bolts[i]);if(d<bd){bd=d;bi=i}}route+=bd;cur=bolts[bi];left=left.filter(i=>i!==bi)}
+  let forced=0;
+  for(let i=0;i<bolts.length;i++)for(let j=0;j<bolts.length;j++){if(i===j)continue;
+    const ra=faBoltReach(lv,bolts,new Set([i])),rb=faBoltReach(lv,bolts,new Set([j]));
+    const bAfterA=(()=>{const si=ra.segOf(bolts[j].g,bolts[j].x);return si>=0&&ra.reach.has(bolts[j].g+":"+si)})();
+    const aAfterB=(()=>{const si=rb.segOf(bolts[i].g,bolts[i].x);return si>=0&&rb.reach.has(bolts[i].g+":"+si)})();
+    if(!bAfterA&&aAfterB)forced++;
+  }
+  return{meanLadderDist,minLadderDist,flameBolts,route:Math.round(route),forcedPairs:forced/2,count:bolts.length};
+}
 function faGrillHit(it){ // arrivo nella griglia: vampata (fa_griglia1), sbuffo di fumo e scintille (codice); stesso aggancio genera la fiamma
   const gr=faGrill(),cx=gr.cx,fx=FA.fx;fx.flare=1;faSnd("flame");
   for(let i=0;i<5;i++)fx.parts.push({k:"puff",x:cx+(Math.random()-.5)*22,y:gr.top+10,vx:(Math.random()-.5)*16,vy:-(26+Math.random()*26),age:-i*.08,life:1.1,r:4});

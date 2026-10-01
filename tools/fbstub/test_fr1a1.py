@@ -116,11 +116,11 @@ with sync_playwright() as pw:
           after["lives"] == before["lives"] - 1 and after["items"] == 0 and after["x"] == after["sx"] and 1.9 < after["inv"] <= 2 and after["st"] == "play" and after["wait"] == 2.5, (before["lives"], after))
     check("e) death: picked bolts/holes, belts and score unchanged", (after["bolts"], after["gaps"], after["belt"], after["score"]) == (before["bolts"], before["gaps"], before["belt"], before["score"]), after)
     check("e) death: no forced eat, no stock loss (only the normal drain while dying)", d["eat"] != "eat" and before["stock"] - after["stock"] < 1.5, (d, before["stock"], after["stock"]))
-    # control: practice keeps today's death rule (stock −10, Algidone eats)
+    # control: as of FR1b2, practice ALSO switched to soft respawn (no stock/bite loss on death) -- superseded, see CLAUDE.md FR1b2
     p.evaluate("(()=>{" + UNF + "FA.dead=true;FA=null;go('menu')})()"); p.wait_for_timeout(300)
     p.evaluate("startFerma({test:true})"); p.wait_for_function("FA&&FA.state==='intro'", timeout=15000); p.evaluate(FREEZE); p.evaluate(QUIET)
     s0 = p.evaluate("FA.stock"); d = p.evaluate(DIE_AND_WAIT)
-    check("e) control — practice unchanged: a death still eats 10 s of stock (Algidone eats)", d["eat"] == "eat" and s0 - p.evaluate("FA.stock") >= 10 and p.evaluate("FA.run") is None, (s0, d))
+    check("e) control — practice now soft-respawns too (FR1b2): no bite, stock unchanged", d["eat"] != "eat" and abs(s0 - p.evaluate("FA.stock")) < 1.5 and p.evaluate("FA.run") is None, (s0, d))
     check("no console errors (e)", not errs, errs)
 
     # ---------------- f) 0 lives → «Partita finita» with the same numbers as a maze runPayout; «Ancora!»; pause «Esci»
