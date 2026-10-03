@@ -9,6 +9,8 @@ Permanent project context for Claude Code. Read it fully at the start of every s
 
 0.5 plan in §10. **E5 complete and phone-tested** (0.4.5_24 merge, 0.4.5_25 wall-breaking). **E6a report done** (`docs/releases/0.5-E6a-report.md`, commit `bda614b`) and acted on in E6b. 0.4.5_31 (FA-MUS), 0.4.5_32 (FR1b1), 0.4.5_33 (FR1b2), 0.4.5_34 (FR1c) and 0.4.5_35/0.4.5_36 (FR1d + fix) all phone-tested OK. **FR1 complete.** FR2 split into FR2a (run-agnostic El Gamblador/interlude entry+exit, `RUN_HOLD`/`RUN_BACK`, dev «Forza El Gamblador») + FR2b (the actual Ferma-run gap), owner decision logged in §10.9 — 0.4.5_37 (FR2a) and 0.4.5_38 (FR2b) phone-tested OK — **FR2 complete.** **Last build 0.4.5_39** (FR2-tidy: the brief-integrity rule §1, dev El Gamblador parity in the Ferma run, the `S.p.gam` dev gate, the owed-gap backdrop; §4/§10.9), **not yet phone-tested**. Next: phone test of 0.4.5_39 (an owed El Gamblador/×5 card from «Gioco corrente» — no menu behind, menu music silent; a dev Ferma run reaching girone 5), then **Phase 4**: L0 (Firebase console + rules, in Claude chat), then L1 (registration UI), L2–L5, then **Phase 5** (REQ, REL). Still waiting on the owner: the B1 screenshot (maze hitboxes around assets) and the REQ tile-10 reward skin's art + name. Working method that proved efficient this phase: specs written in Claude chat first, then Claude Code on Sonnet implements thin chunks with targeted tests. Dev-branch builds are `0.4.5_N`.
 
+2026-10-03: roadmap to 1.0 approved (docs/roadmap-1.0.md, §11) — starts after v0.5; 0.5 work in §10 continues unchanged.
+
 ---
 
 
@@ -522,6 +524,7 @@ Before player bug reports go live (0.5, `BUG_PLAYERS=true`): the repo is public 
 A synced save may refer to dev-added extra objects that exist only on another device (extras aren't synced). Devs only, harmless; revisit when extras become player-facing.
 
 ### 0.6 backlog
+*Shifted: this list is now the 0.7 content, and 0.6 is the migration release — see docs/roadmap-1.0.md §4.*
 Raised by the owner during FR1c planning (2026-10-01); not scoped into chunks yet.
 1. **Ferma Algidone!: power-ups and improvements** — a power-up slot for the mini-game, to be specced.
 2. **Ferma: randomised ladder placement** — the small ladders stop being fixed, placed differently each game and in harder spots as the run progresses; the bolt validator (`faBoltCheck`, §4) would then need to run on generated layouts, not just the three hand-authored ones.
@@ -561,7 +564,7 @@ Dev builds are numbered `0.4.5_N` until the 0.5 release. One chunk per build; st
 Any question a chunk raises → ask as [Q], log the answer in §10.9. Player-facing text in Italian, in-universe; the owner edits wording later via long-press.
 
 ### 10.0 Sandbox rules (apply to every 0.5 feature)
-- The single-HTML game is a sandbox; after its 1.0 a clean build imports its features. Every new feature must stay transferable:
+- The old plan (single-HTML sandbox until 1.0, then a clean rebuild) is replaced — see §11 / docs/roadmap-1.0.md. Every new feature must still stay transferable:
   data in tables (constants/objects at the top of its section), logic in self-contained modules with clear hooks
   (e.g. `onSpawn / update / draw` per ghost ability, a run-layer object for runs). No tangling with unrelated maze code.
 - **Each feature/mode keeps its own tuning table** (lives, timings, speeds, rewards). Changing one mode's values never changes another's — e.g. Mangiaroccia lives and Hardcore are not affected by anything in the Ferma Algidone! run, and vice versa.
@@ -775,3 +778,7 @@ Stage is per ghost. Scared (`s`) or eaten (`g`) ghosts never use abilities. Each
 - 2026-10-02 · 0.4.5_38 (FR2b) phone test: OK — FR2 complete. The owner accepted all FR2b deviations (the `activeRun()` host fallback; the win-panel hide in `faPlayGap`; test b) at girone 5 plus the girone-7 case; the owed interlude over the menu — fixed in 0.4.5_39; `S.p.gam.won` written in dev runs — fixed in 0.4.5_39) and Claude Code's own test h).
 - 2026-10-02 · **Brief-integrity incident (0.4.5_38)**: the FR2b brief arrived cut off mid-test («h) Dev») and the build went ahead after listing what was missing, writing the missing test from the decisions. Owner's rule (now §1, first rule): every brief from Claude chat ends with the exact line "END OF BRIEF — if this line is missing, the message was cut: stop and tell me."; with the line missing, do nothing and ask for a resend — never fill in missing parts.
 - 2026-10-02 · FR2-tidy (0.4.5_39) decisions: **dev parity** — a dev/SIM Ferma run rolls El Gamblador exactly like a dev maze run (girone 5, then `GAM_ODDS`, price gate), `GAM_FORCE` still forces once, `FA_FORCE` stays ignored and unconsumed, no `S.p` writes (replaces FR2b's «no own rolls in dev»). **`S.p.gam` writes found in the table code and gated**: (1) `S.p.gam.won++` + `persist()` + `ach("bjwon")` in the hand-result code — was gated only by `!B.dbg` (so any dev/SIM RUN table counted wins, in the maze too), now also `!B.dev`; (2) `S.p.gam.visits++`/`.seen=true` + `persist()` in `startGamblador` — already gated by `dv` since FR2a, unchanged. No other write exists (the rest of the BJ code writes only the host score). **Owed gap look** — no menu behind the card or the table, menu track stopped at once. **`test_fr1c` «async start resolves late» — cause: the test's own assumption, not game code.** The unit check runs on `screen==="menu"`; there the menu's 800 ms interval calls `bgm.play()` whenever `bgm` is paused, and `play()` (FR1c's exclusivity) stops every OTHER track — including the second test track under test, so it ended paused. Confirmed with a spy (`bgm.play` called once during the window on «menu», zero times on «fa»; the second track ends playing on «fa», and the first, stale one still correctly dropped). Fixed in the test (it sets `screen="fa"` for the duration, as the real entry points do). It had been red 3/3 since 0.4.5_37's re-run only because of the 800 ms interval phase against the test's 300 ms delay — it is the same menu-interval/exclusivity interaction already recorded for `test_famus` §h (FR1d). Deviations: none beyond the above; the opaque backdrop is a new plain element (not Ferma's own stage) because no Ferma exists on the resume path.
+
+---
+## 11. After 0.5 — new structure and co-op (roadmap to 1.0)
+Full plan: docs/roadmap-1.0.md. Summary: 0.6 = migration to Vite modules + asset files + JSON data, game identical; 0.7 = former 0.6 backlog; 0.8 = co-op core (Cloudflare Durable Objects session rooms, host-authoritative rounds, live spectators); 0.9 = Discord Activity; 1.0 = co-op release. Nothing of this starts before v0.5 is released, and no refactoring toward it happens during 0.5 work.

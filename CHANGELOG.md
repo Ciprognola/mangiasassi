@@ -2355,3 +2355,9 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - No game-code change; `index.html`/`VERSION` untouched.
 - Tested locally (Actions can't run here): the workflow's shell logic run verbatim (extracted from the parsed YAML) against a scratch clone with a local bare "origin" and a stub `gh` — resolves the target to `a2f33d4` ("Release 0.4.5"), a rerun changes nothing (tag and release both skipped), the CHANGELOG extraction matches the 0.4.5 section exactly, a `VERSION` of `0.4.5_1` exits early with no git/gh calls, and a `VERSION` naming a release that was never committed fails with a clear message and touches nothing. Deleted this session's own leftover local `v0.4.5` tag (from the previous session's failed push) before testing; nothing was pushed to the real `origin` by any of this.
 - Not tested: the real Action run on GitHub.
+
+## docs — 2026-10-04 (docs only — no build bump)
+
+- `docs/roadmap-1.0.md` added: roadmap to 1.0 (new structure + co-op), approved 2026-10-03 in Claude chat.
+- CLAUDE.md: new §11 "After 0.5 — new structure and co-op", old sandbox-until-1.0 line in §10.0 replaced by a pointer, 0.6 backlog marked as shifted to 0.7, handoff line added.
+- `index.html`/`VERSION` untouched.
