@@ -1,0 +1,17 @@
+{
+  "char": "roccia",
+  "id": "G3FvJa9U6oUrvefhVWqZ",
+  "meta": {
+    "acct": "giocatore",
+    "diff": "easy",
+    "girone": null,
+    "site": "dev",
+    "viewport": "376x715"
+  },
+  "platform": "Android",
+  "screen": "opt-generali-account",
+  "text": "test1",
+  "ts": "2026-10-04T04:59:23.083000Z",
+  "uid": "giocatore",
+  "version": "0.4.5_43"
+}
