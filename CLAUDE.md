@@ -10,6 +10,7 @@ Permanent project context for Claude Code. Read it fully at the start of every s
 0.5 released 2026-10-04 (tag v0.5). Next: 0.6 planning in Claude chat (roadmap §11; first open point: where the pet costumes go). Dev builds 0.5_N.
 
 2026-10-03: roadmap to 1.0 approved (docs/roadmap-1.0.md, §11) — starts after v0.5; 0.5 work in §10 continues unchanged.
+2026-10-04: roadmap revised (docs/roadmap-1.0.md): handheld mode first, as 0.5_N builds before 0.6 M0; pets in 0.7; no Discord Activity. Next: handheld plan in Claude chat, then 0.6 M0.
 
 ---
 
@@ -516,7 +517,7 @@ by Claude (the planning side) before Claude Code executes them.
   battle-engine balance.
 
 ### Planning items — Claude chat (2026-10-04)
-- **Costumi per Usagi (il cane del owner) e Felix (il gatto di Algidone)**: planning item for Claude chat, target release to be decided. No detail yet.
+- **Usagi's quest (pets Usagi and Felix)**: planned for 0.7, full spec in docs/roadmap-1.0.md §8.
 
 ### 0.5 backlog
 - **REQ — tile-10 reward skin (Uomo roccia). Dropped 2026-10-04 (owner decision): tile 10 keeps «Premio in arrivo».** made with the F4 skin tool. Moved from 0.4.5 (2026-09-26, owner's decision, no time). Needs: the owner's art (drawn with «Scarica foglio»/«Carica costume» or supplied to the artist per DEVELOPERS.md) and a name for the costume.
@@ -579,4 +580,4 @@ Current release — 0.6: plan not written yet (Claude chat). Roadmap: §11 and d
 
 ---
 ## 11. After 0.5 — new structure and co-op (roadmap to 1.0)
-Full plan: docs/roadmap-1.0.md. Summary: 0.6 = migration to Vite modules + asset files + JSON data, game identical; 0.7 = former 0.6 backlog; 0.8 = co-op core (Cloudflare Durable Objects session rooms, host-authoritative rounds, live spectators); 0.9 = Discord Activity; 1.0 = co-op release. Nothing of this starts before v0.5 is released, and no refactoring toward it happens during 0.5 work.
+Full plan: docs/roadmap-1.0.md. Summary: handheld mode («modalità portatile») first, as 0.5_N builds before the 0.6 migration; 0.6 = migration to Vite modules + asset files + JSON data, game identical; 0.7 = former 0.6 backlog + Usagi's quest (pets) + handheld layout for the remaining screens; 0.8 = co-op core (Cloudflare Durable Objects session rooms, host-authoritative rounds, live spectators); 0.9 = co-op for the remaining minigames, session rewards, balancing, handheld mode on PC; 1.0 = co-op release. No Discord Activity: co-op runs on each player's own device, Discord is only used for streaming.

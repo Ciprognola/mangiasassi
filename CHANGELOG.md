@@ -2377,6 +2377,12 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - CLAUDE.md: new §11 "After 0.5 — new structure and co-op", old sandbox-until-1.0 line in §10.0 replaced by a pointer, 0.6 backlog marked as shifted to 0.7, handoff line added.
 - `index.html`/`VERSION` untouched.
 
+## docs — 2026-10-04 (docs only — no build bump)
+
+- `docs/roadmap-1.0.md` revised: handheld mode («modalità portatile») first as 0.5_N builds before 0.6 M0; pets (Usagi / Felix) in 0.7; no Discord Activity (co-op on each player's own device, Discord only for streaming); 0.9 and 1.0 content updated; release plan, open decisions and risks rewritten.
+- CLAUDE.md: §11 summary replaced with the revised plan, §8 planning item replaced by a pointer to the pets spec, SESSION HANDOFF line added.
+- `index.html`/`VERSION` untouched.
+
 ## 0.4.5_41 — 2026-10-04 — L2: player flags on + 25-day confirmation
 - `PLAYER_LOGIN=true`, `CLOUD_SAVE=true` (`BUG_PLAYERS` stays false). The Account accordion is visible to everyone; cloud save is on for any session; the «Salvataggio cloud (test)» toggle is no longer rendered.
 - Login help line → «Accedi con il tuo account, oppure creane uno qui sotto.».
