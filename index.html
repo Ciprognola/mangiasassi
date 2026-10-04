@@ -1290,7 +1290,7 @@ lpSync();
    Icona nella barra in alto di ogni schermata (solo sviluppatori con la sessione Firebase; i giocatori quando BUG_PLAYERS sara' true, 0.5).
    Tocco = il gioco si ferma come nella sua pausa ma senza il menu di pausa, popup con il testo, "Indietro" riprende esattamente da dove era.
    Invio: Firestore `bugs` (campi ammessi da firestore.rules); senza rete la segnalazione va in una coda locale (max 20) e parte appena si e' online. */
-const BUG_PLAYERS=false; // 0.5: si attiva insieme al login dei giocatori (gia' costruito in F2a, dietro questo flag)
+const BUG_PLAYERS=true; // 0.5 (L5, 0.4.5_43): segnalazioni anche dei giocatori connessi; la cartella le pubblica senza uid, ua e account
 const CLOUD_SAVE=true; // F2b: salvataggio cloud per tutti (acceso in L2, 0.4.5_41). Con il flag acceso l'interruttore «Salvataggio cloud (test)» non si vede piu' e nulla lo legge
 const PLAYER_LOGIN=true; // F2a: Account giocatore visibile a tutti (acceso in L2, 0.4.5_41). Se false si vede solo con dev mode attiva
 const bugPlayerSession=()=>!!playerAcct;
@@ -1299,6 +1299,10 @@ const BUG_SVG='<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColo
 const bugBtn=cls=>canReport()?`<button class="bugb ${cls||""}" id="bugb" aria-label="Segnala un bug">${BUG_SVG}</button>`:"";
 const BUGQ_KEY=IS_DEVSITE?"mgs_bugq_dev":"mgs_bugq",BUG_MAX=1000,BUG_QMAX=20;
 let BUG=null,BUG_NOFLUSH=false,bugFlushing=false;
+const BUGDAY_KEY=IS_DEVSITE?"mgs_bugday_dev":"mgs_bugday",BUG_DAY_MAX=5; // L5: al massimo 5 segnalazioni al giorno per dispositivo, solo giocatori
+const bugDay=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const bugDayN=()=>{const v=store.get(BUGDAY_KEY);return v&&v.day===bugDay()?v.n:0};
+function bugDayAdd(){store.set(BUGDAY_KEY,{day:bugDay(),n:bugDayN()+1})}
 
 /* screenId(): id canonico della schermata (refs/screens/SCREENS.md). Una sola tabella leggibile; quando la variante esatta non ha un id
    proprio si usa l'id base; stato sconosciuto -> "unknown:<screen>". Riusabile da F5. */
@@ -1394,9 +1398,10 @@ function bugInfo(){
 function bugOpen(){
   if(!canReport())return;
   if(BUG&&document.getElementById("bgt"))return;
+  if(!role&&bugDayN()>=BUG_DAY_MAX){toast("Hai già inviato 5 segnalazioni oggi: riprova domani.");return}
   BUG=null;
   const info=bugInfo(),resume=bugFreeze();
-  const m=openModal(`<div class="bugbox" data-nolp><h3>Hai un insetto?</h3><textarea id="bgt" maxlength="${BUG_MAX}" placeholder="Cosa è successo?"></textarea><small class="cnt" id="bgc">0/${BUG_MAX}</small>
+  const m=openModal(`<div class="bugbox" data-nolp><h3>Hai un insetto?</h3>${role?"":'<small class="bugpriv">Non scrivere dati personali: le segnalazioni sono pubbliche.</small>'}<textarea id="bgt" maxlength="${BUG_MAX}" placeholder="Cosa è successo?"></textarea><small class="cnt" id="bgc">0/${BUG_MAX}</small>
     <div class="acts"><button class="btn red" id="bgx">Indietro</button><button class="btn ok" id="bgk" disabled>Invia</button></div></div>`);
   const ta=m.querySelector("#bgt"),ok=m.querySelector("#bgk");let sending=false;
   const close=()=>{closeModal();const b=BUG;BUG=null;if(b&&b.resume)b.resume();if(screen==="splash")render()}; // la domanda del splash e' una modale: la ridisegno
@@ -1407,6 +1412,7 @@ function bugOpen(){
   ok.onclick=async()=>{
     const text=ta.value.trim().slice(0,BUG_MAX);if(!text||sending)return;
     sending=true;upd();ok.textContent="Invio…";
+    if(!role)bugDayAdd(); // conta alla creazione, anche se finisce in coda
     const r=await bugSubmit(Object.assign({text},info));
     toast(r==="sent"?"Grazie! Segnalazione inviata.":r==="queued"?"Segnalazione salvata, verrà inviata appena sei online":"Invio non riuscito");
     if(BUG&&BUG.close===close)close();
@@ -1466,7 +1472,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_42";
+const VERSION="0.4.5_43";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}

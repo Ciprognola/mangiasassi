@@ -16,6 +16,7 @@ import argparse, datetime, json, os, re, subprocess, sys
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 ACCT_RE = re.compile(r"^(master|dev[1-5])$")
+PLAYER_MAX = 5  # L5: al massimo 5 segnalazioni di giocatori per uid per esecuzione (le piu' vecchie)
 
 
 def iso(v):
@@ -43,21 +44,67 @@ def write_json(path, obj):
 
 
 # ------------------------------------------------------------------ bugs
+def platform_of(ua):
+    """Piattaforma grossolana dallo user agent (L5). Android prima di Linux: il suo UA contiene entrambi."""
+    u = ua or ""
+    if "Android" in u:
+        return "Android"
+    if re.search(r"iPhone|iPad|iPod", u):
+        return "iOS"
+    if re.search(r"Windows|Macintosh|Linux|X11", u):
+        return "desktop"
+    return "altro"
+
+
+def player_rec(doc_id, out):
+    """Segnalazione di un giocatore senza identita': uid -> «giocatore», ua -> piattaforma, account in meta -> «giocatore»."""
+    rec = {"id": doc_id}
+    rec.update(out)
+    rec["uid"] = "giocatore"
+    rec["platform"] = platform_of(rec.pop("ua", None))
+    meta = dict(rec.get("meta") or {})
+    if "acct" in meta:
+        meta["acct"] = "giocatore"
+    rec["meta"] = meta
+    return rec
+
+
 def export_bugs(db, out_dir, today):
-    """-> (file names, [doc paths to mark])"""
-    files, refs = [], []
+    """-> (file names, [doc paths to mark], [doc paths over the player cap, marked skipped])"""
+    files, refs, skipped = [], [], []
+    devs = {}
+
+    def is_dev(uid):  # un uid con un documento in devs/ e' uno sviluppatore: scritto com'e' (come prima di L5)
+        if uid not in devs:
+            devs[uid] = bool(uid) and db.collection("devs").document(uid).get().exists
+        return devs[uid]
+
+    def write(doc, rec):
+        name = f"{day_of(rec.get('ts'), today)}_{doc.id}.json"
+        write_json(os.path.join(out_dir, name), rec)
+        files.append(name)
+        refs.append("bugs/" + doc.id)
+
+    players = {}
     for doc in db.collection("bugs").stream():
         data = doc.to_dict() or {}
         if data.get("exported") is True:
             continue
         out = iso(data)
-        name = f"{day_of(out.get('ts'), today)}_{doc.id}.json"
         rec = {"id": doc.id}
         rec.update(out)
-        write_json(os.path.join(out_dir, name), rec)
-        files.append(name)
-        refs.append("bugs/" + doc.id)
-    return files, refs
+        if is_dev(data.get("uid")):
+            write(doc, rec)
+        else:
+            players.setdefault(data.get("uid"), []).append((str(out.get("ts") or ""), doc, out))
+    for uid, items in players.items():
+        items.sort(key=lambda x: x[0])  # le piu' vecchie per prime
+        for i, (_, doc, out) in enumerate(items):
+            if i < PLAYER_MAX:
+                write(doc, player_rec(doc.id, out))
+            else:
+                skipped.append("bugs/" + doc.id)
+    return files, refs, skipped
 
 
 # ------------------------------------------------------------------ text edits (submission format v2, docs/submissions-v2.md)
@@ -125,10 +172,13 @@ def run_validator(pdir):
 
 
 # ------------------------------------------------------------------ marking + client + CLI
-def mark(db, refs, server_ts):
+def mark(db, refs, server_ts, skipped=()):
     for r in refs:
         col, doc_id = r.split("/", 1)
         db.collection(col).document(doc_id).update({"exported": True, "exportedAt": server_ts})
+    for r in skipped:  # oltre il limite: segnate come esportate ma saltate, nessun file
+        col, doc_id = r.split("/", 1)
+        db.collection(col).document(doc_id).update({"exported": True, "exportedAt": server_ts, "skipped": True})
 
 
 def real_client():
@@ -157,9 +207,9 @@ def main():
     db, ts = real_client()
     today = datetime.datetime.now(datetime.timezone.utc).date()
     if a.phase == "export":
-        files, brefs = export_bugs(db, a.inbox, today)
+        files, brefs, bskip = export_bugs(db, a.inbox, today)
         pk, erefs, skipped, fails = export_edits(db, a.subs, today, run_validator)
-        json.dump({"refs": brefs + erefs}, open(a.pending, "w"))
+        json.dump({"refs": brefs + erefs, "skipped": bskip}, open(a.pending, "w"))
         if a.bugs_msg:
             open(a.bugs_msg, "w", encoding="utf-8").write(f"bugs: export {len(files)} report(s)\n")
         if a.edits_msg:
@@ -168,12 +218,14 @@ def main():
                 msg += f"\nvalidator FAILED for {os.path.relpath(pdir, REPO)}:\n{out}\n"
             open(a.edits_msg, "w", encoding="utf-8").write(msg)
         print(f"bugs: {len(files)}, text edits: {len(erefs)} in {len(pk)} package(s), validator failures: {len(fails)}, skipped: {len(skipped)}")
+        print(f"Segnalazioni saltate (limite): {len(bskip)}")
         for s in skipped:
             print("skipped:", s)
     else:
-        refs = json.load(open(a.pending))["refs"]
-        mark(db, refs, ts)
-        print(f"marked {len(refs)} document(s) exported")
+        pend = json.load(open(a.pending))
+        refs = pend["refs"]
+        mark(db, refs, ts, pend.get("skipped", []))
+        print(f"marked {len(refs) + len(pend.get('skipped', []))} document(s) exported")
 
 
 if __name__ == "__main__":

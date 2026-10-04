@@ -2392,6 +2392,17 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Tests: new `tools/players/test_cleanup.py` (22 checks, mocked firebase_admin, fixed clock; two mutation runs — category A at 29 days, a full username printed — fail as intended); `tools/bugs/test_export_bugs.py` 15/15; full `tools/fbstub` run (41 suites, skin coverage excluded) 1786 checks, all green.
 - `index.html`/`VERSION` untouched. Not tested: the real service account / IAM role, real Auth `list_users` shapes beyond the documented API.
 
+## 0.4.5_43 — 2026-10-04 — L5: player bug reports
+- `BUG_PLAYERS=true`: a signed-in player gets the bug icon on every top bar, as a dev does; a logged-out visitor gets none (unchanged).
+- Player popup only: «Non scrivere dati personali: le segnalazioni sono pubbliche.» above the text box. Developer popup unchanged.
+- Daily limit for players: `mgs_bugday` (`mgs_bugday_dev` on the dev site) = `{day,n}`, 5 per local day per device. Counted when the report is created (queued offline ones included). At the limit the popup does not open and the toast «Hai già inviato 5 segnalazioni oggi: riprova domani.» appears. Developers unlimited.
+- Export (`tools/bugs/export_bugs.py`): a report from a uid with a `devs` doc is written exactly as before (golden: byte-identical). A player report loses `uid` (now «giocatore»), `ua` (now `platform`: Android / iOS / desktop / altro) and any account name in `meta` (now «giocatore»), in content and file name alike. At most 5 player reports per uid per run, the oldest kept; the rest are marked `exported` + `skipped` and not written. The run prints «Segnalazioni saltate (limite): <n>», counts only, never a uid, ua or account.
+- Firestore rules and `bugs-export.yml` untouched (the bugs fields are the same as before; the export still runs with the Admin SDK).
+- `index.html`: +757 bytes (LF-normalised, 6252681 → 6253438); `VERSION` 0.4.5_43.
+- Tests: new `tools/fbstub/test_l5.py` 23/23 (icon for player vs logged out, one allowed-fields write with the player's own uid, privacy line player-only, 5/day + 6th toast + next day, developer unlimited, offline queue counting toward the 5 and sent on `online`). `tools/bugs/test_export_bugs.py` 27/27 (added: dev golden, player stripping, platform mapping, cap 5 + skipped marking, log without identities). Mutations on a scratch copy prove the checks bite: `ua` left in a player file → 4 fail; cap 6 → 4 fail.
+- Regression: every tools/fbstub suite green on the final tree (skin coverage skipped, no art changed); tools/players/test_cleanup.py 53/53. test_f2a, test_f2c and test_l2 first failed on their old flag-off assertions (BUG_PLAYERS); updated to the new invariant, now 37/37, 22/22 and 46/46.
+- Not tested on a real device or against the real published rules: the owner's phone test (player report on the stable site, the 6th-report toast, the next-day reset, then the export run) is next.
+
 ## 0.4.5_42 — 2026-10-04 — L4: deletion request after 5 wrong passwords
 - Player login form (`plLogin`): wrong-password counter per name in `mgs_pwfail` (`mgs_pwfail_dev` on the dev site), +1 only for invalid-credential / wrong-password / user-not-found and only for a name that passes `plNameCheck`; a successful sign-in clears that name's counter and its request.
 - From 5 wrong passwords, under the login error: «Hai dimenticato la password? Puoi chiedere di cancellare l'account «<nome>» e crearne uno nuovo.» + «Chiedi la cancellazione».

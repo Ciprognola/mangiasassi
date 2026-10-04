@@ -113,7 +113,7 @@ with sync_playwright() as pw:
     # ============================================================ a) flags
     ctx, p, errs = page(b, users=dict(USERS)); go(p)
     f = p.evaluate("({pl:PLAYER_LOGIN,cs:CLOUD_SAVE,bp:BUG_PLAYERS})")
-    check("a) PLAYER_LOGIN and CLOUD_SAVE true, BUG_PLAYERS false", f == {"pl": True, "cs": True, "bp": False}, f)
+    check("a) PLAYER_LOGIN, CLOUD_SAVE and BUG_PLAYERS true (BUG_PLAYERS since L5)", f == {"pl": True, "cs": True, "bp": True}, f)
     check("a) no console errors", not errs, errs)
     ctx.close()
 
