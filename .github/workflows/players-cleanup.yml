@@ -1,0 +1,27 @@
+name: players-cleanup
+
+# L3a: DRY-RUN of the player-account cleanup (§10.7). Reads Auth users + Firestore and prints, masked, what L3b would delete. Deletes nothing.
+# Secret FIREBASE_SA = service-account JSON (Actions secret), read only from the environment by tools/players/cleanup.py.
+# Manual trigger only for now (the daily schedule comes with L3b). This file lives on BOTH main and dev (main is needed for "Run workflow"); keep the two copies identical.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Install firebase-admin
+        run: pip install --quiet firebase-admin
+      - name: Cleanup dry-run
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+        run: python tools/players/cleanup.py
