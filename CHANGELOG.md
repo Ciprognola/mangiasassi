@@ -2376,3 +2376,11 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - `docs/roadmap-1.0.md` added: roadmap to 1.0 (new structure + co-op), approved 2026-10-03 in Claude chat.
 - CLAUDE.md: new §11 "After 0.5 — new structure and co-op", old sandbox-until-1.0 line in §10.0 replaced by a pointer, 0.6 backlog marked as shifted to 0.7, handoff line added.
 - `index.html`/`VERSION` untouched.
+
+## 0.4.5_41 — 2026-10-04 — L2: player flags on + 25-day confirmation
+- `PLAYER_LOGIN=true`, `CLOUD_SAVE=true` (`BUG_PLAYERS` stays false). The Account accordion is visible to everyone; cloud save is on for any session; the «Salvataggio cloud (test)» toggle is no longer rendered.
+- Login help line → «Accedi con il tuo account, oppure creane uno qui sotto.».
+- `plConfirmCheck`/`plConfirmPend` + popup «Sei ancora dei nostri?» (from 25 days since `players/{uid}.confirmed`, once per open, menu screens only, never for a dev); «Confermo» → `updateDoc` of `confirmed` only + toast «Account confermato!»; «Più tardi»/Esc/back write nothing.
+- Tests: new `tools/fbstub/test_l2.py` (46 checks, plus two mutation runs that fail as intended); `test_f2a`/`test_f2b`/`test_f2c`/`test_l1` now serve the flag-off build for their flag-off assertions (hook only, no check removed); stub SDK gained `updateDoc`.
+- `index.html` size delta: +2541 bytes (LF-normalised, 6246234 → 6248775).
+- Not tested: the real published rules against the client update, real-device touch/Android back, the real 25-day clock.

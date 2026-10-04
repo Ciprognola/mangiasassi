@@ -37,6 +37,11 @@ def page(b, dev_cache=None, player_cache=None, has_touch=False, **kw):
     if init:
         ctx.add_init_script(init)
     fbstub.install(ctx, **kw)
+    # L2 turned PLAYER_LOGIN on; this suite covers the flag-off case, so serve the page with it forced off
+    def _off(route):
+        r = route.fetch()
+        route.fulfill(response=r, body=r.text().replace("const PLAYER_LOGIN=true;", "const PLAYER_LOGIN=false;", 1))
+    ctx.route("**/index.html", _off)
     p = ctx.new_page(); errs = []
     p.on("pageerror", lambda e: errs.append(str(e)))
     p.on("console", lambda m: m.type == "error" and "Failed to load resource" not in m.text and errs.append(m.text))

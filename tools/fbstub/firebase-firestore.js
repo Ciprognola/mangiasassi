@@ -50,13 +50,26 @@ export async function setDoc(ref, data) {
   if (!ok || S.players[ref.id]) throw { code: "permission-denied" };
   S.players[ref.id] = { username: data.username, created: Date.now(), confirmed: Date.now() };
 }
+// L2: updateDoc on players/{uid}: checked like the `update` rule (only `confirmed`, a server timestamp); denyUpdate / offline force a failure.
+export async function updateDoc(ref, data) {
+  const S = window.__fbs;
+  if (ref.col !== "players") throw { code: "permission-denied" };
+  (S.playerUpdates = S.playerUpdates || []).push({ id: ref.id, data: JSON.parse(JSON.stringify(data)) });
+  if (S.offline) throw { code: "unavailable" };
+  const n = localStorage.getItem("__fbstub_user_" + ref.db.app.name);
+  const ok = n && ref.id === "uid_" + n && Object.keys(data).join(",") === "confirmed" && data.confirmed && data.confirmed.__ts && (S.players || {})[ref.id];
+  if (S.denyUpdate || !ok) throw { code: "permission-denied" };
+  S.players[ref.id].confirmed = Date.now();
+}
 export async function getDoc(ref) {
   if (ref.col === "players") {
     const S = window.__fbs;
     S.playerReads = (S.playerReads || 0) + 1;
     if (S.offline) throw { code: "unavailable" };
     const x = (S.players || {})[ref.id];
-    return { exists: () => !!x, data: () => x };
+    // like the real SDK: timestamps come back as Timestamp objects (toMillis)
+    const dd = x && { ...x, created: { toMillis: () => x.created }, confirmed: { toMillis: () => x.confirmed } };
+    return { exists: () => !!x, data: () => dd };
   }
   if (ref.col === "saves") { saveGate(ref); return snap(SV()[ref.id] || null); }
   if (window.__fbs.offline) throw { code: "unavailable" };

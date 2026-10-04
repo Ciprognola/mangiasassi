@@ -38,9 +38,13 @@ class H(http.server.SimpleHTTPRequestHandler):
             path = "/" + path[5:]
         if MUT and path == "/index.html":
             old, new = MUTATIONS[MUT]
-            s = open(os.path.join(ROOT, "index.html"), encoding="utf-8", newline="").read().replace("\r\n", "\n")
+            s = open(os.path.join(ROOT, "index.html"), encoding="utf-8", newline="").read().replace("\r\n", "\n").replace("const PLAYER_LOGIN=true;", "const PLAYER_LOGIN=false;", 1)
             assert s.count(old) == 1, "mutation anchor"
             body = s.replace(old, new, 1).encode("utf-8")
+            self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Content-Length", str(len(body))); self.end_headers(); self.wfile.write(body)
+            return
+        if path == "/index.html":  # L2 turned PLAYER_LOGIN on; this suite covers the flag-off case, so serve it forced off
+            body = open(os.path.join(ROOT, "index.html"), encoding="utf-8", newline="").read().replace("const PLAYER_LOGIN=true;", "const PLAYER_LOGIN=false;", 1).encode("utf-8")
             self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Content-Length", str(len(body))); self.end_headers(); self.wfile.write(body)
             return
         self.path = path

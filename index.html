@@ -669,14 +669,14 @@ async function plLogin(user,pass){
   return r;
 }
 async function plLogout(){
-  const fb=_fb;cloudReset();playerAcct=null;persistPlayer();
+  const fb=_fb;PLC.pend=null;cloudReset();playerAcct=null;persistPlayer();
   if(!role){try{const f=await(fb||fbLoad());await f.Au.signOut(f.auth)}catch(e){}}
 }
 async function plVerify(){ // controllo in background come fbVerify: l'utente sparisce -> fuori; senza rete resta valida
   try{
     const fb=await fbLoad();await fb.auth.authStateReady();
     const u=fb.auth.currentUser;DIAG.log("auth","verifica giocatore: "+(u?"sessione ok":"nessun utente"));
-    if(!u&&playerAcct){cloudReset();playerAcct=null;persistPlayer();if(screen==="opt")render()}
+    if(!u&&playerAcct){PLC.pend=null;cloudReset();playerAcct=null;persistPlayer();if(screen==="opt")render()}
     else if(u&&playerAcct){cloudStart();plEnsureProfile(fb,u)}
   }catch(e){}
 }
@@ -702,7 +702,7 @@ function plAccountHTML(){
    <div class="err" id="ple"></div><div class="acts" style="margin-top:8px"><button class="btn ghost sm" id="plback">Ho già un account</button><button class="btn sm" id="plr">Crea account</button></div>`;
   return`<label class="f">Utente</label><input type="text" id="plu" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"><label class="f">Password</label><input type="password" id="plp" autocomplete="off">
    <div class="err" id="ple"></div><div class="acts" style="margin-top:8px"><button class="btn sm" id="plk">Entra</button></div>
-   <small style="display:block;margin-top:6px;color:var(--mute)">Accedi con l'account che ti ha dato El Cipro.</small>
+   <small style="display:block;margin-top:6px;color:var(--mute)">Accedi con il tuo account, oppure creane uno qui sotto.</small>
    <button id="plreg" style="background:none;border:0;padding:0;margin-top:6px;min-height:44px;color:var(--runway);text-decoration:underline;font:inherit;cursor:pointer">Non hai un account? Crealo</button>`;
 }
 /* registrazione giocatore (L1): createUserWithEmailAndPassword(<nome>@mangiasassi.invalid) + players/{uid} {username,created,confirmed}.
@@ -728,6 +728,35 @@ async function plRegister(){
   toast("Benvenuto, "+name+"!");render();cloudStart(true);
   if(!wrote)plEnsureProfile(fb,cred.user,true);
 }
+/* conferma dell'account (L2): dopo PL_CONF.warn giorni da players/{uid}.confirmed, alla prima apertura sul menu un popup chiede di confermare
+   (confirmed = ora); a PL_CONF.del giorni l'account verra' cancellato dalla pulizia (L3b). Usa il documento che plEnsureProfile ha gia' letto
+   (nessuna seconda lettura), solo per un giocatore (plEnsureProfile non arriva qui per uno sviluppatore), al massimo una volta per apertura.
+   Mai a partita in corso: aspetta il prossimo render() su una schermata di menu. «Piu' tardi» non scrive nulla. */
+const PL_CONF={warn:25,del:30},PLC={done:false,pend:null,wait:0};
+function plMs(t){try{if(t&&typeof t.toMillis==="function")return t.toMillis();if(t&&typeof t.seconds==="number")return t.seconds*1000}catch(e){}return typeof t==="number"?t:null}
+function plConfirmCheck(data,fb,u){
+  if(PLC.done||PLC.pend||!data||!fb||!u)return;
+  const ms=plMs(data.confirmed);if(ms==null)return;
+  const el=(Date.now()-ms)/864e5;if(el<PL_CONF.warn)return;
+  PLC.pend={fb,uid:u.uid,left:Math.max(0,PL_CONF.del-Math.floor(el))};plConfirmPend();
+}
+function plConfirmPend(){
+  if(BUG&&BUG.plc&&!document.getElementById("plcpop"))BUG=null; // la schermata e' stata ridisegnata sotto il popup
+  const X=PLC.pend;if(!X||PLC.done||!["menu","opt","wish","ach","road","cust"].includes(screen))return;
+  const md=modalEl();
+  if(BUG||(md&&md.firstChild)){clearTimeout(PLC.wait);PLC.wait=setTimeout(plConfirmPend,1000);return} // un altro popup aperto: si aspetta
+  PLC.done=true;PLC.pend=null;
+  const when=X.left<=0?"oggi":X.left===1?"domani":X.left+" giorni";
+  const m=openModal(`<div id="plcpop" data-nolp><h3>Sei ancora dei nostri?</h3><p>Conferma il tuo account entro ${when}, altrimenti verrà cancellato insieme al salvataggio nel cloud.</p><div class="acts"><button class="btn ghost" id="plcl">Più tardi</button><button class="btn" id="plcy">Confermo</button></div></div>`);
+  const close=()=>{closeModal();const b=BUG;BUG=null;if(b&&b.resume)b.resume()};
+  BUG={plc:true,close}; // stessa guardia degli altri popup: Esc / indietro = Piu' tardi, nessun tasto arriva al gioco
+  m.querySelector("#plcl").onclick=close;
+  m.querySelector("#plcy").onclick=async()=>{
+    const k=m.querySelector("#plcy");k.disabled=true;
+    try{await X.fb.Fs.updateDoc(X.fb.Fs.doc(X.fb.db,"players",X.uid),{confirmed:X.fb.Fs.serverTimestamp()});close();toast("Account confermato!")}
+    catch(e){close();toast(fbErr(e))}
+  };
+}
 const _plEns=new Set();
 async function plEnsureProfile(fb,u,noRole){ // dopo un accesso giocatore / una verifica: se manca players/{uid} e il nome e' valido lo crea. Fallimenti silenziosi, mai bloccante
   if(!u||!u.uid||_plEns.has(u.uid))return;
@@ -739,7 +768,7 @@ async function plEnsureProfile(fb,u,noRole){ // dopo un accesso giocatore / una 
     if(plNameCheck(name))return;
     if(!noRole&&await fbRoleOf(fb,u))return;
     const d=await fb.Fs.getDoc(fb.Fs.doc(fb.db,"players",u.uid));
-    if(d.exists())return;
+    if(d.exists()){plConfirmCheck(d.data(),fb,u);return}
     await plMakeProfile(fb,u.uid,name);
     DIAG.log("auth","profilo giocatore creato");
   }catch(e){}
@@ -1008,7 +1037,7 @@ function cloudAccHTML(){ // aggiunte all'accordion «Account» (solo con una ses
   if(!cloudSession()||(!CLOUD_SAVE&&!IS_DEVSITE))return""; // sito stabile con il flag spento: interfaccia invariata
   const on=cloudOn(),t=cloudTest(),b=IS_DEVSITE?store.get(CLOUDBAK_KEY):null;
   return`<div class="opt"><div>Salvataggio cloud<small id="clst">${esc(cloudStatText())}</small></div><button class="btn sm" id="clsy" ${on?"":"disabled"}>Sincronizza ora</button></div>`
-   +(IS_DEVSITE?`<div class="opt" style="flex-direction:column;align-items:stretch"><div>Salvataggio cloud (test)<small>Solo sul sito di prova: usa saves/{uid}_dev.</small></div><div class="seg" style="margin-top:8px"><button data-clt="1" class="${t?"on":""}" style="flex:1">Attivo</button><button data-clt="0" class="${t?"":"on"}" style="flex:1">Spento</button></div></div>`:"")
+   +(IS_DEVSITE&&!CLOUD_SAVE?`<div class="opt" style="flex-direction:column;align-items:stretch"><div>Salvataggio cloud (test)<small>Solo sul sito di prova: usa saves/{uid}_dev.</small></div><div class="seg" style="margin-top:8px"><button data-clt="1" class="${t?"on":""}" style="flex:1">Attivo</button><button data-clt="0" class="${t?"":"on"}" style="flex:1">Spento</button></div></div>`:"")
    +(IS_DEVSITE&&b&&b.data?`<div class="opt"><div>Ripristina backup<small>${b.from==="cloud"?"Copia del cloud":"Copia di questo dispositivo"} · ${cloudDay(b.ts)} ${cloudHM(b.ts)}</small></div><button class="btn sm" id="clrb">Ripristina</button></div>`:"");
 }
 
@@ -1220,8 +1249,8 @@ lpSync();
    Tocco = il gioco si ferma come nella sua pausa ma senza il menu di pausa, popup con il testo, "Indietro" riprende esattamente da dove era.
    Invio: Firestore `bugs` (campi ammessi da firestore.rules); senza rete la segnalazione va in una coda locale (max 20) e parte appena si e' online. */
 const BUG_PLAYERS=false; // 0.5: si attiva insieme al login dei giocatori (gia' costruito in F2a, dietro questo flag)
-const CLOUD_SAVE=false; // F2b: salvataggio cloud per tutti (0.5). Finche' e' false: sito stabile nessuna chiamata, sul sito /dev/ si prova con «Salvataggio cloud (test)»
-const PLAYER_LOGIN=false; // F2a: quando false l'Account giocatore si vede solo con dev mode attiva (per poterlo provare); i giocatori non vedono nulla
+const CLOUD_SAVE=true; // F2b: salvataggio cloud per tutti (acceso in L2, 0.4.5_41). Con il flag acceso l'interruttore «Salvataggio cloud (test)» non si vede piu' e nulla lo legge
+const PLAYER_LOGIN=true; // F2a: Account giocatore visibile a tutti (acceso in L2, 0.4.5_41). Se false si vede solo con dev mode attiva
 const bugPlayerSession=()=>!!playerAcct;
 const canReport=()=>!!role||(BUG_PLAYERS&&!!bugPlayerSession());
 const BUG_SVG='<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><ellipse cx="12" cy="14" rx="4" ry="5.5" stroke="none"/><circle cx="12" cy="7" r="2.2" stroke="none"/><path fill="none" d="M9.5 5 8 3M14.5 5 16 3M8 11 4.5 9.5M8 14.5H4M8.5 18 5 20M16 11l3.5-1.5M16 14.5h4M15.5 18l3.5 2"/></svg>';
@@ -1395,7 +1424,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_40";
+const VERSION="0.4.5_41";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -8178,7 +8207,7 @@ async function prBattleStart(){
 
 /* ============ ROUTER ============ */
 function render(){
-  DIAG.screen(screen);lpSync();cloudPendCheck();
+  DIAG.screen(screen);lpSync();cloudPendCheck();setTimeout(plConfirmPend,0);
   cancelAnimationFrame(raf);cancelAnimationFrame(menuRaf);cancelAnimationFrame(custRaf);setTimeout(syncMusic,0);
   if(screen!=="pr")prCleanup();
   if(screen==="splash"){renderSplash()}

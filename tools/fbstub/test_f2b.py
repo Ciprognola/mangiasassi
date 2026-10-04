@@ -37,8 +37,12 @@ class H(http.server.SimpleHTTPRequestHandler):
             if path.startswith(pre):
                 flag = pre == "/flagon/"
                 path = "/" + path[len(pre):]
-        if flag and path == "/index.html":
-            body = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read().replace("const CLOUD_SAVE=false;", "const CLOUD_SAVE=true;", 1).encode("utf-8")
+        if path == "/index.html":
+            # L2 turned CLOUD_SAVE/PLAYER_LOGIN on in the build: /flagon/ serves it as is, every other site forces the old flag-off case
+            body = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
+            if not flag:
+                body = body.replace("const CLOUD_SAVE=true;", "const CLOUD_SAVE=false;", 1).replace("const PLAYER_LOGIN=true;", "const PLAYER_LOGIN=false;", 1)
+            body = body.encode("utf-8")
             self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Content-Length", str(len(body))); self.end_headers(); self.wfile.write(body)
             return
         self.path = path
