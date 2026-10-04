@@ -1,26 +1,49 @@
 #!/usr/bin/env python3
-"""Player-account cleanup, DRY-RUN (L3a): reads Auth users + Firestore and prints what L3b would delete. It deletes and writes NOTHING.
+"""Player-account cleanup (L3a dry-run, L3b live). Reads Auth users + Firestore and prints what would be deleted.
 
-  cleanup.py            (run by .github/workflows/players-cleanup.yml, workflow_dispatch only)
+  cleanup.py            DRY-RUN (default): deletes and writes NOTHING; no write call is reachable from this path
+  cleanup.py --live     LIVE: performs the deletions listed below
+
+Run by .github/workflows/players-cleanup.yml: manual (mode dry-run or live) and daily at 06:30 UTC (live).
 
 Reads: all Auth users (paginated), collections devs, players, delreq, and the document ids of saves.
 Categories (non-exempt accounts only; exempt = a uid with a devs doc, or an email name master / dev1-dev5):
-  A unconfirmed : players.confirmed older than 30 days            -> Auth user + players/{uid} + saves/{uid} + saves/{uid}_dev
-  B orphan      : Auth user with no players and no devs doc, created more than 24 h ago -> Auth user + both saves
-  C delreq      : junk (no such user) -> the delreq doc; cancelled (signed in after the request) -> the delreq doc;
-                  due (request older than 7 days) -> Auth user + players + both saves + the delreq doc; else pending
-  D info        : players docs with no Auth user; saves docs whose uid has no Auth user (counted only)
-All "older than" rules are strict (exactly on the limit = not yet).
+  A unconfirmed : players.confirmed older than 30 days -> players/{uid}, saves/{uid}, saves/{uid}_dev, then the Auth user
+  B orphan      : Auth user with no players and no devs doc, created more than 24 h ago -> saves/{uid}, saves/{uid}_dev, Auth user
+  C delreq      : junk (no such user) -> the delreq doc; cancelled (signed in OR token refreshed after the request) -> the delreq doc;
+                  due (request older than 7 days) -> players/{uid}, both saves, Auth user, then the delreq doc; else pending
+  E stray       : players docs and saves docs with no Auth user (never for a uid with a devs doc) -> that document
+All "older than" rules are strict (exactly on the limit = not yet). A uid that is both A and C3 is processed once, with C3's steps.
+
+Live safety:
+  - cap, checked before any deletion: more than 25 accounts or more than 100 documents -> nothing deleted, exit 2;
+  - a devs doc is re-read before an account's first delete and again right before its Auth delete: an exempt account is skipped;
+  - a failure stops that item only (its later steps are not run; the next run retries it), the others still run, exit 1 at the end;
+  - a missing document and an Auth UserNotFound count as done (idempotent).
+
 The repo is PUBLIC and so are the Actions logs: output carries only masked names (2 letters + ... + length + age), never a uid, an
 email, a full username or anything from the credentials. Credentials: env FIREBASE_SA (service-account JSON), parsed in memory only."""
-import datetime, json, os, sys
+import argparse, datetime, json, os, sys
 
 UTC = datetime.timezone.utc
 DOM = "@mangiasassi.invalid"
 EXEMPT_NAMES = {"master", "dev1", "dev2", "dev3", "dev4", "dev5"}
 CONF_DAYS, ORPHAN_HOURS, DELREQ_DAYS = 30, 24, 7
+ACCOUNT_CAP, DOC_CAP = 25, 100
 MSG_AUTH_DENIED = "PERMESSO NEGATO: il service account non può leggere gli utenti Auth — serve il ruolo Firebase Authentication Admin"
 MSG_FS_DENIED = "PERMESSO NEGATO: il service account non può leggere Firestore"
+MSG_CAP = "LIMITE SUPERATO: {a} account / {d} documenti — nessuna eliminazione"
+HDR_DRY = "DRY-RUN — nothing deleted"
+HDR_LIVE = "LIVE — eliminazioni eseguite"
+HDR_LIVE_NO = "LIVE — eliminazioni NON eseguite"
+TITLES = [
+    ("A", "A) non confermati (> 30 giorni)", "utente Auth + players + saves"),
+    ("B", "B) orfani (> 24 h, senza players né devs)", "utente Auth + saves"),
+    ("C1", "C1) delreq spazzatura (utente inesistente)", "il doc delreq"),
+    ("C2", "C2) delreq annullate (accesso dopo la richiesta)", "il doc delreq"),
+    ("C3", "C3) delreq scadute (> 7 giorni)", "utente Auth + players + saves + il doc delreq"),
+    ("E", "E) documenti orfani (senza utente Auth)", "il documento"),
+]
 
 
 def utc(v):
@@ -34,6 +57,11 @@ def utc(v):
     return None
 
 
+def latest(*ts):
+    vals = [t for t in ts if t is not None]
+    return max(vals) if vals else None
+
+
 def name_of(email):
     e = (email or "").lower()
     return e[:-len(DOM)] if e.endswith(DOM) else None
@@ -44,8 +72,12 @@ def mask(name, age):
     return f"{n[:2]}… ({len(n)}) · {int(age.total_seconds() // 86400)} g"
 
 
+def class_names(exc):
+    return " ".join(c.__name__ for c in type(exc).__mro__)
+
+
 def is_perm(exc):
-    names = " ".join(c.__name__ for c in type(exc).__mro__)
+    names = class_names(exc)
     low = (names + " " + str(exc)).lower()
     return "permissiondenied" in names.lower() or "forbidden" in low or "insufficient permission" in low or "403" in low
 
@@ -56,12 +88,18 @@ class StageError(Exception):
         self.stage, self.cause = stage, cause
 
 
+class Skipped(Exception):
+    pass
+
+
 def read_users(auth):
     out, page = [], auth.list_users()
     while page:
         for u in page.users:
             md = u.user_metadata
-            out.append({"uid": u.uid, "email": u.email, "created": utc(md.creation_timestamp), "last": utc(md.last_sign_in_timestamp)})
+            out.append({"uid": u.uid, "email": u.email, "created": utc(md.creation_timestamp),
+                        "last": utc(md.last_sign_in_timestamp),
+                        "refresh": utc(getattr(md, "last_refresh_timestamp", None))})
         page = page.get_next_page()
     return out
 
@@ -81,20 +119,25 @@ def read_all(auth, db):
     return users, devs, players, delreq, saves
 
 
-def analyse(users, devs, players, delreq, saves, now):
-    """Pure: -> dict of lists of (masked label) per category, plus totals. Never touches a client."""
+def fs(coll, doc):
+    return ("fs", coll, doc)
+
+
+def build_plan(users, devs, players, delreq, saves, now):
+    """Pure: -> {"items": [...], "pending": [labels], "exempt_delreq": n, "accounts": n, "docs": n}.
+    Each item = {cat, label, uid, name, steps}; steps are ("fs", collection, doc_id) or ("auth", uid), in run order."""
     by_uid = {u["uid"]: u for u in users}
     by_name = {}
     for u in users:
         n = name_of(u["email"])
         if n:
             by_name[n] = u
+    exempt_uids = {u["uid"] for u in users if u["uid"] in devs or name_of(u["email"]) in EXEMPT_NAMES}
+    items, pending, exempt_delreq = [], [], 0
 
-    def exempt(u):
-        return u["uid"] in devs or name_of(u["email"]) in EXEMPT_NAMES
+    def add(cat, label, uid, name, steps):
+        items.append({"cat": cat, "label": label, "uid": uid, "name": name, "steps": steps})
 
-    exempt_uids = {u["uid"] for u in users if exempt(u)}
-    r = {"A": [], "B": [], "C_junk": [], "C_cancelled": [], "C_due": [], "C_pending": [], "D_players": 0, "D_saves": 0, "exempt_delreq": 0}
     for u in users:
         if u["uid"] in exempt_uids:
             continue
@@ -103,48 +146,111 @@ def analyse(users, devs, players, delreq, saves, now):
         if p is not None:
             c = utc(p.get("confirmed"))
             if c is not None and now - c > datetime.timedelta(days=CONF_DAYS):
-                r["A"].append(mask(p.get("username") if isinstance(p.get("username"), str) else n, now - c))
+                label = mask(p.get("username") if isinstance(p.get("username"), str) else n, now - c)
+                add("A", label, uid, n, [fs("players", uid), fs("saves", uid), fs("saves", uid + "_dev"), ("auth", uid)])
         elif uid not in devs and u["created"] is not None and now - u["created"] > datetime.timedelta(hours=ORPHAN_HOURS):
-            r["B"].append(mask(n, now - u["created"]))
+            add("B", mask(n, now - u["created"]), uid, n, [fs("saves", uid), fs("saves", uid + "_dev"), ("auth", uid)])
     for uname, d in sorted(delreq.items()):
         ts = utc(d.get("ts"))
         u = by_name.get(uname.lower())
         age = (now - ts) if ts else datetime.timedelta(0)
-        if u is not None and (u["uid"] in exempt_uids):
-            r["exempt_delreq"] += 1
+        if u is not None and u["uid"] in exempt_uids:
+            exempt_delreq += 1
         elif u is None:
-            r["C_junk"].append(mask(uname, age))
-        elif ts is not None and u["last"] is not None and u["last"] > ts:
-            r["C_cancelled"].append(mask(uname, age))
+            add("C1", mask(uname, age), None, None, [fs("delreq", uname)])
+        elif ts is not None and latest(u["last"], u["refresh"]) is not None and latest(u["last"], u["refresh"]) > ts:
+            add("C2", mask(uname, age), None, None, [fs("delreq", uname)])
         elif ts is not None and age > datetime.timedelta(days=DELREQ_DAYS):
-            r["C_due"].append(mask(uname, age))
+            uid = u["uid"]
+            add("C3", mask(uname, age), uid, uname, [fs("players", uid), fs("saves", uid), fs("saves", uid + "_dev"),
+                                                    ("auth", uid), fs("delreq", uname)])
         else:
-            r["C_pending"].append(mask(uname, age))
-    r["D_players"] = sum(1 for uid in players if uid not in by_uid)
-    r["D_saves"] = sum(1 for s in saves if (s[:-4] if s.endswith("_dev") else s) not in by_uid)
-    r["totals"] = {"auth": len(users), "exempt": len(exempt_uids), "players": len(players), "delreq": len(delreq)}
-    return r
+            pending.append(mask(uname, age))
+    # one account, one set of steps: C3 wins over A (its steps include A's and the delreq)
+    c3 = {it["uid"] for it in items if it["cat"] == "C3"}
+    items = [it for it in items if not (it["cat"] == "A" and it["uid"] in c3)]
+    stray = 0
+    for pid in sorted(players):
+        if pid not in by_uid and pid not in devs:
+            stray += 1
+            add("E", f"players n.{stray}", pid, None, [fs("players", pid)])
+    for s in sorted(saves):
+        base = s[:-4] if s.endswith("_dev") else s
+        if base not in by_uid and base not in devs:
+            stray += 1
+            add("E", f"saves n.{stray}", base, None, [fs("saves", s)])
+    accounts = sum(1 for it in items for st in it["steps"] if st[0] == "auth")
+    docs = sum(1 for it in items for st in it["steps"] if st[0] == "fs")
+    return {"items": items, "pending": pending, "exempt_delreq": exempt_delreq, "accounts": accounts, "docs": docs,
+            "totals": {"auth": len(users), "exempt": len(exempt_uids), "players": len(players), "delreq": len(delreq)}}
 
 
-def render(r, now):
-    t = r["totals"]
-    L = ["DRY-RUN — nothing deleted", "Esecuzione: " + now.strftime("%Y-%m-%d %H:%M UTC"), "",
-         f"Utenti Auth: {t['auth']} · dev esenti: {t['exempt']} · players: {t['players']} · delreq: {t['delreq']}", ""]
+def exempt_now(db, uid, name):
+    if name in EXEMPT_NAMES:
+        return True
+    return bool(db.collection("devs").document(uid).get().exists)
 
-    def cat(title, what, items):
-        L.append(f"{title}: {len(items)}" + (f" — eliminerebbe {what}" if items else ""))
-        L.extend("  " + x for x in items)
 
-    cat("A) non confermati (> 30 giorni)", "utente Auth + players + saves", r["A"])
-    cat("B) orfani (> 24 h, senza players né devs)", "utente Auth + saves", r["B"])
-    cat("C1) delreq spazzatura (utente inesistente)", "il doc delreq", r["C_junk"])
-    cat("C2) delreq annullate (accesso dopo la richiesta)", "il doc delreq", r["C_cancelled"])
-    cat("C3) delreq scadute (> 7 giorni)", "utente Auth + players + saves + il doc delreq", r["C_due"])
-    L.append(f"C4) delreq in attesa: {len(r['C_pending'])} (nessuna azione)")
-    L.extend("  " + x for x in r["C_pending"])
-    if r["exempt_delreq"]:
-        L.append(f"delreq di account esenti ignorate: {r['exempt_delreq']}")
-    L += ["", f"D) solo informativo: players senza utente Auth: {r['D_players']} · saves senza utente Auth: {r['D_saves']}"]
+def delete_auth(auth, uid):
+    try:
+        auth.delete_user(uid)
+    except Exception as e:
+        if "UserNotFoundError" in class_names(e):
+            return
+        raise
+
+
+def execute(plan, auth, db):
+    """Live only. Mutates item['status'] and returns the counters. Failure text is the exception CLASS name only."""
+    st = {"acc": 0, "docs": 0, "fail": 0, "skip": 0}
+    for it in plan["items"]:
+        uid, name = it["uid"], it["name"]
+        try:
+            if uid is not None and exempt_now(db, uid, name):
+                raise Skipped()
+            for step in it["steps"]:
+                if step[0] == "auth":
+                    if exempt_now(db, uid, name):
+                        raise Skipped()
+                    delete_auth(auth, uid)
+                    st["acc"] += 1
+                else:
+                    db.collection(step[1]).document(step[2]).delete()
+                    st["docs"] += 1
+            it["status"] = "eliminato"
+        except Skipped:
+            st["skip"] += 1
+            it["status"] = "saltato (dev)"
+        except Exception as e:
+            st["fail"] += 1
+            it["status"] = f"fallito ({type(e).__name__})"
+    return st
+
+
+def render(plan, now, live=False, st=None, capped=False):
+    t = plan["totals"]
+    if capped:
+        head = [HDR_LIVE_NO, MSG_CAP.format(a=plan["accounts"], d=plan["docs"])]
+    else:
+        head = [HDR_LIVE if live else HDR_DRY]
+    L = head + ["Esecuzione: " + now.strftime("%Y-%m-%d %H:%M UTC"), "",
+                f"Utenti Auth: {t['auth']} · dev esenti: {t['exempt']} · players: {t['players']} · delreq: {t['delreq']}", ""]
+    for cat, title, what in TITLES:
+        items = [it for it in plan["items"] if it["cat"] == cat]
+        if live and not capped:
+            L.append(f"{title}: {len(items)}")
+        else:
+            L.append(f"{title}: {len(items)}" + (f" — eliminerebbe {what}" if items else ""))
+        for it in items:
+            L.append("  " + it["label"] + (f" — {it['status']}" if live and not capped and "status" in it else ""))
+    L.append(f"C4) delreq in attesa: {len(plan['pending'])} (nessuna azione)")
+    L.extend("  " + x for x in plan["pending"])
+    if plan["exempt_delreq"]:
+        L.append(f"delreq di account esenti ignorate: {plan['exempt_delreq']}")
+    if live and not capped:
+        L += ["", f"Eliminati: account {st['acc']} · documenti {st['docs']} · falliti {st['fail']} · saltati (dev) {st['skip']}"]
+    else:
+        L += ["", f"Da eliminare: account {plan['accounts']} · documenti {plan['docs']}"]
     return "\n".join(L) + "\n"
 
 
@@ -156,8 +262,10 @@ def emit(text):
             f.write("```\n" + text + "```\n")
 
 
-def run(auth, db, now=None):
-    """-> exit code. `auth` needs list_users(); `db` needs collection(name).stream() / .list_documents() — reads only."""
+def run(auth, db, now=None, live=False):
+    """-> exit code: 0 ok, 1 some item failed (live), 2 cap exceeded (live, nothing deleted), 1 on a read error.
+    `auth` needs list_users() and (live) delete_user(); `db` needs collection(name).stream()/.list_documents() and (live)
+    document(id).get()/.delete()."""
     now = now or datetime.datetime.now(UTC)
     try:
         data = read_all(auth, db)
@@ -167,8 +275,16 @@ def run(auth, db, now=None):
         else:
             emit(f"Errore durante la lettura ({e.stage}): {type(e.cause).__name__}\n")
         return 1
-    emit(render(analyse(*data, now), now))
-    return 0
+    plan = build_plan(*data, now)
+    if not live:
+        emit(render(plan, now))
+        return 0
+    if plan["accounts"] > ACCOUNT_CAP or plan["docs"] > DOC_CAP:
+        emit(render(plan, now, live=True, capped=True))
+        return 2
+    st = execute(plan, auth, db)
+    emit(render(plan, now, live=True, st=st))
+    return 1 if st["fail"] else 0
 
 
 def real_clients():
@@ -186,5 +302,8 @@ def real_clients():
 
 
 if __name__ == "__main__":
+    ap = argparse.ArgumentParser(description="Player-account cleanup (dry-run by default).")
+    ap.add_argument("--live", action="store_true", help="perform the deletions (default: dry-run, deletes nothing)")
+    args = ap.parse_args()
     a, d = real_clients()
-    sys.exit(run(a, d))
+    sys.exit(run(a, d, live=args.live))
