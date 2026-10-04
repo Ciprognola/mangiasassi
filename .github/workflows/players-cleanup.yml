@@ -1,4 +1,4 @@
-﻿name: players-cleanup
+name: players-cleanup
 
 # L3b: player-account cleanup (§10.7). Manual run: mode dry-run (default, deletes nothing) or live. Daily 06:30 UTC: always live.
 # Live = the deletions tools/players/cleanup.py lists (capped at 25 accounts / 100 documents per run).
