@@ -1472,7 +1472,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.5";
+const VERSION="0.5_1";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -3082,6 +3082,57 @@ function diagCopy(){
   const fb=()=>{try{const ta=document.createElement("textarea");ta.value=t;ta.style.cssText="position:fixed;opacity:0";document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();ok()}catch(e){toast("Copia non riuscita")}};
   try{navigator.clipboard.writeText(t).then(ok,fb)}catch(e){fb()}
 }
+/* ============ CONTROLLER (HM0, 0.5_1): prova dei tasti del gamepad — solo sviluppatori, nessuna azione di gioco, nulla salvato ============ */
+const CTRL={log:[],prev:{},raf:0,ticks:0};
+const ctrlAcc=()=>document.querySelector("details[data-acc=ctrl]");
+const ctrlOpen=()=>screen==="opt"&&!!(ctrlAcc()&&ctrlAcc().open);
+const ctrlPads=()=>{try{return Array.from(navigator.getGamepads?navigator.getGamepads():[])}catch(e){return[]}};
+const ctrlMap=p=>p.mapping==="standard"?"standard":"nessuna";
+function ctrlLogHTML(){return CTRL.log.map(m=>`<li>${esc(m)}</li>`).join("")}
+function ctrlRender(){const ol=document.getElementById("ctrlLog");if(ol)ol.innerHTML=ctrlLogHTML()}
+function ctrlAdd(m){CTRL.log.unshift(m);if(CTRL.log.length>12)CTRL.log.length=12;ctrlRender()}
+function ctrlLive(){ // vista in diretta: ogni pad collegato, i tasti premuti e gli assi con |valore| > 0,2
+  const rows=[];
+  ctrlPads().forEach((p,i)=>{if(!p)return;
+    const pr=p.buttons.map((b,j)=>b.pressed?`${j} (${(b.value||0).toFixed(2)})`:null).filter(Boolean);
+    const ax=p.axes.map((v,j)=>Math.abs(v)>.2?`asse ${j} = ${v.toFixed(2)}`:null).filter(Boolean);
+    rows.push(`gamepad ${i}: ${p.id} · ${ctrlMap(p)} · ${p.buttons.length} tasti · ${p.axes.length} assi`,`  premuti: ${pr.length?pr.join(", "):"nessuno"}`,`  assi: ${ax.length?ax.join(", "):"fermi"}`)});
+  return rows.length?rows.join("\n"):"Nessun controller: premi un tasto sul controller";
+}
+function ctrlTick(){ // eventi: solo transizioni (tasto premuto/rilasciato, asse che attraversa 0,5, pad collegato/scollegato)
+  ctrlPads().forEach((p,i)=>{
+    const old=CTRL.prev[i];
+    if(!p){if(old){ctrlAdd(`gamepad scollegato: ${old.id}`);delete CTRL.prev[i]}return}
+    if(!old){ctrlAdd(`gamepad collegato: ${p.id}`);CTRL.prev[i]={id:p.id,b:[],a:[]};return}
+    p.buttons.forEach((b,j)=>{const d=!!b.pressed;if(d!==!!old.b[j]){old.b[j]=d;ctrlAdd(`gamepad ${i}: tasto ${j} ${d?"premuto":"rilasciato"}`)}});
+    p.axes.forEach((v,j)=>{const z=v>=.5?1:v<=-.5?-1:0;if(z!==(old.a[j]||0)){old.a[j]=z;ctrlAdd(`gamepad ${i}: asse ${j} = ${v.toFixed(2)}`)}});
+  });
+  const el=document.getElementById("ctrlLive"),t=ctrlLive();if(el&&el.textContent!==t)el.textContent=t;
+}
+function ctrlLoop(){ // si ferma da sola appena l'accordion si chiude o cambia schermo
+  if(!ctrlOpen()){CTRL.raf=0;return}
+  CTRL.ticks++;ctrlTick();CTRL.raf=requestAnimationFrame(ctrlLoop);
+}
+function ctrlStart(){if(!CTRL.raf&&ctrlOpen())CTRL.raf=requestAnimationFrame(ctrlLoop)}
+document.addEventListener("toggle",e=>{if(e.target.matches&&e.target.matches("details[data-acc=ctrl]")&&e.target.open)ctrlStart()},true);
+addEventListener("keydown",e=>{ // solo log: nessun preventDefault, nessuna azione; i campi di testo non si registrano
+  if(!ctrlOpen()||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))return;
+  ctrlAdd(`tastiera: ${e.key} / ${e.code}`)
+},true);
+function ctrlSummary(){
+  const pads=ctrlPads().map((p,i)=>p?`gamepad ${i}: ${p.id} · ${ctrlMap(p)} · ${p.buttons.length} tasti · ${p.axes.length} assi`:null).filter(Boolean);
+  return ["Prova controller (0.5_1)",...(pads.length?pads:["Nessun controller collegato"]),"","Ultimi eventi (dal più recente):",...(CTRL.log.length?CTRL.log:["(nessuno)"])].join("\n");
+}
+function ctrlCopy(){
+  const t=ctrlSummary(),fb=()=>{const ta=document.getElementById("ctrlTa");if(!ta)return;ta.hidden=false;ta.value=t;ta.focus();ta.select()};
+  try{navigator.clipboard.writeText(t).then(()=>toast("Risultati copiati"),fb)}catch(e){fb()}
+}
+const ctrlHTML=()=>`<div class="opt" style="flex-direction:column;align-items:stretch"><div>Prova controller<small>Mostra i tasti e gli assi del controller collegato. Non cambia nulla nel gioco e non salva niente.</small></div>
+ <div id="ctrlLive" style="margin-top:10px;font-size:.85rem;white-space:pre-wrap">${esc(ctrlLive())}</div>
+ <div style="margin-top:12px;font-size:.85rem;color:var(--mute)">Ultimi eventi (dal più recente)</div>
+ <ol id="ctrlLog" style="font-size:.8rem;margin:4px 0 0 18px;padding:0">${ctrlLogHTML()}</ol>
+ <div class="acts" style="margin-top:10px"><button class="btn ghost sm" id="ctrlCopy">Copia risultati</button></div>
+ <textarea id="ctrlTa" hidden readonly rows="6" style="margin-top:8px;width:100%"></textarea></div>`;
 function devRows(){
   const m=isMaster(),g=gamDevHTML();
   const account=`<div class="opt"><div>Connesso come ${esc(acct||"?")}<small>Ruolo: ${m?"master developer":"sviluppatore"}</small></div><button class="btn red sm" id="lo">Esci</button></div>
@@ -3119,7 +3170,7 @@ function devRows(){
      <div class="acts"><button class="btn ghost sm" data-popprev="asset">Asset</button><button class="btn ghost sm" data-popprev="char">Personaggio</button><button class="btn ghost sm" data-popprev="game">Minigioco</button><button class="btn ghost sm" data-popprev="milestone">Traguardo</button><button class="btn ghost sm" data-popprev="ach">Obiettivo</button></div></div>`;
   const exp=`<div class="opt"><div>Esporta modifiche<small>Crea uno zip con solo ciò che hai cambiato, pronto da caricare su GitHub</small></div><button class="btn sm" id="xopen">Prepara</button></div>
    <div class="opt"><div>Ripristina build originale<small>Cancella le modifiche locali di testi e schede</small></div><button class="btn red sm" id="rs">Ripristina</button></div>`;
-  return optAcc("account","Account",account)+optAcc("test","Strumenti di test",test)+optAcc("audio","Audio e testi",audio)+optAcc("obj","Anteprime",obj)+optAcc("exp","Consegna",exp)+optAcc("skins","Costumi",skinToolHTML())+optAcc("diag","Diagnostica",diagHTML());
+  return optAcc("account","Account",account)+optAcc("test","Strumenti di test",test)+optAcc("ctrl","Controller",ctrlHTML())+optAcc("audio","Audio e testi",audio)+optAcc("obj","Anteprime",obj)+optAcc("exp","Consegna",exp)+optAcc("skins","Costumi",skinToolHTML())+optAcc("diag","Diagnostica",diagHTML());
 }
 function bindDev(){
   root.onchange=async e=>{
@@ -3155,6 +3206,7 @@ function bindDev(){
     if(t.closest("#xopen"))return exportDialog();
     if(t.closest("#dgc"))return diagCopy();
     if(t.closest("#dgx")){DIAG.clear();const b=document.querySelector("details.acc[data-acc=diag] .accb");if(b)b.innerHTML=diagHTML();return toast("Diagnostica svuotata")}
+    if(t.closest("#ctrlCopy"))return ctrlCopy();
     if(t.closest("#lo")){fbLogout();return go("menu")}
     if(t.closest("#cpw")){return fbChangePw()}
     const sm=t.closest("[data-sim]");if(sm&&isMaster()){if(sm.dataset.sim==="1")simOn();else simOff();toast(S.sim?"Simulazione attiva":"Dati reali ripristinati");return render()}

@@ -11,6 +11,7 @@ Permanent project context for Claude Code. Read it fully at the start of every s
 
 2026-10-03: roadmap to 1.0 approved (docs/roadmap-1.0.md, §11) — starts after v0.5; 0.5 work in §10 continues unchanged.
 2026-10-04: roadmap revised (docs/roadmap-1.0.md): handheld mode first, as 0.5_N builds before 0.6 M0; pets in 0.7; no Discord Activity. Next: handheld plan in Claude chat, then 0.6 M0.
+0.5_1 HM0 done: controller test (dev) + docs/releases/0.5-H0.md; next: handheld plan in Claude chat.
 
 ---
 
@@ -216,6 +217,7 @@ in-universe — never use developer words like "asset" or "fantasma" in player-f
 Tap **"Build locale" five times** in Options to open the login modal (username + password, **Firebase Auth**; the game appends `@mangiasassi.invalid`, §10.2). The role comes from Firestore `devs/{uid}.role` (`master`, `dev1`…`dev5`): internally `role` is `'master'` or `'dev1'` (every dev1…dev5 behaves as `dev1`, master-only = Sblocca tutto + menu/GAM music uploads), `acct` keeps the account name (shown in the Account accordion, default developer name of the export). `isMaster()` is the helper.
 The SDK (`fbLoad`, v12.19.0 from gstatic) is loaded with `import()` only when the login modal opens or when the dev cache says a session exists: the game never waits for it (8 s timeout = offline). Two separate Firebase sessions per site (app name `mgs` / `mgs_dev`). Cache `mgs_dev` (`mgs_dev_dev` on /dev/) = `{role,acct,fb:true,devOn}`: restored at load, verified in the background (`fbVerify`: no user / role removed → dev off + SIM off; unreachable → the session stays valid). A cache without `fb:true` (old local login) is cleared. `file://` builds cannot log in.
 Developer options must be **completely invisible** when the dev toggle is off; Sblocca tutto ends with dev mode. Dev jump/map runs, `PR.test` battles and Ferma tests save no progress and never set real unlock flags (`seen`, achievements). Headless tests: `tools/fbstub/` (stub SDK + `test_f1.py`; never real credentials).
+- **Controller (HM0, 0.5_1)**: Opzioni › Sviluppatore › accordion «Controller» (`ctrlHTML`, `ctrlTick`, `ctrlLoop`): «Prova controller» lists the connected gamepads, live buttons/axes and a log of the last 12 events; dev-only, log only (no game action, nothing saved), polling runs only while the accordion is open.
 **Jump to any girone (0.4.5_14)**: next to `#jg4`/`#jg7` (kept, unchanged) in the «Salta al girone» accordion, `#jgN` (number, 1-20) + `#jgGo` call `devJump(n)` clamped in the click handler; `devJump` already ran the girone's real spec through `pickMap(n)`/`resetActors` (M1a), so no separate wiring was needed. Tests: `tools/fbstub/test_jg.py`.
 
 ### Player login (F2a, flag off)

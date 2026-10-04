@@ -2445,3 +2445,12 @@ Bundles builds 0.4.5_1 … 0.4.5_43 (their entries below stay as they are).
 - Percorso: alcune tappe bloccate mostrano come sbloccarle.
 - Account: crealo nel gioco, salvataggio nel cloud tra dispositivi, segnalazione dei bug dal gioco.
 - Niente email: ti chiede di confermare l'account circa ogni 25 giorni, altrimenti dopo 30 l'account viene cancellato; se dimentichi la password puoi chiederne la cancellazione.
+## 0.5_1 — 2026-10-04 — HM0: Prova controller (dev) + handheld investigation H0
+- New dev-only accordion «Controller» in Opzioni › Sviluppatore, with «Prova controller»: connected pads (index, id, mapping, button and axis counts), a live view of pressed buttons and axes with |value| > 0.2, and a log of the last 12 events (buttons pressed/released, axes crossing 0.5, pad connected/disconnected, keyboard keys outside text fields). «Copia risultati» copies the summary, with a selected-textarea fallback when the clipboard fails.
+- Read-only: no preventDefault, no game action, nothing saved. The polling runs only while the accordion is open and stops on close or screen change.
+- `docs/releases/0.5-H0.md`: handheld-mode investigation H0 (screen layouts, input handlers, mgback, pause per game, layout proposal, rough size per area). No code change for it.
+- Triage 2026-10-04: 5 pipeline test reports (test1…test5, opt-generali-account) → NEW. `submissions/PROCESSED.md` line spelled with a trailing slash, so the §1b pending check never matched it; spelling fixed.
+- Tests: new `tools/fbstub/test_hm0.py` (A–F, 17 checks, green); bite run with `HM0_MUTATE=nopoll` (polling disabled): B, C and F fail as expected.
+- `VERSION` and `const VERSION` = `0.5_1`. `index.html` size delta: +12702 bytes (6253433 → 6266135, raw, CRLF checkout).
+- Not tested: a real gamepad, the Android wrapper, a real phone (owner test pending).
+
