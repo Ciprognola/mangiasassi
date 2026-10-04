@@ -2423,3 +2423,19 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - Tests: `tools/players/test_cleanup.py` 53/53 (was 22): dry-run writes nothing, exact delete order per category, refresh-rule boundaries, idempotence, A/C3 dedupe, exempt guard (also mid-item), cap at 25/26 and 100/101, one failing delete, public-log hygiene in both modes, workflow text and its run line. Mutation runs (cap 26; Auth before Firestore in A; no second devs check; sign-in-only C2) each fail as intended.
 - Not tested here: a real run against Firebase (the owner's dry-run, then live, is the test); the `last_refresh_timestamp` attribute is not checked against the installed firebase-admin (not installed here); the workflow's shell line is checked as text, not executed by Actions.
 - `index.html`, `VERSION`, `firestore.rules`, `bugs-export.yml` untouched.
+
+## 0.5 — 2026-10-04
+
+Bundles builds 0.4.5_1 … 0.4.5_43 (their entries below stay as they are).
+
+### Novità
+- Il gioco ora si chiama «Mr. Stone».
+- Ferma Algidone! diventa una corsa completa: gironi senza fine, più difficili a ogni giro, con la sua musica. Algidone si arrabbia quando sali le scale, e all'ultimo piano i bulloni cambiano disposizione.
+- Tra un girone e l'altro arrivano El Gamblador e gli intermezzi, anche in Ferma Algidone!; in Ferma puoi salvare e uscire tra i gironi.
+- Labirinto: mappe piccole, medie e grandi con 3, 4 o 5 fantasmi; nessuna mappa bloccata al livello 10.
+- I fantasmi dal secondo stadio cambiano: gli aerei scattano e, dal terzo stadio, sparano; gli attrezzi lasciano grasso per terra e, dal terzo stadio, si fondono in un Super Panino che abbatte i muri.
+- Nel labirinto, dopo aver perso una vita hai 5 secondi di protezione, con un'aura del colore del tuo potere.
+- Il sasso mangiato prende il colore della tua roccia.
+- Percorso: alcune tappe bloccate mostrano come sbloccarle.
+- Account: crealo nel gioco, salvataggio nel cloud tra dispositivi, segnalazione dei bug dal gioco.
+- Niente email: ti chiede di confermare l'account circa ogni 25 giorni, altrimenti dopo 30 l'account viene cancellato; se dimentichi la password puoi chiederne la cancellazione.

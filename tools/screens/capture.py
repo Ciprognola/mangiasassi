@@ -294,6 +294,8 @@ def sc_maze(b, only):
     c.ev("S.p.g5=true;persist()"); c.p.reload(); c.p.wait_for_selector("#rsi"); enter_menu(c)
     c.shot("menu-home-nuovo-hardcore", 400)
     go_tile(c, "new")
+    c.p.get_by_role("button", name="Mangiaroccia", exact=True).click(timeout=5000)  # S1 chooser: Mangiaroccia
+    time.sleep(0.5)
     c.shot("maze-intro-roccia", 400)
     c.p.wait_for_timeout(3200)
     c.shot("maze-play-roccia", 100)
