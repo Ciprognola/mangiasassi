@@ -12,6 +12,7 @@ export function getAuth(app) {
   };
 }
 export async function signInWithEmailAndPassword(auth, email, pw) {
+  S().signIns = (S().signIns || 0) + 1;
   if (S().offline) throw { code: "auth/network-request-failed" };
   if (S().tooMany) throw { code: "auth/too-many-requests" };
   const n = email.split("@")[0], u = S().users[n];

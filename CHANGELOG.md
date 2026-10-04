@@ -2391,3 +2391,13 @@ M7 — Ferma Algidone! audio (synth placeholders) + sound in every kind of run.
 - New `.github/workflows/players-cleanup.yml`: `workflow_dispatch` only (schedule comes with L3b), `contents: read`, checks out `dev`. Identical copy on `main`.
 - Tests: new `tools/players/test_cleanup.py` (22 checks, mocked firebase_admin, fixed clock; two mutation runs — category A at 29 days, a full username printed — fail as intended); `tools/bugs/test_export_bugs.py` 15/15; full `tools/fbstub` run (41 suites, skin coverage excluded) 1786 checks, all green.
 - `index.html`/`VERSION` untouched. Not tested: the real service account / IAM role, real Auth `list_users` shapes beyond the documented API.
+
+## 0.4.5_42 — 2026-10-04 — L4: deletion request after 5 wrong passwords
+- Player login form (`plLogin`): wrong-password counter per name in `mgs_pwfail` (`mgs_pwfail_dev` on the dev site), +1 only for invalid-credential / wrong-password / user-not-found and only for a name that passes `plNameCheck`; a successful sign-in clears that name's counter and its request.
+- From 5 wrong passwords, under the login error: «Hai dimenticato la password? Puoi chiedere di cancellare l'account «<nome>» e crearne uno nuovo.» + «Chiedi la cancellazione».
+- Confirm popup «Cancellare l'account?» (Annulla / Esc / Android back write nothing). «Conferma» writes `delreq/{name}` = `{ts: server time}` with no sign-in; permission-denied → «C'è già una richiesta in corso per questo nome.»; offline → the usual offline message.
+- After a successful request `mgs_delreq` (`_dev` on the dev site) remembers it; the button becomes «Richiesta di cancellazione inviata il <data>.» (kept across reloads). The local save, registration, confirmation, cloud and bug code are untouched. The dev login modal is untouched.
+- `index.html`: +3906 bytes (LF-normalised, 6248775 → 6252681); `VERSION` 0.4.5_42.
+- Stub SDK: `delreq` create branch (create only, `{ts}` only, reserved or already-requested → permission-denied), sign-in counter `signIns`.
+- Tests: new `tools/fbstub/test_l4.py` 41/41; mutations (`L4_MUTATE=threshold`: 1 check fails; `L4_MUTATE=extra`: 5 fail) prove the checks bite. Full `tools/fbstub` regression (42 suites, skin coverage excluded) all exit 0 (six needed `PYTHONIOENCODING=utf-8` for their Italian console output); `tools/players/test_cleanup.py` 22/22.
+- Not tested on a real device or against the real published rules (the owner's phone test on the dev site is next, as for L1/L2).

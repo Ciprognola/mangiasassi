@@ -37,6 +37,15 @@ export async function runTransaction(db, fn) {
 const RESERVED = ["master", "dev1", "dev2", "dev3", "dev4", "dev5", "admin", "algidone", "gamblador", "professore", "mrstone", "usagi"];
 export async function setDoc(ref, data) {
   const S = window.__fbs;
+  if (ref.col === "delreq") { // L4: create only, only {ts: server time}; a name already requested or reserved -> permission-denied
+    (S.delreqWrites = S.delreqWrites || []).push({ id: ref.id, data: JSON.parse(JSON.stringify(data)) });
+    if (S.offline) throw { code: "unavailable" };
+    S.delreqs = S.delreqs || {};
+    const ok = Object.keys(data).join(",") === "ts" && data.ts && data.ts.__ts && /^[a-z0-9_-]{3,16}$/.test(ref.id) && !RESERVED.includes(ref.id);
+    if (!ok || S.delreqs[ref.id] || S.denyDelreq) throw { code: "permission-denied" };
+    S.delreqs[ref.id] = Date.now();
+    return;
+  }
   if (ref.col !== "players") throw { code: "permission-denied" };
   (S.playerWrites = S.playerWrites || []).push({ id: ref.id, data: JSON.parse(JSON.stringify(data)) });
   if (S.denyPlayers) throw { code: "permission-denied" };

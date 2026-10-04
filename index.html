@@ -662,7 +662,8 @@ if(role)setTimeout(fbVerify,0);
    invariato e separato: questo e' il solo modo con cui un giocatore normale puo' accedere. */
 async function plLogin(user,pass){
   let fb;try{fb=await fbLoad()}catch(e){throw new Error(fbErr(e))}
-  let cred;try{cred=await fb.Au.signInWithEmailAndPassword(fb.auth,user+FB_DOM,pass)}catch(e){throw new Error(fbErr(e))}
+  let cred;try{cred=await fb.Au.signInWithEmailAndPassword(fb.auth,user+FB_DOM,pass)}catch(e){plFailCount(user,e);throw new Error(fbErr(e))}
+  plFailClear(user);
   let r=null;try{r=await fbRoleOf(fb,cred.user)}catch(e){}
   if(r){role=r==="master"?"master":"dev1";acct=r;persistDev()}
   else{playerAcct=user;persistPlayer();plEnsureProfile(fb,cred.user,true)}
@@ -685,9 +686,50 @@ async function plLoginGo(){
   const er=$("#ple"),k=$("#plk"),u=($("#plu").value||"").trim().toLowerCase(),p=$("#plp").value;
   if(!u||!p){er.textContent="Inserisci utente e password.";return}
   if(u.includes("@")){er.textContent="Scrivi solo il nome utente, senza @.";return}
-  k.disabled=true;er.textContent="Accesso in corso…";
+  k.disabled=true;er.textContent="Accesso in corso…";const oh=document.getElementById("plhint");if(oh)oh.remove();
   try{await plLogin(u,p);toast("Accesso effettuato");render();cloudStart(true)}
-  catch(e){er.textContent=e.message||"Accesso non riuscito.";k.disabled=false;const pi=$("#plp");if(pi)pi.focus()}
+  catch(e){er.textContent=e.message||"Accesso non riuscito.";k.disabled=false;plDelHint(u);const pi=$("#plp");if(pi)pi.focus()}
+}
+/* cancellazione account (L4): dopo PL_DEL.after accessi sbagliati di fila per uno stesso nome (contatore per dispositivo, mgs_pwfail) compare,
+   sotto l'errore, la richiesta di cancellazione: delreq/{nome} = {ts}, creabile senza accesso (regole: solo ts == ora). Conta solo le tre risposte
+   «credenziali sbagliate» (con la protezione dall'enumerazione un nome sconosciuto risponde come una password sbagliata); rete e troppi tentativi no.
+   Un accesso riuscito con quel nome azzera il contatore e la richiesta locale. Il dev (loginModal / fbLogin) non passa di qui. */
+const PL_DEL={after:5};
+const PWF_KEY=IS_DEVSITE?"mgs_pwfail_dev":"mgs_pwfail",DELREQ_KEY=IS_DEVSITE?"mgs_delreq_dev":"mgs_delreq";
+const PWF_WRONG=/auth\/(invalid-credential|wrong-password|user-not-found)/;
+const plFailMap=k=>{const m=store.get(k);return m&&typeof m==="object"?m:{}};
+const plFailGet=(m,name)=>Object.prototype.hasOwnProperty.call(m,name)?(+m[name]||0):0;
+function plFailCount(name,e){ // +1 solo per una risposta «credenziali sbagliate» e solo per un nome valido
+  if(!PWF_WRONG.test((e&&e.code)||"")||plNameCheck(name))return;
+  const m=plFailMap(PWF_KEY);m[name]=plFailGet(m,name)+1;store.set(PWF_KEY,m);
+}
+function plFailClear(name){ // accesso riuscito: via il conteggio e la richiesta locale di questo nome
+  const m=plFailMap(PWF_KEY);if(Object.prototype.hasOwnProperty.call(m,name)){delete m[name];store.set(PWF_KEY,m)}
+  const d=plFailMap(DELREQ_KEY);if(Object.prototype.hasOwnProperty.call(d,name)){delete d[name];store.set(DELREQ_KEY,d)}
+}
+function plDelHint(name){ // sotto l'errore d'accesso: dopo PL_DEL.after tentativi, il pulsante (o la riga, se la richiesta e' gia' partita)
+  const old=document.getElementById("plhint");if(old)old.remove();
+  const er=document.getElementById("ple");
+  if(!er||plNameCheck(name)||plFailGet(plFailMap(PWF_KEY),name)<PL_DEL.after)return;
+  const d=plFailGet(plFailMap(DELREQ_KEY),name);
+  const h=document.createElement("div");h.id="plhint";
+  h.innerHTML=d?`<small style="display:block;margin-top:6px;color:var(--mute)">Richiesta di cancellazione inviata il ${esc(new Date(d).toLocaleDateString("it-IT"))}.</small>`
+    :`<small style="display:block;margin-top:6px;color:var(--mute)">Hai dimenticato la password? Puoi chiedere di cancellare l'account «${esc(name)}» e crearne uno nuovo.</small><div class="acts" style="margin-top:6px"><button class="btn ghost sm" id="pldel">Chiedi la cancellazione</button></div>`;
+  er.after(h);
+  const b=h.querySelector("#pldel");if(b)b.onclick=()=>plDelAsk(name);
+}
+function plDelAsk(name){
+  const m=openModal(`<div id="delpop" data-nolp><h3>Cancellare l'account?</h3><p>Tra 7 giorni l'account «${esc(name)}» e il suo salvataggio nel cloud verranno cancellati. Se nel frattempo l'account viene usato, la richiesta si annulla. Dopo potrai ricreare un account con lo stesso nome. I progressi su questo dispositivo restano.</p><div class="acts"><button class="btn ghost" id="dlno">Annulla</button><button class="btn" id="dlok">Conferma</button></div></div>`);
+  const close=()=>{closeModal();BUG=null};
+  BUG={del:true,close}; // stessa guardia dei popup: Esc / indietro = Annulla, nessun tasto arriva al gioco
+  m.querySelector("#dlno").onclick=close;
+  m.querySelector("#dlok").onclick=async()=>{
+    m.querySelector("#dlok").disabled=true;
+    try{const fb=await fbLoad();await Promise.race([fb.Fs.setDoc(fb.Fs.doc(fb.db,"delreq",name),{ts:fb.Fs.serverTimestamp()}),bugTimeout(12000)])}
+    catch(e){close();toast((e&&e.code)==="permission-denied"?"C'è già una richiesta in corso per questo nome.":fbErr(e));return}
+    const d=plFailMap(DELREQ_KEY);d[name]=Date.now();store.set(DELREQ_KEY,d);
+    close();toast("Richiesta inviata: l'account verrà cancellato tra 7 giorni.");plDelHint(name);
+  };
 }
 /* corpo dell'accordion «Account» (Opzioni -> Generali): F1's «Cambia password» e' riusata cosi'
    com'e' (stessi id #cpo/#cpn/#cpr/#cpe/#cpw, mai in pagina insieme a quella della scheda
@@ -1424,7 +1466,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_41";
+const VERSION="0.4.5_42";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
