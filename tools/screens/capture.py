@@ -294,6 +294,8 @@ def sc_maze(b, only):
     c.ev("S.p.g5=true;persist()"); c.p.reload(); c.p.wait_for_selector("#rsi"); enter_menu(c)
     c.shot("menu-home-nuovo-hardcore", 400)
     go_tile(c, "new")
+    c.p.get_by_role("button", name="Mangiaroccia", exact=True).click(timeout=5000)  # S1 chooser: Mangiaroccia
+    time.sleep(0.5)
     c.shot("maze-intro-roccia", 400)
     c.p.wait_for_timeout(3200)
     c.shot("maze-play-roccia", 100)
@@ -534,7 +536,6 @@ def sc_bug(b, only):
         c.shot("dev-textedit-popup", 300)
         c.p.keyboard.press("Escape"); time.sleep(0.3)
     c.ev("go('bye')"); c.shot("bye-goodbye", 300)
-    c.ev("go('sad')"); c.shot("sad-countdown", 200)  # legacy screen, not reachable from the UI: shown through go()
     c.close()
 
 

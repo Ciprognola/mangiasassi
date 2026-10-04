@@ -6,6 +6,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, "..", "screens"))
 import capture as C, fbstub
+from gp import pick_maze
 from playwright.sync_api import sync_playwright
 
 RES = []
@@ -151,7 +152,7 @@ with sync_playwright() as pw:
     # ---------------------------------------------------------------- nothing to export / smoke
     ctx, p, errs = page(b); menu(p); open_export(p)
     check("no audio/sprite: 'Scarica pacchetto' disabled with a hint", p.evaluate("document.querySelector('#xk').disabled") and "Nessun audio o sprite" in p.evaluate("document.querySelector('#modal').innerText"))
-    p.evaluate("closeModal()"); p.evaluate("go('menu')"); p.wait_for_timeout(300); p.click("[data-tile=new]"); p.wait_for_timeout(1500)
+    p.evaluate("closeModal()"); p.evaluate("go('menu')"); p.wait_for_timeout(300); p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1500)
     check("a run starts", p.evaluate("screen") == "game"); check("no console errors (smoke)", not errs, errs); ctx.close()
     b.close()
 srv.shutdown()

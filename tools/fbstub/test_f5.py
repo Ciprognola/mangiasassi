@@ -4,6 +4,7 @@ import json, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, "..", "screens"))
 import capture as C, fbstub
+from gp import pick_maze
 from playwright.sync_api import sync_playwright
 
 RES = []
@@ -104,7 +105,7 @@ with sync_playwright() as pw:
     check("Invia testi sends it with the popup note (field set unchanged)", len(d) == 1 and d[0]["note"] == "più corto" and set(d[0]) <= ALLOWED and "locator" not in d[0], d)
     check("no console errors (DOM label flow)", not errs, errs); ctx.close()
     # ------------------------------------------------------------ gameplay controls / running canvas ignored
-    ctx, p, errs = page(b); menu(p); p.click("[data-tile=new]"); p.wait_for_timeout(3800)
+    ctx, p, errs = page(b); menu(p); p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(3800)
     hold_el(p, ".dpad [data-d='0']", 3.3); check("maze d-pad (data-nolp): nothing", not popup(p))
     x, y = centre(p, "#cv"); hold(p, x, y); check("maze running: canvas long press ignored", not popup(p))
     hold_el(p, "#sc", 3.3); check("maze HUD label (DOM) works anytime", popup(p) and p.evaluate("G.state") == "pause", p.evaluate("screenId()"))
@@ -176,7 +177,7 @@ with sync_playwright() as pw:
     check("Invia testi sends the proposal: locator, no target, allowed field set", len(d) == 1 and d[0]["locator"]["text"] == pr[0]["locator"]["text"] and "target" not in d[0] and set(d[0]) <= ALLOWED and d[0]["before"] == pr[0]["before"] and d[0]["screen"] == pr[0]["screen"], d)
     check("no console errors (battle)", not errs, errs); ctx.close()
     # ------------------------------------------------------------ smoke
-    ctx, p, errs = page(b); menu(p); p.click("[data-tile=new]"); p.wait_for_timeout(1500)
+    ctx, p, errs = page(b); menu(p); p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1500)
     check("a run starts", p.evaluate("screen") == "game"); check("no console errors (smoke)", not errs, errs); ctx.close()
     b.close()
 srv.shutdown()

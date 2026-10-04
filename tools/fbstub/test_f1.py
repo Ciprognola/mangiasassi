@@ -4,6 +4,7 @@ import json, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, "..", "screens"))
 import capture as C, fbstub
+from gp import pick_maze
 from playwright.sync_api import sync_playwright
 
 RES = []
@@ -140,7 +141,7 @@ with sync_playwright() as pw:
     ctx.close()
     # 10 a run starts with a dev session
     ctx, p, errs = page(b, cache={"role": "master", "acct": "master", "fb": True, "devOn": True}, session="master"); open_menu(p)
-    p.click("[data-tile=new]"); p.wait_for_timeout(1500); check("a run starts", p.evaluate("screen") == "game")
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1500); check("a run starts", p.evaluate("screen") == "game")
     check("no console errors (run)", not errs, errs); ctx.close()
     b.close()
 srv.shutdown()

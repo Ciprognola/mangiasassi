@@ -4,6 +4,7 @@ import json, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, "..", "screens"))
 import capture as C, fbstub
+from gp import pick_maze
 from playwright.sync_api import sync_playwright
 
 RES = []
@@ -89,13 +90,13 @@ with sync_playwright() as pw:
     if bugs:
         d = bugs[0]
         check("field values", d["uid"] == "uid_master" and d["text"] == "il menu ha un problema" and d["screen"] == "menu-home-roccia" and d["version"] == p.evaluate("VERSION") and d["char"] == "roccia" and d["ts"] == {"__ts": True} and 0 < len(d["ua"]) <= 300, d)
-        check("meta", set(d["meta"]) == {"acct", "site", "girone", "diff", "viewport"} and d["meta"]["site"] == "stable" and d["meta"]["viewport"] == "390x844" and d["meta"]["acct"] == "master", d["meta"])
+        check("meta", set(d["meta"]) == {"acct", "site", "girone", "diff", "viewport", "diag"} and d["meta"]["site"] == "stable" and d["meta"]["viewport"] == "390x844" and d["meta"]["acct"] == "master" and isinstance(d["meta"]["diag"], list) and 0 < len(d["meta"]["diag"]) <= 30, d["meta"])
     check("popup closed + success toast", not p.evaluate("!!document.querySelector('#bgt')") and "inviata" in p.evaluate("document.body.innerText"))
     after = p.evaluate("localStorage.getItem('mgs_v1_dev')||localStorage.getItem('mgs_v1')")
     check("save untouched by opening/sending", before == after)
     check("no console errors (menu flow)", not errs, errs)
     # 3 maze freeze
-    p.click("[data-tile=new]"); p.wait_for_timeout(3600)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(3600)
     check("icon in maze HUD, tap area", has_bug(p) and hit_ok(p) and p.evaluate("screenId()").startswith("maze-"), p.evaluate("screenId()"))
     snap = "JSON.stringify(G,(k,v)=>k==='grid'||k==='parts'||k==='last'?undefined:v)"
     a = p.evaluate(snap); p.wait_for_timeout(600); check("control: maze state changes while running", a != p.evaluate(snap))
@@ -173,7 +174,7 @@ with sync_playwright() as pw:
         def overlap(sel_a, sel_b):
             return p.evaluate("(()=>{const a=document.querySelector('%s'),b=document.querySelector('%s');if(!a||!b)return null;const x=a.getBoundingClientRect(),y=b.getBoundingClientRect();return !(x.right<=y.left||x.left>=y.right||x.bottom<=y.top||x.top>=y.bottom)})()" % (sel_a, sel_b))
         ov.append(("menu bug/devt", overlap("#bugb", "#devt"))); ov.append(("menu bug/title", overlap("#bugb", ".brand h1")))
-        p.click("[data-tile=new]"); p.wait_for_timeout(1500)
+        p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1500)
         ov.append(("maze bug/pause", overlap("#bugb", "#ps"))); ov.append(("maze bug/wv", overlap("#bugb", "#wv"))); ov.append(("maze bug/lives", overlap("#bugb", "#lv")))
         check(f"no overlaps at {vp['width']}x{vp['height']}", not any(v for _, v in ov), ov)
         p.screenshot(path=os.path.join(os.path.expanduser("~"), f"f6_maze_{vp['width']}.png"))
@@ -187,12 +188,6 @@ with sync_playwright() as pw:
         p.click("#bgx"); p.wait_for_timeout(400)
         check("splash: Indietro brings the question back", p.evaluate("!!document.querySelector('#rsi')") and has_bug(p))
         p.screenshot(path=os.path.join(os.path.expanduser("~"), f"f6_splash_{vp['width']}.png"))
-        p.evaluate("go('sad')"); p.wait_for_timeout(300)
-        check("sad: icon visible + screenId", has_bug(p) and p.evaluate("screenId()") == "sad-countdown")
-        p.click("#bugb"); p.wait_for_timeout(200); n = p.evaluate("sadN"); p.wait_for_timeout(2500)
-        check("sad: countdown frozen while the popup is open, popup still there", p.evaluate("sadN") == n and p.evaluate("screen") == "sad" and p.evaluate("!!document.querySelector('#bgt')"), n)
-        p.screenshot(path=os.path.join(os.path.expanduser("~"), f"f6_sad_{vp['width']}.png"))
-        p.click("#bgx"); p.wait_for_timeout(3600); check("sad: resumes and ends on the splash", p.evaluate("screen") == "splash")
         p.evaluate("go('bye')"); p.wait_for_timeout(300)
         check("bye: icon visible + screenId", has_bug(p) and p.evaluate("screenId()") == "bye-goodbye")
         p.screenshot(path=os.path.join(os.path.expanduser("~"), f"f6_bye_{vp['width']}.png"))

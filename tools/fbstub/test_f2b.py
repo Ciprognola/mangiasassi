@@ -7,9 +7,12 @@ import functools, http.server, json, os, sys, threading, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import fbstub
+from gp import pick_maze
 from playwright.sync_api import sync_playwright
 
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
+_v = [int(x) for x in open(os.path.join(ROOT, "VERSION"), encoding="utf-8").read().strip().split("_")[0].split(".")]
+NEWER_VER = "%d.%d" % (_v[0], _v[1] + 1)  # always newer than the current build (0.4.5_N -> 0.5, 0.5 -> 0.6), derived from VERSION
 PORT = 8793
 BASE = "http://127.0.0.1:%d/" % PORT
 VIEW = {"width": 390, "height": 844}
@@ -34,8 +37,12 @@ class H(http.server.SimpleHTTPRequestHandler):
             if path.startswith(pre):
                 flag = pre == "/flagon/"
                 path = "/" + path[len(pre):]
-        if flag and path == "/index.html":
-            body = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read().replace("const CLOUD_SAVE=false;", "const CLOUD_SAVE=true;", 1).encode("utf-8")
+        if path == "/index.html":
+            # L2 turned CLOUD_SAVE/PLAYER_LOGIN on in the build: /flagon/ serves it as is, every other site forces the old flag-off case
+            body = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
+            if not flag:
+                body = body.replace("const CLOUD_SAVE=true;", "const CLOUD_SAVE=false;", 1).replace("const PLAYER_LOGIN=true;", "const PLAYER_LOGIN=false;", 1)
+            body = body.encode("utf-8")
             self.send_response(200); self.send_header("Content-Type", "text/html; charset=utf-8"); self.send_header("Content-Length", str(len(body))); self.end_headers(); self.wfile.write(body)
             return
         self.path = path
@@ -229,7 +236,8 @@ with sync_playwright() as pw:
     # ---- Ripristina backup (dev site): swaps backup and current save, marks dirty
     check("Account accordion shows «Ripristina backup» on the dev site", open_account(p) and p.evaluate("!!document.querySelector('#clrb')"))
     p.click("#clrb"); p.wait_for_timeout(200); p.click("#cy"); p.wait_for_timeout(2500)
-    p.wait_for_selector("#rsi, #root .brand")
+    p.wait_for_selector("#rsi, #root .brand, #root .top", timeout=10000)
+    check("Ripristina backup: back in Opzioni with the Account accordion, never the splash question", p.evaluate("screen")=="opt" and not p.evaluate("!!document.querySelector('#rsi')"))
     s2 = p.evaluate("({r:S.p.ch.roccia.lvl,so:S.p.sordi,ov:S.ov.char_roccia&&S.ov.char_roccia.label})")
     bk2 = bakk(p); M2 = p.evaluate("JSON.parse(localStorage.getItem('mgs_cloud_dev'))")
     check("Ripristina backup: the old (fresh) local save is back, dev fields kept", s2["r"] == 1 and s2["so"] == 0 and s2["ov"] == "Pietrone", s2)
@@ -259,6 +267,8 @@ with sync_playwright() as pw:
     txt = p.evaluate("document.querySelector('#clpop')&&document.querySelector('#clpop').innerText") or ""
     check("first sync, different progress -> popup «Due salvataggi diversi»", "Due salvataggi diversi" in txt and "Nel cloud" in txt and "Su questo dispositivo" in txt, txt[:200].replace(chr(10), " | "))
     check("popup cards: levels of both characters + sordi + date", all(x in txt for x in ["Liv. 22", "Liv. 3", "90 sordi", "Liv. 14", "Liv. 8", "4200 sordi", "Salvato il"]), txt.replace(chr(10), " | ")[:300])
+    wr = p.evaluate("[...document.querySelectorAll('#clpop .clcard b, #clpop .clcard small')].map(e=>Math.round(e.getBoundingClientRect().height)<=Math.round(parseFloat(getComputedStyle(e).lineHeight)||parseFloat(getComputedStyle(e).fontSize)*1.4)+2)")
+    check("conflict cards at 390 px: title and date each on one line", len(wr) == 4 and all(wr), wr)
     check("screenId() = cloud-conflict", p.evaluate("screenId()") == "cloud-conflict")
     p.keyboard.press("Enter"); p.wait_for_timeout(200)
     check("popup blocks keys (Enter does nothing)", p.evaluate("!!document.querySelector('#clpop')"))
@@ -357,7 +367,7 @@ with sync_playwright() as pw:
 
     # ============================================================ run-end flush (real run, Abbandona)
     ctx, p, errs = page(b, site="dev", local=norm(b, save())); settle(p)
-    p.click("[data-tile=new]"); p.wait_for_timeout(1500)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1500)
     check("a real run starts", p.evaluate("screen") == "game")
     p.click("#ps"); p.wait_for_timeout(300); p.click("#q"); p.wait_for_timeout(300)
     if p.evaluate("!!document.querySelector('#cy')"):
@@ -396,7 +406,7 @@ with sync_playwright() as pw:
     open_account(p)
     check("stable: Account accordion (dev in dev mode) has NO cloud block", not p.evaluate("!!document.querySelector('#clst')||!!document.querySelector('[data-clt]')||!!document.querySelector('#clsy')"))
     p.click("details.acc[data-acc=game] > summary"); p.wait_for_timeout(200); change_diff(p, "hard"); pagehide(p)
-    p.click("#back"); p.wait_for_timeout(200); p.click("[data-tile=new]"); p.wait_for_timeout(1200)
+    p.click("#back"); p.wait_for_timeout(200); p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1200)
     p.click("#ps"); p.wait_for_timeout(300); p.click("#q"); p.wait_for_timeout(900)
     check("stable, flag off (even with the dev test key set): zero Firestore save calls", not p.evaluate("window.__fbs.saveCalls") and p.evaluate("localStorage.getItem('mgs_cloud')===null"), p.evaluate("window.__fbs.saveCalls"))
     check("stable: cloudOn() false", p.evaluate("cloudOn()") is False)
@@ -427,7 +437,7 @@ with sync_playwright() as pw:
 
     # ============================================================ offline boot -> game plays, retry once online
     ctx, p, errs = page(b, site="dev", local=norm(b, save()), offline=True); settle(p)
-    p.click("[data-tile=new]"); p.wait_for_timeout(1200)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1200)
     check("offline boot: a run starts normally", p.evaluate("screen") == "game")
     check("offline: nothing in the cloud, status 'in attesa di rete'", not docs(p) and cl(p)["txt"] == "Cloud: in attesa di rete", cl(p)["txt"])
     p.evaluate("window.__fbs.offline=false;window.dispatchEvent(new Event('online'))"); p.wait_for_timeout(900)
@@ -447,7 +457,7 @@ with sync_playwright() as pw:
     ctx.close()
 
     # ============================================================ newer ver in the cloud -> never applied, never overwritten
-    ctx, p, errs = page(b, site="dev", cloud={UID + "_dev": cdoc(norm(b, save(r=40)), rev=9, ver="0.4.5_1")}); settle(p)
+    ctx, p, errs = page(b, site="dev", cloud={UID + "_dev": cdoc(norm(b, save(r=40)), rev=9, ver=NEWER_VER)}); settle(p)
     c = cl(p)
     check("cloud copy from a newer build -> not applied (local still fresh), no write", p.evaluate("S.p.ch.roccia.lvl") == 1 and docs(p)[UID + "_dev"]["rev"] == 9 and c["status"] == "ver", c)
     check("status «Aggiorna il gioco per sincronizzare» in the Account accordion", open_account(p) and p.evaluate("document.querySelector('#clst').textContent") == "Aggiorna il gioco per sincronizzare")
@@ -472,7 +482,7 @@ with sync_playwright() as pw:
     ctx, p, errs = page(b, site="dev", local=norm(b, save())); settle(p)
     p.evaluate("(()=>{const a=JSON.parse(localStorage.getItem('__fbstub_saves'));const d=JSON.parse(a['%s'].data);d.p.sordi=31337;a['%s']={data:JSON.stringify(d),rev:2,ts:Date.now(),ver:'0.4_14'};localStorage.setItem('__fbstub_saves',JSON.stringify(a))})()" % (UID + "_dev", UID + "_dev"))
     p.evaluate("sessionStorage.setItem('__off','1')"); p.reload(); settle(p)
-    p.click("[data-tile=new]"); p.wait_for_timeout(1200)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1200)
     p.evaluate("window.__mark=1;sessionStorage.removeItem('__off');window.__fbs.offline=false;window.dispatchEvent(new Event('online'))"); p.wait_for_timeout(900)
     if p.evaluate("!!document.querySelector('#clpop')"):
         check("mid-run conflict popup freezes the maze (G.state pause)", p.evaluate("G.state") == "pause")
@@ -497,7 +507,7 @@ with sync_playwright() as pw:
     check("setup: device dirty", cl(p)["M"]["dirty"] is True)
     p.evaluate("(()=>{const a=JSON.parse(localStorage.getItem('__fbstub_saves'));const d=JSON.parse(a['%s'].data);d.p.sordi=777;a['%s']={data:JSON.stringify(d),rev:2,ts:Date.now(),ver:'0.4_14'};localStorage.setItem('__fbstub_saves',JSON.stringify(a))})()" % (UID + "_dev", UID + "_dev"))
     p.evaluate("sessionStorage.setItem('__off','1')"); p.reload(); settle(p)
-    p.click("[data-tile=new]"); p.wait_for_timeout(1500)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1500)
     p.evaluate("sessionStorage.removeItem('__off');window.__fbs.offline=false;window.dispatchEvent(new Event('online'))"); p.wait_for_timeout(900)
     check("mid-run: cloud newer + device dirty -> popup, maze frozen", p.evaluate("!!document.querySelector('#clpop')") and p.evaluate("G.state") == "pause")
     p.evaluate("window.dispatchEvent(new Event('mgback'))"); p.wait_for_timeout(300)
@@ -512,12 +522,12 @@ with sync_playwright() as pw:
     ctx, p, errs = page(b, site="dev", local=OLD); settle(p)
     check("old save loads (roccia lvl 5, sordi 300)", p.evaluate("S.p.ch.roccia.lvl") == 5 and p.evaluate("S.p.sordi") == 300)
     check("old save is not 'fresh' -> uploaded at first sync", docs(p).get(UID + "_dev", {}).get("rev") == 1)
-    p.click("[data-tile=new]"); p.wait_for_timeout(1200)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1200)
     check("old save: a run starts", p.evaluate("screen") == "game")
     check("no console errors (old save, dev site)", not errs, errs)
     ctx.close()
     ctx, p, errs = page(b, site="stable", local=OLD, dev=False, toggle=False); settle(p)
-    p.click("[data-tile=new]"); p.wait_for_timeout(1200)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1200)
     check("old save on stable (flag off): loads, run starts, no errors", p.evaluate("S.p.ch.roccia.lvl") == 5 and p.evaluate("screen") == "game" and not errs, errs)
     ctx.close()
 

@@ -5,6 +5,7 @@ import json, os, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, "..", "screens"))
 import capture as C, fbstub
+from gp import pick_maze
 from playwright.sync_api import sync_playwright
 
 RES = []
@@ -36,6 +37,11 @@ def page(b, dev_cache=None, player_cache=None, has_touch=False, **kw):
     if init:
         ctx.add_init_script(init)
     fbstub.install(ctx, **kw)
+    # L2 turned PLAYER_LOGIN on; this suite covers the flag-off case, so serve the page with it forced off
+    def _off(route):
+        r = route.fetch()
+        route.fulfill(response=r, body=r.text().replace("const PLAYER_LOGIN=true;", "const PLAYER_LOGIN=false;", 1))
+    ctx.route("**/index.html", _off)
     p = ctx.new_page(); errs = []
     p.on("pageerror", lambda e: errs.append(str(e)))
     p.on("console", lambda m: m.type == "error" and "Failed to load resource" not in m.text and errs.append(m.text))
@@ -118,7 +124,7 @@ with sync_playwright() as pw:
     open_account_acc(p)
     p.fill("#plu", "norole"); p.fill("#plp", "pw-norole"); p.click("#plk"); p.wait_for_timeout(600)
     check("offline: clear 'sei offline' error on player login attempt", "sei offline" in (p.evaluate(PLE) or ""), p.evaluate(PLE))
-    p.click("#back"); p.click("[data-tile=new]"); p.wait_for_timeout(1200)
+    p.click("#back"); p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1200)
     check("offline: a real run still starts fine", p.evaluate("screen") == "game")
     check("no console errors (offline)", not errs, errs)
     ctx.close()
@@ -127,8 +133,8 @@ with sync_playwright() as pw:
     ctx, p, errs = page(b, player_cache={"acct": "norole", "fb": True}, session="norole", users={"norole": {"pw": "pw-norole", "role": None}}); menu(p); p.wait_for_timeout(1000)
     st = p.evaluate("({playerAcct,role,devOn,devUI:devUI(),canReport:canReport(),bugPlayerSession:bugPlayerSession(),sim:SIM()})")
     check("restored player session: playerAcct set from cache, no role/devOn/dev-UI/SIM", st["playerAcct"] == "norole" and st["role"] is None and not st["devOn"] and not st["devUI"] and not st["sim"], st)
-    check("a logged-in player: bugPlayerSession() true, but canReport() stays false (BUG_PLAYERS still off)", st["bugPlayerSession"] is True and st["canReport"] is False, st)
-    check("a logged-in player: no bug icon anywhere", not p.evaluate("!!document.querySelector('#bugb')"))
+    check("a logged-in player: bugPlayerSession() true and canReport() true (BUG_PLAYERS on since L5)", st["bugPlayerSession"] is True and st["canReport"] is True, st)
+    check("a logged-in player: bug icon shown (L5)", p.evaluate("!!document.querySelector('#bugb')"))
     go_options(p)
     check("a logged-in player: no Sviluppatore tab, no Account accordion either (PLAYER_LOGIN off and not a dev)", not p.evaluate("!!document.querySelector('[data-otab=dev]')") and not p.evaluate("!!document.querySelector('details.acc[data-acc=account]')"))
     check("no console errors (player has no dev reach)", not errs, errs)
@@ -168,7 +174,7 @@ with sync_playwright() as pw:
     # ============================================================ smoke
     ctx, p, errs = page(b, dev=False); menu(p)
     check("smoke: menu renders", p.evaluate("screen") == "menu")
-    p.click("[data-tile=new]"); p.wait_for_timeout(1500)
+    p.click("[data-tile=new]"); pick_maze(p); p.wait_for_timeout(1500)
     check("smoke: a run starts", p.evaluate("screen") == "game")
     check("no console errors (smoke)", not errs, errs)
     ctx.close()

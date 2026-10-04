@@ -5,9 +5,35 @@ service cloud.firestore {
     function isDev() {
       return signedIn() && exists(/databases/$(database)/documents/devs/$(request.auth.uid));
     }
+    function reserved() {
+      return ['master','dev1','dev2','dev3','dev4','dev5','admin','algidone','gamblador','professore','mrstone','usagi'];
+    }
+    function validName(u) {
+      return u is string && u.matches('^[a-z0-9_-]{3,16}$') && !(u in reserved());
+    }
     match /devs/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
       allow write: if false;
+    }
+    match /players/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['username','created','confirmed'])
+        && request.resource.data.keys().hasAll(['username','created','confirmed'])
+        && validName(request.resource.data.username)
+        && request.auth.token.email == request.resource.data.username + '@mangiasassi.invalid'
+        && request.resource.data.created == request.time
+        && request.resource.data.confirmed == request.time;
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmed'])
+        && request.resource.data.confirmed == request.time;
+      allow delete: if false;
+    }
+    match /delreq/{username} {
+      allow create: if validName(username)
+        && request.resource.data.keys().hasOnly(['ts'])
+        && request.resource.data.ts == request.time;
+      allow read, update, delete: if false;
     }
     match /saves/{docId} {
       function mine() { return request.auth != null && (docId == request.auth.uid || docId == request.auth.uid + '_dev'); }
@@ -20,7 +46,7 @@ service cloud.firestore {
       allow delete: if false;
     }
     match /bugs/{id} {
-      allow create: if isDev()
+      allow create: if signedIn()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0

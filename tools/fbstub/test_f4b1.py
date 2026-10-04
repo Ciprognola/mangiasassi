@@ -7,6 +7,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, "..", "screens"))
 import capture as C, fbstub
+from gp import pick_maze
 from playwright.sync_api import sync_playwright
 from PIL import Image
 
@@ -51,6 +52,12 @@ def page(b, dev=True, **kw):
 
 def menu(p):
     p.goto(C.BASE + "index.html"); p.wait_for_selector("#rsi"); p.click("#rsi"); p.wait_for_timeout(800)
+
+
+def import_go(p):
+    """Click «Carica costume» and wait for the import to really finish (skinImpBusy back to false), not a fixed delay."""
+    p.click("#skinImpGo")
+    p.wait_for_function("skinImpBusy===false", timeout=30000)
 
 
 def open_skins_acc(p):
@@ -209,7 +216,7 @@ with sync_playwright() as pw:
     set_val(p, "#skinImpName", "Test Import")
     p.click("[data-skinimpmode='overlay']")
     p.set_input_files("#skinImpFiles", path_new)
-    p.click("#skinImpGo"); p.wait_for_timeout(600)
+    import_go(p)
     pv = p.evaluate("SKIN_IMPORT_PV && {char:SKIN_IMPORT_PV.char,id:SKIN_IMPORT_PV.id,mode:SKIN_IMPORT_PV.mode,keys:Object.keys(SKIN_IMPORT_PV.frames)}")
     check("import (new skin): preview set for roccia, mode overlay, no target id", pv and pv["char"] == "roccia" and pv["mode"] == "overlay" and pv["id"] is None, pv)
     check("import (new skin): every non-empty, non-outside frame got imported except the deliberately empty one", pv and set(pv["keys"]) == set(keys_in_sheet) - {empty_key}, pv and set(keys_in_sheet) - {empty_key} - set(pv["keys"]))
@@ -240,7 +247,7 @@ with sync_playwright() as pw:
     big_im.save(big_path)
     set_val(p, "#skinImpTarget", "new"); set_val(p, "#skinImpName", "Big")
     p.set_input_files("#skinImpFiles", big_path)
-    p.click("#skinImpGo"); p.wait_for_timeout(2000)
+    import_go(p)
     txt = p.evaluate("document.querySelector('#skinImpOut').innerText")
     check("import: oversized-frame warning fires when a cut frame's PNG exceeds 200 KB", "200 KB" in txt, txt)
     check("no console errors (oversized frame)", not errs, errs)
@@ -252,21 +259,21 @@ with sync_playwright() as pw:
     set_val(p, "#skinImpTarget", "new"); set_val(p, "#skinImpName", "Errori")
     stale = Image.new("RGBA", (1804, 2924), (0, 0, 0, 0))  # 0.4_10-era roccia sheet size, no longer valid
     stale_path = os.path.join(WORK, "stale.png"); stale.save(stale_path)
-    p.set_input_files("#skinImpFiles", stale_path); p.click("#skinImpGo"); p.wait_for_timeout(400)
+    p.set_input_files("#skinImpFiles", stale_path); import_go(p)
     txt = p.evaluate("document.querySelector('#skinImpOut').innerText")
     check("import error: stale 0.4_10-sized page -> exact Italian error", "riscarica il foglio" in txt, txt)
     # 0.4_15: a page shrunk/enlarged uniformly by a phone app -> its own message; same width + other height = an old sheet
     for (sw, sh, why) in ((layout["w"] // 2, layout["h"] // 2, "halved"), (round(layout["w"] * .6), round(layout["h"] * .6), "x0.6 (phone export)"), (layout["w"] * 2, layout["h"] * 2, "doubled")):
         rs = Image.new("RGBA", (sw, sh), (0, 0, 0, 0)); rs_path = os.path.join(WORK, "resized_%dx%d.png" % (sw, sh)); rs.save(rs_path)
-        p.set_input_files("#skinImpFiles", rs_path); p.click("#skinImpGo"); p.wait_for_timeout(400)
+        p.set_input_files("#skinImpFiles", rs_path); import_go(p)
         txt = p.evaluate("document.querySelector('#skinImpOut').innerText")
         check("import error: page resized uniformly (%s, %dx%d) -> «L'app ha ridimensionato il foglio: esportalo a dimensione originale»" % (why, sw, sh), "L'app ha ridimensionato il foglio: esportalo a dimensione originale" in txt and "riscarica" not in txt, txt)
     old_v = Image.new("RGBA", (layout["w"], layout["h"] - 10), (0, 0, 0, 0))  # 0.4_11-era roccia height (1804x3400): same width, other height
     old_path = os.path.join(WORK, "old_version.png"); old_v.save(old_path)
-    p.set_input_files("#skinImpFiles", old_path); p.click("#skinImpGo"); p.wait_for_timeout(400)
+    p.set_input_files("#skinImpFiles", old_path); import_go(p)
     txt = p.evaluate("document.querySelector('#skinImpOut').innerText")
     check("import error: same width, different height (old sheet, %dx%d) stays «Foglio di un'altra versione»" % (layout["w"], layout["h"] - 10), "Foglio di un'altra versione: riscarica il foglio" in txt and "ridimensionato" not in txt, txt)
-    p.set_input_files("#skinImpFiles", path_new); p.click("#skinImpGo"); p.wait_for_timeout(600)
+    p.set_input_files("#skinImpFiles", path_new); import_go(p)
     pv = p.evaluate("SKIN_IMPORT_PV && Object.keys(SKIN_IMPORT_PV.frames).length")
     check("a correct page still imports as before (after the resize/old-sheet errors)", pv == len(keys_in_sheet) - 1, pv)
     lg = p.evaluate("SKIN_LEGGIMI('Uomo roccia','roccia')")
@@ -275,7 +282,7 @@ with sync_playwright() as pw:
 
     guide_like = Image.new("RGBA", (layout["w"], layout["h"]), (201, 204, 209, 255))  # GUIDE bg colour, fully opaque
     guide_path = os.path.join(WORK, "guide_like.png"); guide_like.save(guide_path)
-    p.set_input_files("#skinImpFiles", guide_path); p.click("#skinImpGo"); p.wait_for_timeout(400)
+    p.set_input_files("#skinImpFiles", guide_path); import_go(p)
     txt = p.evaluate("document.querySelector('#skinImpOut').innerText")
     check("import error: opaque GUIDE-like screenshot -> exact Italian error", "sfondo trasparente" in txt, txt)
 
@@ -285,7 +292,7 @@ with sync_playwright() as pw:
         for x in range(layout["w"]):
             ppx[x, y] = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255), 255)
     photo_path = os.path.join(WORK, "photo_like.png"); photo_like.save(photo_path)
-    p.set_input_files("#skinImpFiles", photo_path); p.click("#skinImpGo"); p.wait_for_timeout(400)
+    p.set_input_files("#skinImpFiles", photo_path); import_go(p)
     txt = p.evaluate("document.querySelector('#skinImpOut').innerText")
     check("import error: opaque photo-like image -> same exact Italian error", "sfondo trasparente" in txt, txt)
     check("no console errors (import errors)", not errs, errs)
@@ -321,7 +328,7 @@ with sync_playwright() as pw:
         im.save(pth); paths.append(pth)
     set_val(p, "#skinImpTarget", "bk")
     p.set_input_files("#skinImpFiles", paths)
-    p.click("#skinImpGo"); p.wait_for_timeout(1500)
+    import_go(p)
     pv = p.evaluate("SKIN_IMPORT_PV && {char:SKIN_IMPORT_PV.char,id:SKIN_IMPORT_PV.id,mode:SKIN_IMPORT_PV.mode}")
     check("import (update BK): preview targets bk, mode fixed to BK's own (replace)", pv and pv["id"] == "bk" and pv["mode"] == "replace" and pv["char"] == "algidone", pv)
     txt = p.evaluate("document.querySelector('#skinImpOut').innerText")
@@ -339,13 +346,13 @@ with sync_playwright() as pw:
     p.click("[data-skinchar='roccia']"); p.wait_for_timeout(150)
     set_val(p, "#skinImpTarget", "new"); set_val(p, "#skinImpName", "Round Trip")
     p.set_input_files("#skinImpFiles", path_new)
-    p.click("#skinImpGo"); p.wait_for_timeout(800)
+    import_go(p)
     first_b64 = p.evaluate("SKIN_IMPORT_PV.frames.f1.toDataURL('image/png').split(',')[1]")
     p.evaluate("(b)=>{SKINS._testinv={char:'roccia',mode:'overlay',name:'x',na:[],frames:{f1:b}};SKIN_IMPORT_PV=null;render()}", first_b64)
     p.wait_for_timeout(150)
     set_val(p, "#skinImpTarget", "_testinv")
     p.set_input_files("#skinImpFiles", path_new)
-    p.click("#skinImpGo"); p.wait_for_timeout(800)
+    import_go(p)
     txt2 = p.evaluate("document.querySelector('#skinImpOut').innerText")
     check('"invariato" detection: re-uploading a sheet whose cut bytes match the target skin\'s stored frame marks it «invariato»', "Invariato: f1" in txt2, txt2)
     p.evaluate("delete SKINS._testinv")
@@ -377,7 +384,7 @@ with sync_playwright() as pw:
         color = (0, 255, 0, 255) if key == "f0" else (0, 0, 255, 255)
         make_layer_png(pth, pg, "roccia", lambda c, col=color: col)
         set_val(p, "#skinImpTarget", "new"); set_val(p, "#skinImpName", "Ambiguous " + key)
-        p.set_input_files("#skinImpFiles", pth); p.click("#skinImpGo"); p.wait_for_timeout(400)
+        p.set_input_files("#skinImpFiles", pth); import_go(p)
         pv = p.evaluate("SKIN_IMPORT_PV && Object.keys(SKIN_IMPORT_PV.frames)")
         check("ambiguous pages: filename '_%d' resolves to the page carrying '%s' (not the other same-size page)" % (n, key), pv == [key], pv)
     check("no console errors (ambiguous page disambiguation)", not errs, errs)
@@ -403,7 +410,7 @@ with sync_playwright() as pw:
 
     # maze
     p.evaluate("go('menu')"); p.wait_for_timeout(150)
-    p.evaluate("tileAction('new')"); p.wait_for_timeout(1200)
+    p.evaluate("tileAction('new')"); pick_maze(p); p.wait_for_timeout(1200)
     maze_snap = "()=>document.getElementById('cv').toDataURL()"
     p.wait_for_timeout(150); with_pv = p.evaluate(maze_snap)
     p.evaluate("SKIN_IMPORT_PV=null"); p.wait_for_timeout(150)
@@ -484,7 +491,7 @@ with sync_playwright() as pw:
     # ============================================================ smoke: menu renders, a run still starts, zero console errors
     ctx, p, errs = page(b); menu(p)
     check("smoke: menu screen renders", p.evaluate("screen") == "menu")
-    p.evaluate("tileAction('new')"); p.wait_for_timeout(1500)
+    p.evaluate("tileAction('new')"); pick_maze(p); p.wait_for_timeout(1500)
     check("smoke: a run starts", p.evaluate("screen") == "game")
     check("no console errors (smoke)", not errs, errs)
     ctx.close()

@@ -7,6 +7,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, "..", "screens"))
 import capture as C, fbstub
+from gp import pick_maze
 from playwright.sync_api import sync_playwright
 from PIL import Image
 
@@ -240,7 +241,7 @@ with sync_playwright() as pw:
     # ============================================================ smoke
     ctx, p, errs = page(b); menu(p)
     check("smoke: menu screen renders", p.evaluate("screen") == "menu")
-    p.evaluate("tileAction('new')"); p.wait_for_timeout(1500)
+    p.evaluate("tileAction('new')"); pick_maze(p); p.wait_for_timeout(1500)
     check("smoke: a run starts", p.evaluate("screen") == "game")
     check("no console errors (smoke)", not errs, errs)
     ctx.close()

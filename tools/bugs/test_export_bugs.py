@@ -11,9 +11,18 @@ def check(n, ok, extra=""):
     RES.append(bool(ok)); print(("PASS " if ok else "FAIL ") + n, extra)
 
 
+class Snap:
+    def __init__(self, e): self.exists = e
+
+
 class Ref:
     def __init__(self, doc): self.doc = doc
     def update(self, d): self.doc.data.update(d)
+    def get(self): return Snap(True)
+
+
+class Missing:
+    def get(self): return Snap(False)
 
 
 class Doc:
@@ -24,7 +33,7 @@ class Doc:
 class Col:
     def __init__(self, docs): self.docs = docs
     def stream(self): return iter(list(self.docs.values()))
-    def document(self, id_): return self.docs[id_].reference
+    def document(self, id_): return self.docs[id_].reference if id_ in self.docs else Missing()
 
 
 class DB:
@@ -56,9 +65,9 @@ edits = [
     edit("e6", "hacker/../x", "text", "x", "a", "b"),
 ]
 with tempfile.TemporaryDirectory() as d:
-    db = DB({"bugs": bugs, "edits": edits})
+    db = DB({"bugs": bugs, "edits": edits, "devs": [Doc("u1", {"role": "dev1"})]})  # u1 is a developer (golden output)
     inbox, subs = os.path.join(d, "inbox"), os.path.join(d, "submissions")
-    files, brefs = E.export_bugs(db, inbox, datetime.date(2026, 9, 26))
+    files, brefs, bskip = E.export_bugs(db, inbox, datetime.date(2026, 9, 26))
     check("bugs: only the not-yet-exported docs", sorted(files) == ["2026-09-23_b2.json", "2026-09-25_a1.json", "2026-09-26_d4.json"], files)
     rec = json.load(open(os.path.join(inbox, "2026-09-25_a1.json"), encoding="utf-8"))
     check("bugs: all fields, ts as ISO string, meta included", rec["id"] == "a1" and rec["ts"] == "2026-09-25T23:30:00Z" and rec["meta"]["qts"] == 5 and rec["text"] == "ciao è un problema" and rec["uid"] == "u1", rec)
@@ -85,8 +94,56 @@ with tempfile.TemporaryDirectory() as d:
     E.mark(db, brefs + erefs, "SERVER_TS")
     check("mark: docs marked exported + exportedAt only in phase 2", all(x.data.get("exported") is True and x.data.get("exportedAt") == "SERVER_TS" for x in bugs if x.id != "c3") and all(x.data.get("exportedAt") == "SERVER_TS" for x in edits[:4]))
     check("mark: skipped docs untouched", "exported" not in edits[5].data and "exportedAt" not in bugs[2].data)
-    files2, _ = E.export_bugs(db, inbox, datetime.date(2026, 9, 27))
+    files2, _, _ = E.export_bugs(db, inbox, datetime.date(2026, 9, 27))
     check("second run exports nothing", files2 == [] and E.export_edits(db, subs, datetime.date(2026, 9, 27))[0] == [])
+    # f) dev report: same bytes as before L5 (uid, ua and meta.acct all kept)
+    dev_bytes = open(os.path.join(inbox, "2026-09-25_a1.json"), "rb").read()
+    dev_exp = json.dumps({"char": "roccia", "id": "a1", "meta": {"acct": "dev1", "girone": None, "qts": 5, "site": "dev"}, "screen": "menu-home-roccia", "text": "ciao è un problema", "ts": "2026-09-25T23:30:00Z", "ua": "UA", "uid": "u1", "version": "0.4_5"}, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    check("f) dev report: byte-identical to the pre-L5 output", dev_bytes == dev_exp.encode("utf-8"), dev_bytes[:120])
+
+    # ---- L5: player reports
+    def pdb():
+        ps = [Doc(f"p{i}", {"uid": "pl1", "text": f"segnalazione {i}", "screen": "menu-home-roccia", "version": "0.4.5_43", "char": "roccia", "ts": T + datetime.timedelta(hours=i), "ua": "Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/120 Mobile", "meta": {"acct": "pippo", "site": "stable", "girone": 3, "diff": "medium", "viewport": "390x844", "qts": 1}}) for i in range(7)]
+        ps.append(Doc("q0", {"uid": "pl2", "text": "altro giocatore", "screen": "menu-home-algidone", "version": "0.4.5_43", "char": "algidone", "ts": T, "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", "meta": {"acct": None, "site": "stable"}}))
+        ps += [Doc(f"d{i}", {"uid": "dv1", "text": f"dev {i}", "ts": T + datetime.timedelta(hours=i), "ua": "UA-dev", "meta": {"acct": "dev1"}}) for i in range(7)]
+        return DB({"bugs": ps, "devs": [Doc("dv1", {"role": "dev1"})]})
+
+    inbox2 = os.path.join(d, "inbox2")
+    pdb_ = pdb()
+    files3, refs3, skip3 = E.export_bugs(pdb_, inbox2, datetime.date(2026, 9, 26))
+    pf = os.path.join(inbox2, "2026-09-25_p0.json")
+    g_txt = open(pf, encoding="utf-8").read() if os.path.exists(pf) else ""
+    g_rec = json.loads(g_txt) if g_txt else {}
+    # g) player report: no uid, ua, email or account anywhere in the file or its name
+    blob_g = g_txt + " ".join(files3)
+    check("g) player file: no uid, ua or account name in content or name", bool(g_rec) and not any(x in blob_g for x in ("pl1", "pl2", "Mozilla", "pippo", "Android 14")), files3[:3])
+    check("g) player file: «giocatore» + platform present, ua gone", g_rec.get("uid") == "giocatore" and g_rec.get("platform") == "Android" and "ua" not in g_rec and g_rec.get("meta", {}).get("acct") == "giocatore", g_rec)
+    check("g) player file: text, screen, version, char, ts and other meta kept", g_rec.get("text") == "segnalazione 0" and g_rec.get("screen") == "menu-home-roccia" and g_rec.get("version") == "0.4.5_43" and g_rec.get("char") == "roccia" and g_rec.get("ts") == "2026-09-25T23:30:00Z" and g_rec.get("meta", {}).get("girone") == 3, g_rec)
+    # i) per-player cap: 7 from pl1 -> the 5 oldest; another player and a developer unaffected
+    written_p1 = sorted(r for r in refs3 if r.startswith("bugs/p"))
+    check("i) 7 reports from one player: the 5 oldest written", written_p1 == ["bugs/p0", "bugs/p1", "bugs/p2", "bugs/p3", "bugs/p4"], written_p1)
+    check("i) the 2 newest marked skipped", sorted(skip3) == ["bugs/p5", "bugs/p6"], skip3)
+    check("i) another player's report unaffected", "bugs/q0" in refs3)
+    check("i) developer: 7 reports all written (no cap)", sum(1 for r in refs3 if r.startswith("bugs/d")) == 7)
+    E.mark(pdb_, refs3, "TS", skip3)
+    check("i) mark: skipped docs exported + skipped, written ones exported only", pdb_.cols["bugs"]["p5"].data.get("skipped") is True and pdb_.cols["bugs"]["p5"].data.get("exported") is True and "skipped" not in pdb_.cols["bugs"]["p0"].data)
+    # j) the run's log: counts only, never a player's uid, ua or account
+    import io, contextlib
+    E.real_client = lambda: (pdb(), "TS")
+    buf = io.StringIO()
+    sys.argv = ["export_bugs.py", "export", "--pending", os.path.join(d, "pending.json"), "--inbox", os.path.join(d, "inbox3"), "--subs", os.path.join(d, "subs3")]
+    with contextlib.redirect_stdout(buf):
+        E.main()
+    out_log = buf.getvalue()
+    check("j) log prints the skipped count line", "Segnalazioni saltate (limite): 2" in out_log, out_log)
+    check("j) log has no player uid, ua or account", not any(x in out_log for x in ("pl1", "pl2", "Mozilla", "pippo", "Android")), out_log)
+    # h) platform mapping
+    pm = [("Mozilla/5.0 (Linux; Android 14; Pixel 8)", "Android"), ("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", "iOS"),
+          ("Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)", "iOS"), ("Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "desktop"),
+          ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", "desktop"), ("Mozilla/5.0 (X11; Linux x86_64)", "desktop"),
+          ("curl/8.0", "altro"), ("", "altro"), (None, "altro")]
+    check("h) platform mapping: Android / iOS / desktop / altro", all(E.platform_of(u) == want for u, want in pm), [(u, E.platform_of(u)) for u, w in pm if E.platform_of(u) != w])
+
     blob = "".join(open(os.path.join(r, f), encoding="utf-8").read() for r, _, fs in os.walk(d) for f in fs)
     check("no credentials anywhere in the output", "private_key" not in blob)
 print(sum(RES), "/", len(RES), "passed"); sys.exit(0 if all(RES) else 1)

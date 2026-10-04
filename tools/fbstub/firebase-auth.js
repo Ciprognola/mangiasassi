@@ -12,10 +12,24 @@ export function getAuth(app) {
   };
 }
 export async function signInWithEmailAndPassword(auth, email, pw) {
+  S().signIns = (S().signIns || 0) + 1;
   if (S().offline) throw { code: "auth/network-request-failed" };
   if (S().tooMany) throw { code: "auth/too-many-requests" };
   const n = email.split("@")[0], u = S().users[n];
   if (!u || u.pw !== pw) throw { code: "auth/invalid-credential" };
+  localStorage.setItem(key(auth.app), n);
+  return { user: auth.currentUser };
+}
+// L1: registration. Mirrors the SDK errors; the new user is signed in like the real one. Calls are logged in __fbs.createCalls.
+export async function createUserWithEmailAndPassword(auth, email, pw) {
+  const F = S();
+  (F.createCalls = F.createCalls || []).push(email);
+  if (F.offline) throw { code: "auth/network-request-failed" };
+  if (F.tooMany) throw { code: "auth/too-many-requests" };
+  const n = email.split("@")[0];
+  if (F.users[n]) throw { code: "auth/email-already-in-use" };
+  if (pw.length < 6) throw { code: "auth/weak-password" };
+  F.users[n] = { pw, role: null };
   localStorage.setItem(key(auth.app), n);
   return { user: auth.currentUser };
 }
