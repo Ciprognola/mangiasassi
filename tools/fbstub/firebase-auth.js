@@ -19,6 +19,19 @@ export async function signInWithEmailAndPassword(auth, email, pw) {
   localStorage.setItem(key(auth.app), n);
   return { user: auth.currentUser };
 }
+// L1: registration. Mirrors the SDK errors; the new user is signed in like the real one. Calls are logged in __fbs.createCalls.
+export async function createUserWithEmailAndPassword(auth, email, pw) {
+  const F = S();
+  (F.createCalls = F.createCalls || []).push(email);
+  if (F.offline) throw { code: "auth/network-request-failed" };
+  if (F.tooMany) throw { code: "auth/too-many-requests" };
+  const n = email.split("@")[0];
+  if (F.users[n]) throw { code: "auth/email-already-in-use" };
+  if (pw.length < 6) throw { code: "auth/weak-password" };
+  F.users[n] = { pw, role: null };
+  localStorage.setItem(key(auth.app), n);
+  return { user: auth.currentUser };
+}
 export async function signOut(auth) { localStorage.removeItem(key(auth.app)); window.__fbs.signedOut = (window.__fbs.signedOut || 0) + 1; }
 export const EmailAuthProvider = { credential: (email, pw) => ({ email, pw }) };
 export async function reauthenticateWithCredential(user, cred) {

@@ -33,7 +33,31 @@ export async function runTransaction(db, fn) {
   SVW(all);
   return r;
 }
+// L1: players/{uid}, kept in window.__fbs.players (page-scoped). Writes are checked like the `players` rules; denyPlayers forces a failure.
+const RESERVED = ["master", "dev1", "dev2", "dev3", "dev4", "dev5", "admin", "algidone", "gamblador", "professore", "mrstone", "usagi"];
+export async function setDoc(ref, data) {
+  const S = window.__fbs;
+  if (ref.col !== "players") throw { code: "permission-denied" };
+  (S.playerWrites = S.playerWrites || []).push({ id: ref.id, data: JSON.parse(JSON.stringify(data)) });
+  if (S.denyPlayers) throw { code: "permission-denied" };
+  if (S.offline) throw { code: "unavailable" };
+  const n = localStorage.getItem("__fbstub_user_" + ref.db.app.name);
+  const ks = Object.keys(data).sort().join(",");
+  const ok = n && ref.id === "uid_" + n && ks === "confirmed,created,username" && typeof data.username === "string" &&
+    /^[a-z0-9_-]{3,16}$/.test(data.username) && !RESERVED.includes(data.username) && n === data.username &&
+    data.created && data.created.__ts && data.confirmed && data.confirmed.__ts;
+  S.players = S.players || {};
+  if (!ok || S.players[ref.id]) throw { code: "permission-denied" };
+  S.players[ref.id] = { username: data.username, created: Date.now(), confirmed: Date.now() };
+}
 export async function getDoc(ref) {
+  if (ref.col === "players") {
+    const S = window.__fbs;
+    S.playerReads = (S.playerReads || 0) + 1;
+    if (S.offline) throw { code: "unavailable" };
+    const x = (S.players || {})[ref.id];
+    return { exists: () => !!x, data: () => x };
+  }
   if (ref.col === "saves") { saveGate(ref); return snap(SV()[ref.id] || null); }
   if (window.__fbs.offline) throw { code: "unavailable" };
   const u = window.__fbs.users[ref.id.replace("uid_", "")];

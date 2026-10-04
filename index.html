@@ -576,6 +576,15 @@ function simOff(){
    Due sessioni separate per i due siti: il nome dell'app fa parte della chiave di persistenza di Auth. */
 const FB_CFG={apiKey:"AIzaSyA6wGraS0bw4hpHUUjru2APjnfcIEkpG8c",authDomain:"mangiasass.firebaseapp.com",projectId:"mangiasass",storageBucket:"mangiasass.firebasestorage.app",messagingSenderId:"666619489138",appId:"1:666619489138:web:a181c869f0d61ae3214beb"};
 const FB_BASE="https://www.gstatic.com/firebasejs/12.19.0/",FB_DOM="@mangiasassi.invalid",FB_ROLES=["master","dev1","dev2","dev3","dev4","dev5"];
+/* nomi utente dei giocatori (L1): stesse regole di firestore.rules (validName/reserved) */
+const PL_NAME_RE=/^[a-z0-9_-]{3,16}$/,PL_RESERVED=["master","dev1","dev2","dev3","dev4","dev5","admin","algidone","gamblador","professore","mrstone","usagi"];
+function plNameCheck(raw){ // null = valido; altrimenti il messaggio. Il nome vale in minuscolo
+  const u=String(raw==null?"":raw).trim().toLowerCase();
+  if(u.length<3||u.length>16)return"Il nome deve avere da 3 a 16 caratteri.";
+  if(!PL_NAME_RE.test(u))return"Solo lettere a–z, numeri, _ e -.";
+  if(PL_RESERVED.includes(u))return"Questo nome è riservato.";
+  return null;
+}
 let _fb=null;
 function fbLoad(){
   if(_fb)return _fb;
@@ -656,7 +665,7 @@ async function plLogin(user,pass){
   let cred;try{cred=await fb.Au.signInWithEmailAndPassword(fb.auth,user+FB_DOM,pass)}catch(e){throw new Error(fbErr(e))}
   let r=null;try{r=await fbRoleOf(fb,cred.user)}catch(e){}
   if(r){role=r==="master"?"master":"dev1";acct=r;persistDev()}
-  else{playerAcct=user;persistPlayer()}
+  else{playerAcct=user;persistPlayer();plEnsureProfile(fb,cred.user,true)}
   return r;
 }
 async function plLogout(){
@@ -668,7 +677,7 @@ async function plVerify(){ // controllo in background come fbVerify: l'utente sp
     const fb=await fbLoad();await fb.auth.authStateReady();
     const u=fb.auth.currentUser;DIAG.log("auth","verifica giocatore: "+(u?"sessione ok":"nessun utente"));
     if(!u&&playerAcct){cloudReset();playerAcct=null;persistPlayer();if(screen==="opt")render()}
-    else if(u&&playerAcct)cloudStart();
+    else if(u&&playerAcct){cloudStart();plEnsureProfile(fb,u)}
   }catch(e){}
 }
 if(playerAcct)setTimeout(plVerify,0);
@@ -688,9 +697,53 @@ function plAccountHTML(){
    <div class="opt" style="flex-direction:column;align-items:stretch"><div>Cambia password<small>Minimo 6 caratteri. Serve la password attuale.</small></div>
      <input type="password" id="cpo" placeholder="Password attuale" autocomplete="off" style="margin-top:8px"><input type="password" id="cpn" placeholder="Nuova password" autocomplete="off" style="margin-top:6px"><input type="password" id="cpr" placeholder="Ripeti la nuova password" autocomplete="off" style="margin-top:6px">
      <div class="err" id="cpe"></div><div class="acts"><button class="btn sm" id="cpw">Cambia</button></div></div>`;
+  if(plReg)return`<label class="f">Nome utente</label><input type="text" id="plu" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"><label class="f">Password</label><input type="password" id="plp" autocomplete="off"><label class="f">Ripeti password</label><input type="password" id="plp2" autocomplete="off">
+   <small style="display:block;margin-top:6px;color:var(--mute)">Niente email: se dimentichi la password non si può recuperare. Annotala!</small>
+   <div class="err" id="ple"></div><div class="acts" style="margin-top:8px"><button class="btn ghost sm" id="plback">Ho già un account</button><button class="btn sm" id="plr">Crea account</button></div>`;
   return`<label class="f">Utente</label><input type="text" id="plu" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"><label class="f">Password</label><input type="password" id="plp" autocomplete="off">
    <div class="err" id="ple"></div><div class="acts" style="margin-top:8px"><button class="btn sm" id="plk">Entra</button></div>
-   <small style="display:block;margin-top:6px;color:var(--mute)">Accedi con l'account che ti ha dato El Cipro.</small>`;
+   <small style="display:block;margin-top:6px;color:var(--mute)">Accedi con l'account che ti ha dato El Cipro.</small>
+   <button id="plreg" style="background:none;border:0;padding:0;margin-top:6px;min-height:44px;color:var(--runway);text-decoration:underline;font:inherit;cursor:pointer">Non hai un account? Crealo</button>`;
+}
+/* registrazione giocatore (L1): createUserWithEmailAndPassword(<nome>@mangiasassi.invalid) + players/{uid} {username,created,confirmed}.
+   Se il profilo non si scrive l'account resta valido: plEnsureProfile lo ricrea al prossimo accesso/verifica (silenzioso, mai per un dev). */
+let plReg=false;
+async function plMakeProfile(fb,uid,name){
+  await fb.Fs.setDoc(fb.Fs.doc(fb.db,"players",uid),{username:name,created:fb.Fs.serverTimestamp(),confirmed:fb.Fs.serverTimestamp()});
+}
+async function plRegister(){
+  const er=$("#ple"),k=$("#plr"),raw=$("#plu").value,p=$("#plp").value,p2=$("#plp2").value;
+  const ne=plNameCheck(raw);if(ne){er.textContent=ne;return}
+  if(p.length<6){er.textContent="La password deve avere almeno 6 caratteri.";return}
+  if(p!==p2){er.textContent="Le password non coincidono.";return}
+  const name=raw.trim().toLowerCase();
+  k.disabled=true;er.textContent="Creo l'account…";
+  let fb,cred;
+  try{
+    try{fb=await fbLoad()}catch(e){throw new Error(fbErr(e))}
+    try{cred=await fb.Au.createUserWithEmailAndPassword(fb.auth,name+FB_DOM,p)}catch(e){throw new Error((e&&e.code)==="auth/email-already-in-use"?"Nome già preso.":fbErr(e))}
+  }catch(e){er.textContent=e.message||"Registrazione non riuscita.";k.disabled=false;return}
+  let wrote=true;try{await plMakeProfile(fb,cred.user.uid,name)}catch(e){wrote=false}
+  playerAcct=name;persistPlayer();plReg=false;
+  toast("Benvenuto, "+name+"!");render();cloudStart(true);
+  if(!wrote)plEnsureProfile(fb,cred.user,true);
+}
+const _plEns=new Set();
+async function plEnsureProfile(fb,u,noRole){ // dopo un accesso giocatore / una verifica: se manca players/{uid} e il nome e' valido lo crea. Fallimenti silenziosi, mai bloccante
+  if(!u||!u.uid||_plEns.has(u.uid))return;
+  _plEns.add(u.uid);
+  try{
+    if(location.protocol==="file:"||navigator.onLine===false)return;
+    const em=u.email||"";if(!em.endsWith(FB_DOM))return;
+    const name=em.slice(0,-FB_DOM.length).toLowerCase();
+    if(plNameCheck(name))return;
+    if(!noRole&&await fbRoleOf(fb,u))return;
+    const d=await fb.Fs.getDoc(fb.Fs.doc(fb.db,"players",u.uid));
+    if(d.exists())return;
+    await plMakeProfile(fb,u.uid,name);
+    DIAG.log("auth","profilo giocatore creato");
+  }catch(e){}
+  finally{_plEns.delete(u.uid)}
 }
 
 /* ============ SALVATAGGIO CLOUD (F2b, flag off) ============
@@ -1342,7 +1395,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.4.5_39";
+const VERSION="0.4.5_40";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -2534,7 +2587,7 @@ function renderOpt(){
      <div class="seg" style="margin-top:8px">${["easy","medium","hard"].map(k=>`<button data-diff="${k}" class="${(S.opts.diff||"medium")===k?"on":""}" style="flex:1">${DIFF[k].n}</button>`).join("")}</div><small style="color:var(--mute);margin-top:6px">Vale dalla prossima partita.</small></div>`;
   const pData=`<div class="opt"><div>Cancella dati locali<small>Progressi, sordi, acquisti, modifiche dev e musica caricata</small></div><button class="btn red sm" id="wipe">Cancella</button></div>`;
   const ver=`<div class="opt"><div id="ver">Build locale<small>Versione ${VERSION}</small></div></div>`;
-  const showAccount=PLAYER_LOGIN||(devOn&&!!role)||(IS_DEVSITE&&!!playerAcct); // F2b: sul sito /dev/ anche un giocatore connesso vede l'Account
+  const showAccount=PLAYER_LOGIN||(devOn&&!!role)||(IS_DEVSITE&&(!!playerAcct||!role)); // F2b: sul sito /dev/ anche un giocatore connesso vede l'Account; L1: e chi non ha fatto l'accesso (per provare la registrazione)
   const body=optTab==="dev"&&devUI()?devRows():optAcc("audio","Audio",pAudio)+optAcc("screen","Schermo",pScreen)+optAcc("game","Gioco",pGame)+(showAccount?optAcc("account","Account",plAccountHTML()+cloudAccHTML()):"")+optAcc("data","Dati",pData,"danger")+ver;
   shell(`<div class="screen"><div class="top"><button class="btn ghost sm" id="back">‹</button><h2>Opzioni</h2>${bugBtn()}</div><div class="scroll" style="flex:1;min-height:0">${tabs}${body}</div></div>`);
 }
@@ -2549,6 +2602,9 @@ function bindOpt(){
     const df=t.closest("[data-diff]");if(df){S.opts.diff=df.dataset.diff;persist();return render()}
     if(t.closest("#wipe"))return confirmBox("Ma che sei gojo?","Vuoi DAVVERO cancellare tutti i dati locali? Progressi, sordi, acquisti, modifiche dev e musica caricata andranno persi.","Sì, deo caro","Noneee",wipeData);
     if(t.closest("#plk"))return plLoginGo();
+    if(t.closest("#plr"))return plRegister();
+    if(t.closest("#plreg")){plReg=true;return optRefreshAccount()}
+    if(t.closest("#plback")){plReg=false;return optRefreshAccount()}
     if(t.closest("#plo")){plLogout();return render()}
     if(t.closest("#cpw"))return fbChangePw();
     if(t.closest("#clsy")){cloudSync(true);return}
