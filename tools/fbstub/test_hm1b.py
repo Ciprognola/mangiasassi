@@ -115,6 +115,7 @@ with sync_playwright() as pw:
       const c=document.createElement('input');c.type='checkbox';c.id='t_chk';c.addEventListener('change',()=>{window.__chk=c.checked});
       d.querySelector(':scope>summary').after(c);d.appendChild(r);return 0})()""")  # the game has no slider or checkbox yet: injected here
     p.wait_for_timeout(200)
+    press(p, "b"); press(p, "a"); p.wait_for_timeout(200)  # the injected checkbox sits under the header: B back to the header, A enters the group again
     on_chk = press_until(p, "down", lambda: ring_id(p) == "t_chk", 10)
     check("A) the ring reaches the injected checkbox under the header", on_chk, ring_id(p))
     if on_chk:
@@ -163,7 +164,21 @@ with sync_playwright() as pw:
     press(p, "r1"); p.wait_for_timeout(400)
     check("C) R1 again reaches the Giocatore tab", p.evaluate("tab") == "player", p.evaluate("tab"))
     before = p.evaluate("S.p.char")
-    found = press_until(p, "down", lambda: p.evaluate("(document.querySelector('.kf')||{}).dataset&&document.querySelector('.kf').dataset.char!==undefined"), 30)
+    group = lambda: p.evaluate("(()=>{const k=document.querySelector('.kf');return !!k&&k.classList.contains('card')&&!!k.querySelector('[data-char]')})()")
+    found = False
+    for _ in range(40):  # the walk: up to the tab row, along it to the selected tab (Giocatore), then down onto the card
+        if group():
+            found = True
+            break
+        on_tab = p.evaluate("(()=>{const k=document.querySelector('.kf');return !!k&&k.classList.contains('on')})()")
+        in_tabs = p.evaluate("!!(document.querySelector('.kf')&&document.querySelector('.kf').closest('.tabs'))")
+        step = "down" if on_tab or not p.evaluate("!!(document.querySelector('.kf')&&document.querySelector('.kf').closest('.card'))") else "up"
+        if in_tabs and not on_tab:  # along the tab row toward the selected tab
+            step = "right" if p.evaluate("(()=>{const k=document.querySelector('.kf'),bs=[...k.parentElement.children];return bs.indexOf(k)<bs.findIndex(b=>b.classList.contains('on'))})()") else "left"
+        press(p, step)
+    if found:
+        press(p, "a"); p.wait_for_timeout(200)  # A enters the card: its first control is «Usa»
+    found = found and p.evaluate("(document.querySelector('.kf')||{}).dataset&&document.querySelector('.kf').dataset.char!==undefined")
     check("C) the ring reaches a «Usa» button", found, ring_tag(p))
     if found:
         press(p, "a"); p.wait_for_timeout(500)
@@ -213,7 +228,11 @@ with sync_playwright() as pw:
     settle(p)
     dev_on_site_open(p)
     p.click("details.acc[data-acc=account] > summary"); p.wait_for_timeout(300)
-    found = press_until(p, "down", lambda: ring_id(p) == "plu", 3) or press_until(p, "up", lambda: ring_id(p) == "plu", 40)  # the first press rings «Entra» (primary), the username is above it
+    hdr = lambda: p.evaluate("(document.querySelector('.kf')||{}).parentElement&&document.querySelector('.kf').parentElement.dataset.acc==='account'")
+    on_hdr = press_until(p, "down", hdr, 6) or press_until(p, "up", hdr, 40)  # the first press rings «Entra» (primary); the Account header is above it
+    if on_hdr:
+        press(p, "a"); p.wait_for_timeout(200)  # A enters the accordion
+    found = on_hdr and (press_until(p, "down", lambda: ring_id(p) == "plu", 3) or press_until(p, "up", lambda: ring_id(p) == "plu", 40))
     check("F) the ring reaches the login username field", found, ring_id(p))
     if found:
         press(p, "a"); p.wait_for_timeout(200)

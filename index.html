@@ -166,7 +166,7 @@ html{-webkit-text-size-adjust:100%}
 .rtile.claimed{background:#2a3444;color:#7c8896}
 .rtile.cur{outline:2px solid #fff;outline-offset:2px}
 .rtile.hl{outline:3px solid var(--runway);outline-offset:2px}
-.kf{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 6px rgba(0,0,0,.55)!important;z-index:2}
+#kring{position:fixed;display:none;pointer-events:none;z-index:70;box-sizing:border-box;border:3px solid #ffd23f;box-shadow:0 0 0 2px rgba(0,0,0,.85)}
 .rtile.gold{box-shadow:inset 0 0 0 2px var(--runway),0 0 8px rgba(242,194,48,.45)}
 .ach.hl{outline:2px solid var(--runway)}
 .gifttag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;background:var(--runway);color:#1b1500;font-size:.68rem;font-weight:700;vertical-align:middle}
@@ -1472,7 +1472,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.5_3";
+const VERSION="0.5_4";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -2178,18 +2178,40 @@ const KNAV_SEL="button,[data-tile],details.acc>summary,input,select,a[href],[rol
 const KNAV_GAME=["game","bj","pr","fa"]; // schermate di gioco: niente anello, salvo gli overlay HTML (invito di El Gamblador, pannelli di Ferma)
 const KNAV_TXT=e=>e.tagName==="TEXTAREA"||(e.tagName==="INPUT"&&!/^(checkbox|radio|range|button|submit|reset|file|color|hidden)$/.test(e.type));
 function bjOverlayEl(){const e=document.getElementById("bpres");return screen==="bj"&&e&&!e.hidden&&e.childElementCount?e:null} // invito di El Gamblador (HTML sopra il tavolo)
-const KNAV={cur:null,
-  items(){ // HM1b: tutti i controlli visibili e abilitati di #root (o del popup aperto); nei giochi solo i pulsanti degli overlay HTML
-    const md=modalEl(),vis=e=>{const r=e.getBoundingClientRect();return r.width>2&&r.height>2&&!e.disabled&&!e.closest("[hidden]")&&getComputedStyle(e).visibility!=="hidden"&&(!e.checkVisibility||e.checkVisibility())};
-    const within=c=>[...c.querySelectorAll(KNAV_SEL+",.card")].filter(e=>!/^(hidden|file)$/.test(e.type)&&vis(e)&&(!e.classList.contains("card")||!e.querySelector(KNAV_SEL))); // HM1b: una scheda senza controlli (Lista desideri) è una tappa della griglia
+const KNAV={cur:null,grp:null,grpScr:null, // HM1c: grp = gruppo aperto (scheda di Lista desideri o accordion); null = livello alto
+  vis(e){const r=e.getBoundingClientRect();return r.width>2&&r.height>2&&!e.disabled&&!e.closest("[hidden]")&&getComputedStyle(e).visibility!=="hidden"&&(!e.checkVisibility||e.checkVisibility())},
+  raw(c){return[...c.querySelectorAll(KNAV_SEL+",.card")].filter(e=>!/^(hidden|file)$/.test(e.type)&&KNAV.vis(e))},
+  isGroup(a){return a.classList.contains("card")?!!a.querySelector(KNAV_SEL):a.matches("details.acc")&&[...a.querySelectorAll(KNAV_SEL)].some(x=>x!==a.firstElementChild)}, // HM1c: una scheda con controlli, o un accordion con contenuto (anche chiuso), e' un gruppo
+  groupOf(e){for(let a=e.parentElement;a&&a!==document.body;a=a.parentElement)if(KNAV.isGroup(a)&&!(a.matches("details.acc")&&a.firstElementChild===e))return a;return null},
+  inner(g){return KNAV.raw(g).filter(e=>e!==g&&KNAV.groupOf(e)===g)}, // i controlli diretti del gruppo, in ordine di lettura
+  top(c){return KNAV.raw(c).filter(e=>!KNAV.groupOf(e)&&(!e.classList.contains("card")||!e.querySelector(KNAV_SEL)||KNAV.isGroup(e)))},
+  items(){ // HM1b: tutti i controlli visibili e abilitati di #root (o del popup aperto); nei giochi solo i pulsanti degli overlay HTML. HM1c: dentro un gruppo, solo i suoi controlli
+    const md=modalEl();
+    const within=c=>KNAV.grp&&KNAV.grp.isConnected&&KNAV.grpScr===screen&&c.contains(KNAV.grp)?KNAV.inner(KNAV.grp):KNAV.top(c);
     if(md&&md.firstChild)return within(md);
     const bo=bjOverlayEl();if(bo)return within(bo);
     if(screen==="fa"){const fp=document.getElementById("fapanel");return fp&&fp.classList.contains("on")?within(fp):[]}
     if(KNAV_GAME.includes(screen))return[];
     return within(root);
   },
-  set(e){if(KNAV.cur)KNAV.cur.classList.remove("kf");KNAV.cur=e||null;if(e){e.classList.add("kf");try{e.scrollIntoView({block:"nearest"})}catch(x){}}},
+  set(e){if(KNAV.cur)KNAV.cur.classList.remove("kf");KNAV.cur=e||null;if(e){e.classList.add("kf");try{e.scrollIntoView({block:"nearest"})}catch(x){}}KNAV.place()}, // HM1c: prima lo scorrimento, poi l'anello
   off(){KNAV.set(null)},
+  place(){ // HM1c: #kring e' l'anello visibile: un riquadro fisso, 3 px fuori dal controllo, nei limiti dello schermo; nascosto senza anello o con un popup BUG aperto
+    let kr=document.getElementById("kring");if(!kr){kr=document.createElement("div");kr.id="kring";document.body.appendChild(kr)}
+    const e=KNAV.cur,r=e&&e.isConnected&&!BUG?e.getBoundingClientRect():null;
+    if(!r||r.width<=0||r.height<=0){kr.style.display="none";return}
+    const l=Math.max(0,r.left-3),t=Math.max(0,r.top-3),rt=Math.min(innerWidth,r.right+3),b=Math.min(innerHeight,r.bottom+3);
+    if(rt<=l||b<=t){kr.style.display="none";return}
+    Object.assign(kr.style,{display:"block",left:l+"px",top:t+"px",width:(rt-l)+"px",height:(b-t)+"px",borderRadius:getComputedStyle(e).borderRadius});
+  },
+  sync(){ // HM1c: dopo un re-render. Il gruppo resta se esiste ancora (anello sul suo titolo, livello alto); altrimenti l'anello si spegne come prima
+    if(KNAV.grp&&!KNAV.grp.isConnected)KNAV.grp=null;
+    const c=KNAV.cur;
+    if(c&&!c.isConnected){const g=KNAV.grp;KNAV.cur=null;KNAV.grp=null;if(g&&g.isConnected)KNAV.set(g.matches("details.acc")?g.firstElementChild:g)}
+    KNAV.place();
+  },
+  key(e){return e.tagName+[...e.attributes].filter(a=>a.name.startsWith("data-")).map(a=>a.name+"="+a.value).join(";")+"|"+e.textContent.trim().slice(0,40)}, // HM1c: riconosce una linguetta dopo il suo re-render
+  enter(g){const inn=KNAV.inner(g);if(!inn.length)return false;KNAV.grp=g;KNAV.grpScr=screen;KNAV.set(inn[0]);return true}, // HM1c: A su un gruppo = il suo primo controllo
   first(it,skipTabs){ // primo controllo: il pulsante giallo principale se c'è, altrimenti il primo in ordine di lettura (le linguette escluse se skipTabs)
     const ok=skipTabs?it.filter(e=>!e.closest(".tabs")):it;return ok.find(e=>e.matches(".btn:not(.ghost)"))||ok.find(e=>e.matches("[data-tile]"))||ok[0]||it[0] // nel menu la prima pressione va sulla prima tessera (come da 0.5_2)
   },
@@ -2197,14 +2219,18 @@ const KNAV={cur:null,
     const st=parseFloat(el.getAttribute("step")),step=st>0?st:((+el.max-+el.min)*.05)||1,v=Math.min(+el.max,Math.max(+el.min,+el.value+d*step));
     if(v===+el.value)return;el.value=v;el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}));
   },
-  act(el){ // A / Invio sul controllo: come un tocco
+  act(el){ // A / Invio sul controllo: come un tocco. HM1c: scheda o accordion aprono il gruppo; una linguetta resta selezionata
     if(KNAV_TXT(el)){el.focus();return} // campo di testo: A lo mette a fuoco (si apre la tastiera)
     if(el.type==="range")return;
+    if(el.classList.contains("card")&&KNAV.isGroup(el)&&KNAV.enter(el))return;
+    if(el.matches("details.acc>summary")&&KNAV.isGroup(el.parentElement)){const d=el.parentElement;if(!d.open)el.click();KNAV.enter(d);return}
+    if(el.tagName==="BUTTON"&&el.closest(".tabs")){const k=KNAV.key(el);KNAV.off();el.click();KNAV.set(KNAV.items().find(e=>KNAV.key(e)===k)||null);return}
     KNAV.off();
     if(el.tagName==="SELECT"){try{el.showPicker()}catch(x){el.focus()}return}
     el.click();
   },
-  tab(d){ // L1/R1: linguetta precedente/successiva della riga .tabs, senza giro; l'anello va sul primo controllo della nuova linguetta
+  tab(d){ // L1/R1: linguetta precedente/successiva della riga .tabs, senza giro; l'anello va sul primo controllo della nuova linguetta. HM1c: torna al livello alto
+    KNAV.grp=null;
     const row=root.querySelector(".tabs");if(!row)return;const bs=[...row.querySelectorAll("button")],i=bs.findIndex(b=>b.classList.contains("on")),t=bs[i+d];
     if(!t)return;KNAV.off();t.click();const it=KNAV.items();if(it.length)KNAV.set(KNAV.first(it,true));
   },
@@ -2212,6 +2238,8 @@ const KNAV={cur:null,
     const it=KNAV.items();if(!it.length)return false;
     const cur=KNAV.cur&&it.includes(KNAV.cur)?KNAV.cur:null;
     if(!cur){KNAV.set(KNAV.first(it));return true}
+    const tr=cur.closest(".tabs"); // HM1c: destra/sinistra nella riga delle linguette: la precedente o la successiva, senza giro e senza selezionarla
+    if(tr&&(dir===1||dir===3)){const bs=it.filter(e=>e.parentElement===tr),t=bs[bs.indexOf(cur)+(dir===1?1:-1)];if(t)KNAV.set(t);return true}
     if(cur.type==="range"&&(dir===1||dir===3)){KNAV.slide(cur,dir===1?1:-1);return true}
     const c=r=>[(r.left+r.right)/2,(r.top+r.bottom)/2],a=c(cur.getBoundingClientRect());let best=null,bs=1e9;
     for(const e of it){if(e===cur)continue;const b=c(e.getBoundingClientRect()),dx=b[0]-a[0],dy=b[1]-a[1];
@@ -2219,18 +2247,26 @@ const KNAV={cur:null,
       if(along<=1)continue;const sc=along+cross/4;if(sc<bs){bs=sc;best=e}} // HM1b: prima la riga più vicina, poi l'allineamento (liste e griglie)
     if(best)KNAV.set(best);
     return true;
+  },
+  back(){ // B (HM1c): dentro un gruppo torna al suo titolo (scheda o accordion); su un accordion aperto lo chiude; altrimenti false = indietro di sempre
+    const md=modalEl();if((md&&md.firstChild)||KNAV_GAME.includes(screen))return false;
+    if(KNAV.grp){const g=KNAV.grp;KNAV.grp=null;if(!g.isConnected)return false;KNAV.set(g.matches("details.acc")?g.firstElementChild:g);return true}
+    const c=KNAV.cur;if(c&&c.matches("details.acc>summary")&&c.parentElement.open){c.click();return true}
+    return false;
   }};
 addEventListener("keydown",e=>{
   if(BUG||ctrlOpen()||e.ctrlKey||e.altKey||e.metaKey)return; // «Prova controller» logga anche le frecce: non le consuma
   const t=e.target;if(t&&/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))return;
   const d={ArrowUp:0,ArrowRight:1,ArrowDown:2,ArrowLeft:3}[e.key];
   if(d!==undefined){if(KNAV.move(d)){e.preventDefault();e.stopImmediatePropagation()}return}
+  if(e.key==="Escape"&&KNAV.back()){e.preventDefault();e.stopImmediatePropagation()} // HM1c: Esc = B
   if(e.key==="Enter"&&KNAV.cur){
     if(!document.body.contains(KNAV.cur)||!KNAV.items().includes(KNAV.cur)){KNAV.off();return}
     e.preventDefault();e.stopImmediatePropagation();KNAV.act(KNAV.cur);
   }
 },true);
-for(const ev of["pointerdown","touchstart","mousedown"])addEventListener(ev,()=>KNAV.off(),true);
+for(const ev of["pointerdown","touchstart","mousedown"])addEventListener(ev,()=>{KNAV.grp=null;KNAV.off()},true); // HM1c: un tocco riporta al livello alto
+addEventListener("scroll",()=>KNAV.place(),true);addEventListener("resize",()=>KNAV.place());
 /* ============ INPUT CONTROLLER (HM1, 0.5_2): il gamepad parla le stesse azioni di frecce, Invio ed Esc, senza leggere i tasti grezzi nei giochi ============ */
 const PAD_PRESETS={pocketTaco:{a:0,b:1,x:2,y:3,l1:4,r1:5,l2:6,r2:7,select:8,start:9,up:12,down:13,left:14,right:15}}; // Pocket Taco (misurato 0.5_1); la rimappatura arriva in HM4
 const PAD={map:PAD_PRESETS.pocketTaco,idx:-1,raf:0,prev:{},held:{},rep:{}};
@@ -2245,7 +2281,7 @@ function padBusy(){return !!BUG||padField()||ctrlOpen()}
 function padMenu(n,ph,modal,fa){ // menu, splash, Opzioni, popup e pannello di Ferma: frecce = anello di KNAV, A = Invio, B = Esc (popup) o indietro
   if(n in PAD_DIR){if(ph!=="up")KNAV.move(PAD_DIR[n]);return}
   if(n==="a"){if(ph!=="down")return;if(!modal&&screen==="splash"){const r=document.getElementById("rsi");if(r)r.click();return}padKey("keydown","Enter");return}
-  if(n==="b"){if(ph!=="down")return;if(modal&&(fa||document.getElementById("popd")))return padKey("keydown","Escape");window.dispatchEvent(new Event("mgback"));return}
+  if(n==="b"){if(ph!=="down")return;if(!modal&&KNAV.back())return;if(modal&&(fa||document.getElementById("popd")))return padKey("keydown","Escape");window.dispatchEvent(new Event("mgback"));return}
   if(n==="l1"||n==="r1"){if(ph==="down"&&!modal)KNAV.tab(n==="r1"?1:-1);return}
 }
 function padAct(n,ph){
@@ -8431,6 +8467,7 @@ function render(){
   else if(screen==="cust"){renderCust();bindCust()}
   else if(screen==="dev"){return go("menu")}
   else if(screen==="bye"){shell(`<div class="screen">${bugBtn("fixr")}<div class="center"><h2 style="font-size:1.6rem;color:var(--runway)">Alla prossima!</h2><p>Puoi chiudere la scheda o l'app.</p><button class="btn" id="re">Riapri</button></div></div>`);root.onclick=e=>{if(e.target.closest("#re"))go("menu")}}
+KNAV.sync();
 }
 addEventListener("keydown",e=>{
   if(e.repeat||e.ctrlKey||e.altKey||e.metaKey||(e.key!=="Enter"&&e.key!=="Escape"))return;

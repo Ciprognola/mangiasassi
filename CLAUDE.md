@@ -14,6 +14,7 @@ Permanent project context for Claude Code. Read it fully at the start of every s
 0.5_1 HM0 done: controller test (dev) + docs/releases/0.5-H0.md; next: handheld plan in Claude chat.
 0.5_2 HM1 done: controller input (PAD, Pocket Taco preset, routing to the existing actions); next: phone test, then the HM2 handheld layout plan in Claude chat.
 0.5_3 HM1b done: controller and arrow keys on every screen (KNAV candidates, L1/R1 tabs, invite card, Partita finita); next: phone test (STOP for the owner), then the HM2 plan.
+0.5_4 HM1c pushed: tab-row moves, visible #kring ring, two-level cards and accordions; next: HM2 after the owner's phone test.
 
 ---
 
@@ -229,6 +230,7 @@ Developer options must be **completely invisible** when the dev toggle is off; S
   - Not reachable by design: the BUG popups (bug report, text edit, cloud conflict, plc/delete confirms) run their own key guard (`BUG`), so neither the pad nor the arrows reach them. Opzioni has no range slider or checkbox today; test A injects one to check the mechanic.
   - repeat: a held D-pad repeats after 400 ms, then every 150 ms, except in the maze and Ferma; A, B, Start and Select never repeat. Guards: nothing runs while the BUG popup, a text field (input/textarea/select, not checkbox/range) or «Prova controller» is active.
   - Tests: `tools/fbstub/test_hm1.py` (HM1, `PAD_MUTATE=noroute`) and `tools/fbstub/test_hm1b.py` (HM1b, A–H, `KNAV_MUTATE=menuonly`: A and C fail as expected). Not tested: a real controller on the owner's phone (phone test pending) and the Android wrapper.
+  - HM1c (0.5_4): left/right on a `.tabs` button move the ring to the adjacent tab without selecting it (no wrap; A selects, the ring stays on it). `#kring` (body child, fixed, z 70, 3 px `#ffd23f` + dark halo, 3 px outside the element, clamped) is placed by `KNAV.place()` on each move, on scroll (capture), resize and after `render()` (`KNAV.sync()`); hidden while a BUG popup is open. The old `.kf` outline rule is gone (class kept): `.acc`/`.scroll` overflow clipped it. Groups: a Lista desideri `.card` with a control, or a `details.acc` with content (open or closed). Top level = the group itself; A enters it (ring to its first control; a closed accordion opens first); inside, D-pad stays in the group; B blurs a focused input, else returns to the group title (`KNAV.grp` null, accordion stays open); B on an open accordion header closes it; other B = today's back. Pointer, L1/R1 and a screen change reset to top level; Esc = B on the keyboard. Tests: `tools/fbstub/test_hm1c.py` (a–h, 59 checks; `HM1C_MUTATE=tabgeo|ring|flat` each bites).
 
 **Jump to any girone (0.4.5_14)**: next to `#jg4`/`#jg7` (kept, unchanged) in the «Salta al girone» accordion, `#jgN` (number, 1-20) + `#jgGo` call `devJump(n)` clamped in the click handler; `devJump` already ran the girone's real spec through `pickMap(n)`/`resetActors` (M1a), so no separate wiring was needed. Tests: `tools/fbstub/test_jg.py`.
 
