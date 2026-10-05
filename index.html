@@ -1472,7 +1472,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.5_1";
+const VERSION="0.5_2";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -2178,6 +2178,7 @@ const KNAV={cur:null,
   items(){ // pulsanti raggiungibili: popup aperto -> i suoi pulsanti; altrimenti, nel menu, le sezioni
     const md=modalEl(),vis=e=>{const r=e.getBoundingClientRect();return r.width>2&&r.height>2&&!e.disabled&&!e.closest("[hidden]")};
     if(md&&md.firstChild)return[...md.querySelectorAll("button,summary")].filter(vis);
+    if(screen==="fa"&&document.getElementById("fapanel")&&document.getElementById("fapanel").classList.contains("on"))return[...document.querySelectorAll("#fapanel button")].filter(vis); // HM1: pannelli di Ferma
     if(screen==="menu")return[...document.querySelectorAll("#root .tile[data-tile]")].filter(vis);
     return[];
   },
@@ -2205,6 +2206,86 @@ addEventListener("keydown",e=>{
   }
 },true);
 for(const ev of["pointerdown","touchstart","mousedown"])addEventListener(ev,()=>KNAV.off(),true);
+/* ============ INPUT CONTROLLER (HM1, 0.5_2): il gamepad parla le stesse azioni di frecce, Invio ed Esc, senza leggere i tasti grezzi nei giochi ============ */
+const PAD_PRESETS={pocketTaco:{a:0,b:1,x:2,y:3,l1:4,r1:5,l2:6,r2:7,select:8,start:9,up:12,down:13,left:14,right:15}}; // Pocket Taco (misurato 0.5_1); la rimappatura arriva in HM4
+const PAD={map:PAD_PRESETS.pocketTaco,idx:-1,raf:0,prev:{},held:{},rep:{}};
+const PAD_NAMES=["up","down","left","right","a","b","start","select","l1","r1","x","y","l2","r2"];
+const PAD_DIR={up:0,right:1,down:2,left:3};
+const PAD_KEY={up:"ArrowUp",down:"ArrowDown",left:"ArrowLeft",right:"ArrowRight"};
+const padsNow=()=>{try{return Array.from(navigator.getGamepads?navigator.getGamepads():[])}catch(e){return[]}};
+const padScan=()=>{const ps=padsNow();for(let i=0;i<ps.length;i++)if(ps[i])return i;return -1};
+const padKey=(type,key)=>window.dispatchEvent(new KeyboardEvent(type,{key:key,code:key,bubbles:true,cancelable:true}));
+function padBusy(){const t=document.activeElement;return !!BUG||!!(t&&/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))||ctrlOpen()}
+function padMenu(n,ph,modal,fa){ // menu, splash, Opzioni, popup e pannello di Ferma: frecce = anello di KNAV, A = Invio, B = Esc (popup) o indietro
+  if(n in PAD_DIR){if(ph!=="up")KNAV.move(PAD_DIR[n]);return}
+  if(n==="a"){if(ph!=="down")return;if(!modal&&screen==="splash"){const r=document.getElementById("rsi");if(r)r.click();return}padKey("keydown","Enter");return}
+  if(n==="b"){if(ph!=="down")return;if(modal&&(fa||document.getElementById("popd")))return padKey("keydown","Escape");window.dispatchEvent(new Event("mgback"));return}
+}
+function padAct(n,ph){
+  if(padBusy())return;
+  const md=modalEl(),modal=!!(md&&md.firstChild),fa=screen==="fa"&&!!document.getElementById("fapanel")&&document.getElementById("fapanel").classList.contains("on");
+  if(ph==="rep"&&(screen==="game"||screen==="fa"))return; // mai ripetuto nel labirinto e in Ferma (stato tenuto premuto)
+  if(fa&&n==="start"){if(ph==="down")faPause(!FA.paused);return} // Start = pausa anche con il pannello aperto (come P)
+  if(modal||fa)return padMenu(n,ph,modal,fa);
+  const dir=PAD_DIR[n];
+  if(screen==="game"){ // labirinto: come le frecce, Trasformati, Fermo, Pausa
+    if(!G||G.state==="mini")return;
+    if(dir!==undefined){if(ph==="down")setDir(dir);return}
+    if(n==="a"){if(ph==="down")abilPress();return}
+    if(n==="b"){if(ph==="down"){const s=document.getElementById("stl");if(s)s.click()}return}
+    if(n==="start"){if(ph==="down"&&G.state!=="over"&&G.state!=="pause")pauseMenu();return}
+    if(n==="select"){if(ph==="down")toast("Co-op in arrivo");return}
+    return;
+  }
+  if(screen==="fa"){ // Ferma: frecce tenute premute come FA_KEYS, A = salto, Start = pausa (come P)
+    if(!FA||FA.dead)return;
+    if(dir!==undefined){if(ph!=="rep")padKey(ph==="up"?"keyup":"keydown",PAD_KEY[n]);return}
+    if(n==="a"){if(ph==="down")faJump();return}
+    if(n==="start"){if(ph==="down")faPause(!FA.paused);return}
+    if(n==="select"){if(ph==="down")toast("Co-op in arrivo");return}
+    return;
+  }
+  if(screen==="bj"){ // El Gamblador: come le frecce, A = conferma, Start = pausa
+    if(!B||bjPauseT)return;
+    if(dir!==undefined){if(ph==="up")return;if(dir===0)bjMove(-1,true);else if(dir===2)bjMove(1,true);else if(dir===3)bjMove(-1);else bjMove(1);return}
+    if(n==="a"){if(ph==="down")bjConfirm();return}
+    if(n==="start"){if(ph==="down")bjPause();return}
+    return;
+  }
+  if(screen==="pr"){ // professore: menu e dialoghi con le frecce su/giu e Invio; battaglia come pbKey (frecce, Invio, Esc)
+    if(!PR||PR.dead)return;
+    if(PR.pb){
+      if(dir!==undefined){if(ph!=="up")padKey("keydown",PAD_KEY[n]);return}
+      if(n==="a"){if(ph==="down")padKey("keydown","Enter");return}
+      if(n==="b"){if(ph==="down")padKey("keydown","Escape");return}
+      return;
+    }
+    if(dir===0||dir===2){if(ph!=="up")padKey("keydown",PAD_KEY[n]);return}
+    if(n==="a"){if(ph==="down")padKey("keydown","Enter");return}
+    return;
+  }
+  padMenu(n,ph,false,false); // schermate di menu (menu, Opzioni, …)
+}
+function padLoop(){
+  const ps=padsNow(),t=performance.now();
+  if(PAD.idx>=0&&!ps[PAD.idx]){PAD.idx=-1;PAD.prev={};PAD.held={};PAD.rep={};if(FA)faKeysClear()} // scollegato
+  if(PAD.idx<0){PAD.idx=padScan();if(PAD.idx<0){PAD.raf=0;return}}
+  const gp=ps[PAD.idx];
+  for(const n of PAD_NAMES){
+    const b=gp.buttons[PAD.map[n]],d=!!(b&&b.pressed);
+    if(d===!!PAD.prev[n])continue;
+    PAD.prev[n]=d;
+    if(d){PAD.held[n]=PAD.rep[n]=t;padAct(n,"down")}else{PAD.held[n]=0;padAct(n,"up")}
+  }
+  for(const n of ["up","down","left","right"])if(PAD.held[n]&&t-PAD.held[n]>=400&&t-PAD.rep[n]>=150){PAD.rep[n]=t;padAct(n,"rep")}
+  PAD.raf=requestAnimationFrame(padLoop);
+}
+function padOn(){if(!PAD.raf)PAD.raf=requestAnimationFrame(padLoop)}
+function padOff(){if(PAD.raf)cancelAnimationFrame(PAD.raf);PAD.raf=0;PAD.idx=-1;PAD.prev={};PAD.held={};PAD.rep={};if(FA)faKeysClear()}
+addEventListener("gamepadconnected",padOn);
+addEventListener("gamepaddisconnected",padOff);
+setInterval(()=>{if(!PAD.raf&&padScan()>=0)padOn()},1000); // primo pad trovato anche senza evento (il browser lo segnala solo dopo un tasto)
+
 function confirmBox(title,msg,yes,no,onYes,onNo){
   const m=openModal(`<h3>${title}</h3><p>${msg}</p><div class="acts"><button class="btn ghost" id="cn">${no}</button><button class="btn red" id="cy">${yes}</button></div>`);
   m.querySelector("#cn").onclick=()=>{closeModal();onNo&&onNo()};m.querySelector("#cy").onclick=()=>{closeModal();onYes()};

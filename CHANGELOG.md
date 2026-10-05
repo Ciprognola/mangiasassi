@@ -2454,3 +2454,15 @@ Bundles builds 0.4.5_1 … 0.4.5_43 (their entries below stay as they are).
 - `VERSION` and `const VERSION` = `0.5_1`. `index.html` size delta: +12702 bytes (6253433 → 6266135, raw, CRLF checkout).
 - Not tested: a real gamepad, the Android wrapper, a real phone (owner test pending).
 
+## 0.5_2 — 2026-10-05 — HM1: controller input (Pocket Taco preset, routing to existing actions)
+- New input module `PAD` (after `KNAV`): starts on `gamepadconnected` or the first connected pad, stops on disconnect, polls with rAF only while a pad is connected. Preset `PAD_PRESETS.pocketTaco` (indices measured on the owner's phone in 0.5_1), used for every pad; nothing saved.
+- Press/release edges for up, down, left, right, a, b, start, select, l1, r1 (x, y, l2, r2 read, unused). Routing by screen to the functions the keyboard path already calls: menus/popups → `KNAV.move`, Enter, Escape or `mgback`; maze → `setDir`, `abilPress`, `#stl`, `pauseMenu`; Ferma → FA_KEYS through the arrow keydown/keyup path, `faJump`, `faPause`; Blackjack → `bjMove`, `bjConfirm`, `bjPause`; professor → arrows/Enter/Escape (`pbKey`).
+- `KNAV.items` also returns the buttons of an open Ferma panel (`#fapanel`), so the D-pad and A drive the intro, pause, win, lost and over panels.
+- Repeat: a held D-pad repeats after 400 ms, then every 150 ms, in menus, popups, Blackjack and the professor; never in the maze or Ferma. Guards: no action while the BUG popup, a text field or «Prova controller» is active.
+- Layout unchanged (the handheld layout is HM2).
+- Tests: new `tools/fbstub/test_hm1.py`, 34 checks (A–I green); bite run `PAD_MUTATE=noroute`: A and C fail as expected (20/34 pass).
+- Correction to the 0.5_1 entry: its size delta compared the LF repo blob (6253433) with the CRLF working file (6266135). LF-normalised, 0.5_1 is +4348 bytes (6253433 → 6257781).
+- `index.html` size delta, LF-normalised: +5411 bytes (6257781 → 6263192).
+- `VERSION` and `const VERSION` = `0.5_2`.
+- Not tested: a real gamepad on the owner's phone (phone test pending), the Android wrapper.
+

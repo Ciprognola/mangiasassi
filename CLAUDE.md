@@ -12,6 +12,7 @@ Permanent project context for Claude Code. Read it fully at the start of every s
 2026-10-03: roadmap to 1.0 approved (docs/roadmap-1.0.md, §11) — starts after v0.5; 0.5 work in §10 continues unchanged.
 2026-10-04: roadmap revised (docs/roadmap-1.0.md): handheld mode first, as 0.5_N builds before 0.6 M0; pets in 0.7; no Discord Activity. Next: handheld plan in Claude chat, then 0.6 M0.
 0.5_1 HM0 done: controller test (dev) + docs/releases/0.5-H0.md; next: handheld plan in Claude chat.
+0.5_2 HM1 done: controller input (PAD, Pocket Taco preset, routing to the existing actions); next: phone test, then the HM2 handheld layout plan in Claude chat.
 
 ---
 
@@ -218,6 +219,13 @@ Tap **"Build locale" five times** in Options to open the login modal (username +
 The SDK (`fbLoad`, v12.19.0 from gstatic) is loaded with `import()` only when the login modal opens or when the dev cache says a session exists: the game never waits for it (8 s timeout = offline). Two separate Firebase sessions per site (app name `mgs` / `mgs_dev`). Cache `mgs_dev` (`mgs_dev_dev` on /dev/) = `{role,acct,fb:true,devOn}`: restored at load, verified in the background (`fbVerify`: no user / role removed → dev off + SIM off; unreachable → the session stays valid). A cache without `fb:true` (old local login) is cleared. `file://` builds cannot log in.
 Developer options must be **completely invisible** when the dev toggle is off; Sblocca tutto ends with dev mode. Dev jump/map runs, `PR.test` battles and Ferma tests save no progress and never set real unlock flags (`seen`, achievements). Headless tests: `tools/fbstub/` (stub SDK + `test_f1.py`; never real credentials).
 - **Controller (HM0, 0.5_1)**: Opzioni › Sviluppatore › accordion «Controller» (`ctrlHTML`, `ctrlTick`, `ctrlLoop`): «Prova controller» lists the connected gamepads, live buttons/axes and a log of the last 12 events; dev-only, log only (no game action, nothing saved), polling runs only while the accordion is open.
+- **Controller input (PAD, HM1, 0.5_2)**: one module after `KNAV` (`padLoop`, `padOn`/`padOff`, `padAct`, `padMenu`). Preset `PAD_PRESETS.pocketTaco` (0.5_1 measured indices) for every pad; nothing saved (remapping in HM4). Routing calls the functions the keyboard path already uses, never a raw button read in a game:
+  - menus, splash, Opzioni, popups and the Ferma panel: D-pad → `KNAV.move`; A → Enter (splash: `#rsi`); B → Escape on a popup or in the Ferma panel, otherwise the `mgback` event;
+  - maze: D-pad → `setDir`; A → `abilPress`; B → `#stl`; Start → `pauseMenu`; Select → toast «Co-op in arrivo»;
+  - Ferma: D-pad → ArrowX keydown/keyup (FA_KEYS, the ladder-up rule included); A → `faJump`; Start → `faPause` toggle (also with the panel open); `#fapanel` buttons are KNAV candidates;
+  - Blackjack: D-pad → `bjMove`; A → `bjConfirm`; Start → `bjPause`;  professor: menus and dialogue ↑↓ and Enter, battle as pbKey (arrows, Enter, Escape = B);
+  - repeat: a held D-pad repeats after 400 ms, then every 150 ms, except in the maze and Ferma; A, B, Start and Select never repeat. Guards: nothing runs while the BUG popup, a text field or «Prova controller» is active.
+
 **Jump to any girone (0.4.5_14)**: next to `#jg4`/`#jg7` (kept, unchanged) in the «Salta al girone» accordion, `#jgN` (number, 1-20) + `#jgGo` call `devJump(n)` clamped in the click handler; `devJump` already ran the girone's real spec through `pickMap(n)`/`resetActors` (M1a), so no separate wiring was needed. Tests: `tools/fbstub/test_jg.py`.
 
 ### Player login (F2a, flag off)
@@ -379,6 +387,7 @@ into `submissions/<acct>/<YYYY-MM-DD>/` through a PR to `dev`. Once the `validat
   `node --check` every `<script>` block first, then the smoke test. Real-time polling is flaky under CPU load.
 - **Patch scripts:** edit `index.html` with a Python script that asserts each anchor appears exactly once, printing nothing but anchor counts; the owner's own Windows checkout is CRLF (read with `newline=""`, normalise `chr(13)+chr(10)`→`chr(10)` for multi-line anchors and convert back on write) — a Claude Code **cloud session's** checkout is plain LF instead (confirmed 2026-09-26): read/write with `newline=""` regardless so a script works either way, but skip the CRLF round-trip normalisation on an LF checkout. Whichever it is, `git diff --stat` before committing must show only the lines actually meant to change in `index.html` — a whole-file diff means a line-ending mismatch slipped in; stop and fix it, never commit it. Use raw strings (`r'''...'''`) for JS containing
   `\u00e8`-style escapes. Never print base64; embed art in the chunk that first draws it. Measure size deltas against `git show HEAD:index.html` (CRLF-normalised only if the checkout itself is CRLF).
+- **Windows test runs:** run the fbstub suites with `PYTHONIOENCODING=utf-8` (non-ASCII output otherwise crashes the console, 0.5_1).
 - **Git Bash heredocs with quotes break on this machine** — write longer scripts with the Write tool (avoid `\n` inside one-line `python -` patches: it becomes a real newline). Console output of non-ASCII needs `PYTHONIOENCODING=utf-8`.
 - **Docs are committed together with the code.** Build doc text with `.replace` (no `%` formatting), and check `git diff --stat` shows CHANGELOG/CLAUDE.md before committing.
 - Each chunk: bump `const VERSION` **and the root `VERSION` file together** to `0.5_N`, CHANGELOG entry with size delta, commit, push to `dev`.
