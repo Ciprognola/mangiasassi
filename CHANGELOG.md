@@ -2466,3 +2466,17 @@ Bundles builds 0.4.5_1 … 0.4.5_43 (their entries below stay as they are).
 - `VERSION` and `const VERSION` = `0.5_2`.
 - Not tested: a real gamepad on the owner's phone (phone test pending), the Android wrapper.
 
+## 0.5_3 — 2026-10-05 — HM1b: controller and arrow keys on every screen (KNAV everywhere, L1/R1 tabs)
+- `KNAV.items` now covers every screen, not only the menu tiles: candidates are every visible, enabled `button`, `[data-tile]`, `details.acc>summary`, `input`, `select`, `a[href]`, `[role=button]` in `#root` (or the open modal), plus a `.card` with no control of its own (the Lista desideri grid). Hidden or collapsed content is excluded by `checkVisibility()`.
+- Game screens keep their routing (maze, Ferma, professor, Blackjack): no ring. Exception: an HTML overlay inside a game screen. The El Gamblador invite card `#bpres` is driven like a modal (its buttons are the candidates; A with no ring places it on the first).
+- The first D-pad press places the ring on the primary yellow button if there is one, else the first candidate. Moves: nearest candidate in that direction, distance first, alignment as tie-break (`along+cross/4`; the old `along+2*cross` jumped past rows in lists).
+- A = a tap on the focused control (buttons and tiles click, accordion summaries toggle, checkboxes toggle, `select` opens via `showPicker`, text fields focus). A range input moves left/right by its step (or 5% of its range) with input/change events.
+- A text field takes focus with A; while it has focus the D-pad and A do nothing; B blurs it. Checkbox and range inputs no longer block the pad (`padField`).
+- L1/R1: previous/next button of the screen's `.tabs` row (Opzioni Generali/Sviluppatore, Lista desideri, Trofei), like a tap, no wrap; the ring goes to the first control of the new tab. The keyboard arrows and Enter share KNAV, so the PC gets the same reach. No layout change, no new screen.
+- Other fixes found while testing: `KNAV.act` (shared by Enter and A) opens selects and focuses text fields instead of clicking them; `KNAV.move` on a focused range slider changes its value.
+- Step-0 inventory (screens KNAV could not reach before this build): Opzioni (accordions, tabs, Account form), Lista desideri (tabs, cards, «Usa»), «Partita finita» (Menu / Ancora!), the El Gamblador invite card (`#bpres` inside `bj`), the trophy tabs (`data-atab`), splash and Percorso buttons. Not reachable by design: the BUG popups (bug report, text edit, cloud conflict, plc and delete confirms), guarded by `BUG`. Opzioni has no range slider or checkbox in the game today.
+- Size: `index.html` LF-normalised +3009 bytes (6263192 → 6266201). `VERSION` and `const VERSION` = `0.5_3`.
+- On the menu the first D-pad press still lands on the first tile («Nuovo gioco»), as in 0.5_2; the top icons and the career card are reached with up.
+- The «Prova controller» panel keeps the arrow keys (KNAV does not consume them while it is open), so its keyboard log still works.
+- Tests: new `tools/fbstub/test_hm1b.py`, 39 checks (A–H green); bite run `KNAV_MUTATE=menuonly` (old candidate rule): A and C fail as expected (18/30 pass). `tools/fbstub/test_hm1.py` section F now seats the player on the invite card first (the card is an overlay and takes A and Start while up); its other checks are unchanged. Regression: see the session report.
+- Not tested: a real controller on the owner's phone (phone test pending), the Android wrapper.

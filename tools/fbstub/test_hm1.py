@@ -175,6 +175,7 @@ with sync_playwright() as pw:
     settle(p)
     dev_open(p, "#mggam"); p.wait_for_timeout(900)
     check("F) El Gamblador table is up", p.evaluate("screen") == "bj", p.evaluate("screen"))
+    press(p, "a"); press(p, "a"); p.wait_for_timeout(700)  # 0.5_3: the invite card is an overlay: A rings «Siediti», A seats the player
     spy(p, "bjConfirm")
     press(p, "a"); p.wait_for_timeout(200)
     check("F) A confirms the selection (bjConfirm)", count(p, "bjConfirm") >= 1, p.evaluate("window.__n"))
