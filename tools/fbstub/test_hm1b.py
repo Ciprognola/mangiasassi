@@ -152,6 +152,7 @@ with sync_playwright() as pw:
     press(p, "down")
     press(p, "r1"); p.wait_for_timeout(400)
     check("C) R1 goes to Rocce", p.evaluate("tab") == "rocks", p.evaluate("tab"))
+    press(p, "a"); p.wait_for_timeout(300)  # HM1d: A on the active tab enters its panel
     ids = set()
     for d in ["right", "right", "down", "down", "left", "down"]:
         press(p, d); ids.add(p.evaluate("(document.querySelector('.kf')||{}).outerHTML||''")[:80])
@@ -165,17 +166,8 @@ with sync_playwright() as pw:
     check("C) R1 again reaches the Giocatore tab", p.evaluate("tab") == "player", p.evaluate("tab"))
     before = p.evaluate("S.p.char")
     group = lambda: p.evaluate("(()=>{const k=document.querySelector('.kf');return !!k&&k.classList.contains('card')&&!!k.querySelector('[data-char]')})()")
-    found = False
-    for _ in range(40):  # the walk: up to the tab row, along it to the selected tab (Giocatore), then down onto the card
-        if group():
-            found = True
-            break
-        on_tab = p.evaluate("(()=>{const k=document.querySelector('.kf');return !!k&&k.classList.contains('on')})()")
-        in_tabs = p.evaluate("!!(document.querySelector('.kf')&&document.querySelector('.kf').closest('.tabs'))")
-        step = "down" if on_tab or not p.evaluate("!!(document.querySelector('.kf')&&document.querySelector('.kf').closest('.card'))") else "up"
-        if in_tabs and not on_tab:  # along the tab row toward the selected tab
-            step = "right" if p.evaluate("(()=>{const k=document.querySelector('.kf'),bs=[...k.parentElement.children];return bs.indexOf(k)<bs.findIndex(b=>b.classList.contains('on'))})()") else "left"
-        press(p, step)
+    press(p, "a"); p.wait_for_timeout(300)  # HM1d: A on the active tab enters its panel
+    found = press_until(p, "right", group, 3) or press_until(p, "down", group, 30)  # the panel: the «Usa» card is right of the first card
     if found:
         press(p, "a"); p.wait_for_timeout(200)  # A enters the card: its first control is «Usa»
     found = found and p.evaluate("(document.querySelector('.kf')||{}).dataset&&document.querySelector('.kf').dataset.char!==undefined")

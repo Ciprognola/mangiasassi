@@ -194,7 +194,8 @@ with sync_playwright() as pw:
         chk("b) right moves the ring to the next tab, not selected", p.evaluate("tab") == first and in_tabs(p), (first, p.evaluate("tab")))
         press(p, "a"); p.wait_for_timeout(400)
         chk("b) A selects that tab", p.evaluate("tab") != first, p.evaluate("tab"))
-        chk("b) the ring stays on the selected tab", in_tabs(p) and "on" in p.evaluate("(document.querySelector('.kf')||{}).className||''"), ring_text(p))
+        chk("b) A enters the panel: the ring is on its first card", ring_is_card(p), ring_text(p))  # HM1d
+        press(p, "b"); p.wait_for_timeout(200)  # B: back to the tab row
         press(p, "left")
         chk("b) left moves back", p.evaluate("tab") != first and ring_text(p) != "", ring_text(p))
     t0 = p.evaluate("tab")
@@ -278,6 +279,7 @@ with sync_playwright() as pw:
     settle(p)
     p.click("[data-tile=wish]"); p.wait_for_timeout(500)
     p.click("[data-tab=player]"); p.wait_for_timeout(400)
+    press(p, "down"); press(p, "a"); press(p, "right")  # HM1d: the tab row no longer walks down: A on the active tab enters the panel, right reaches the Algidone card
     got = reach_group_card(p)
     chk("e) the D-pad reaches a card with controls (top level)", got, ring_tag(p))
     p.evaluate("window.__cd=document.querySelector('.kf')")
@@ -289,6 +291,7 @@ with sync_playwright() as pw:
             moves_clean = False
     chk("e) moving between cards never lands on a control inside a card", moves_clean, "")
     p.click("[data-tab=player]"); p.wait_for_timeout(400)  # a real click clears the ring: walk back from the tab row
+    press(p, "down"); press(p, "a"); press(p, "right")  # HM1d: enter the panel first
     reach_group_card(p)
     p.evaluate("window.__cd=document.querySelector('.kf')")
     press(p, "a"); p.wait_for_timeout(200)

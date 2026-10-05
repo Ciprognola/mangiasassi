@@ -1472,7 +1472,7 @@ function noiseBurst(d,v){
 }
 const crunch=()=>{noiseBurst(.09,.3);beep(90,.12,"sawtooth",.08,40);setTimeout(()=>{noiseBurst(.1,.3);beep(120,.1,"square",.05,50)},90);setTimeout(()=>noiseBurst(.12,.25),190)};
 /* ============ MUSICA ============ */
-const VERSION="0.5_4";
+const VERSION="0.5_5";
 if(IS_DEVSITE){const d=document.createElement("div");d.textContent="DEV "+VERSION;
   d.style.cssText="position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:99998;pointer-events:none;font:bold 9px/11px monospace;color:#fff;background:rgba(160,20,20,.7);padding:0 6px;border-radius:0 0 4px 4px";
   document.body.appendChild(d)}
@@ -2174,11 +2174,11 @@ function closeModal(){modalEl().innerHTML=""}
    Frecce = anello di selezione visibile che si sposta tra le sezioni del menu (o tra i pulsanti di un popup aperto), Invio = attiva.
    L'anello compare solo dopo un tasto freccia e sparisce a ogni tocco/clic: chi usa il touch non lo vede mai. Modulo autonomo: nessuna
    dipendenza dal resto tranne modalEl() e screen. Non tocca le frecce del gioco (labirinto, minigiochi) ne' i campi di testo. */
-const KNAV_SEL="button,[data-tile],details.acc>summary,input,select,a[href],[role=button]"; // HM1b: ciò che KNAV può raggiungere
+const KNAV_SEL="button,[data-tile],details.acc>summary,input,select,a[href],[role=button],[data-ach]"; // HM1b: ciò che KNAV può raggiungere
 const KNAV_GAME=["game","bj","pr","fa"]; // schermate di gioco: niente anello, salvo gli overlay HTML (invito di El Gamblador, pannelli di Ferma)
 const KNAV_TXT=e=>e.tagName==="TEXTAREA"||(e.tagName==="INPUT"&&!/^(checkbox|radio|range|button|submit|reset|file|color|hidden)$/.test(e.type));
 function bjOverlayEl(){const e=document.getElementById("bpres");return screen==="bj"&&e&&!e.hidden&&e.childElementCount?e:null} // invito di El Gamblador (HTML sopra il tavolo)
-const KNAV={cur:null,grp:null,grpScr:null, // HM1c: grp = gruppo aperto (scheda di Lista desideri o accordion); null = livello alto
+const KNAV={cur:null,grp:null,grpScr:null,panel:false,mode:"keys", // HM1c: grp = gruppo aperto (scheda di Lista desideri o accordion); null = livello alto
   vis(e){const r=e.getBoundingClientRect();return r.width>2&&r.height>2&&!e.disabled&&!e.closest("[hidden]")&&getComputedStyle(e).visibility!=="hidden"&&(!e.checkVisibility||e.checkVisibility())},
   raw(c){return[...c.querySelectorAll(KNAV_SEL+",.card")].filter(e=>!/^(hidden|file)$/.test(e.type)&&KNAV.vis(e))},
   isGroup(a){return a.classList.contains("card")?!!a.querySelector(KNAV_SEL):a.matches("details.acc")&&[...a.querySelectorAll(KNAV_SEL)].some(x=>x!==a.firstElementChild)}, // HM1c: una scheda con controlli, o un accordion con contenuto (anche chiuso), e' un gruppo
@@ -2187,14 +2187,15 @@ const KNAV={cur:null,grp:null,grpScr:null, // HM1c: grp = gruppo aperto (scheda 
   top(c){return KNAV.raw(c).filter(e=>!KNAV.groupOf(e)&&(!e.classList.contains("card")||!e.querySelector(KNAV_SEL)||KNAV.isGroup(e)))},
   items(){ // HM1b: tutti i controlli visibili e abilitati di #root (o del popup aperto); nei giochi solo i pulsanti degli overlay HTML. HM1c: dentro un gruppo, solo i suoi controlli
     const md=modalEl();
-    const within=c=>KNAV.grp&&KNAV.grp.isConnected&&KNAV.grpScr===screen&&c.contains(KNAV.grp)?KNAV.inner(KNAV.grp):KNAV.top(c);
+    const within=c=>KNAV.grp&&KNAV.grp.isConnected&&KNAV.grpScr===screen&&c.contains(KNAV.grp)?KNAV.inner(KNAV.grp):screen==="wish"&&c===root?KNAV.wishLevel():KNAV.top(c);
     if(md&&md.firstChild)return within(md);
     const bo=bjOverlayEl();if(bo)return within(bo);
     if(screen==="fa"){const fp=document.getElementById("fapanel");return fp&&fp.classList.contains("on")?within(fp):[]}
     if(KNAV_GAME.includes(screen))return[];
     return within(root);
   },
-  set(e){if(KNAV.cur)KNAV.cur.classList.remove("kf");KNAV.cur=e||null;if(e){e.classList.add("kf");try{e.scrollIntoView({block:"nearest"})}catch(x){}}KNAV.place()}, // HM1c: prima lo scorrimento, poi l'anello
+  wishLevel(){return KNAV.top(root).filter(e=>KNAV.panel?e.closest(".scroll")&&!e.closest(".tabs"):e.closest(".tabs"))}, // HM1d: Lista desideri, livello linguette (solo la riga .tabs) o pannello (solo dentro .scroll)
+  set(e){if(KNAV.cur)KNAV.cur.classList.remove("kf");KNAV.cur=e||null;if(e){e.classList.add("kf");try{e.scrollIntoView({block:"nearest"})}catch(x){}}KNAV.place();if(e)requestAnimationFrame(()=>KNAV.place())}, // HM1d: dopo lo scorrimento, anche al frame successivo // HM1c: prima lo scorrimento, poi l'anello
   off(){KNAV.set(null)},
   place(){ // HM1c: #kring e' l'anello visibile: un riquadro fisso, 3 px fuori dal controllo, nei limiti dello schermo; nascosto senza anello o con un popup BUG aperto
     let kr=document.getElementById("kring");if(!kr){kr=document.createElement("div");kr.id="kring";document.body.appendChild(kr)}
@@ -2206,8 +2207,10 @@ const KNAV={cur:null,grp:null,grpScr:null, // HM1c: grp = gruppo aperto (scheda 
   },
   sync(){ // HM1c: dopo un re-render. Il gruppo resta se esiste ancora (anello sul suo titolo, livello alto); altrimenti l'anello si spegne come prima
     if(KNAV.grp&&!KNAV.grp.isConnected)KNAV.grp=null;
+    if(screen!=="wish")KNAV.panel=false; // HM1d
     const c=KNAV.cur;
     if(c&&!c.isConnected){const g=KNAV.grp;KNAV.cur=null;KNAV.grp=null;if(g&&g.isConnected)KNAV.set(g.matches("details.acc")?g.firstElementChild:g)}
+    if(screen==="wish"&&!KNAV.cur&&!KNAV.panel&&KNAV.mode==="keys"){const on=root.querySelector(".tabs button.on");if(on)KNAV.set(on)} // HM1d: entrando nella Lista desideri l'anello va sulla linguetta attiva
     KNAV.place();
   },
   key(e){return e.tagName+[...e.attributes].filter(a=>a.name.startsWith("data-")).map(a=>a.name+"="+a.value).join(";")+"|"+e.textContent.trim().slice(0,40)}, // HM1c: riconosce una linguetta dopo il suo re-render
@@ -2219,11 +2222,13 @@ const KNAV={cur:null,grp:null,grpScr:null, // HM1c: grp = gruppo aperto (scheda 
     const st=parseFloat(el.getAttribute("step")),step=st>0?st:((+el.max-+el.min)*.05)||1,v=Math.min(+el.max,Math.max(+el.min,+el.value+d*step));
     if(v===+el.value)return;el.value=v;el.dispatchEvent(new Event("input",{bubbles:true}));el.dispatchEvent(new Event("change",{bubbles:true}));
   },
-  act(el){ // A / Invio sul controllo: come un tocco. HM1c: scheda o accordion aprono il gruppo; una linguetta resta selezionata
+  act(el){KNAV.mode="keys"; // A / Invio sul controllo: come un tocco. HM1c: scheda o accordion aprono il gruppo; una linguetta resta selezionata
     if(KNAV_TXT(el)){el.focus();return} // campo di testo: A lo mette a fuoco (si apre la tastiera)
     if(el.type==="range")return;
     if(el.classList.contains("card")&&KNAV.isGroup(el)&&KNAV.enter(el))return;
     if(el.matches("details.acc>summary")&&KNAV.isGroup(el.parentElement)){const d=el.parentElement;if(!d.open)el.click();KNAV.enter(d);return}
+    if(el.tagName==="BUTTON"&&el.closest(".tabs")&&screen==="wish"){KNAV.off();el.click();KNAV.panel=true;KNAV.set(KNAV.items()[0]||null);return} // HM1d: Lista desideri: A seleziona la linguetta ed entra nel pannello
+    if(el.hasAttribute("data-ach")){el.click();return} // Obiettivi: come un tocco, senza anello da spegnere
     if(el.tagName==="BUTTON"&&el.closest(".tabs")){const k=KNAV.key(el);KNAV.off();el.click();KNAV.set(KNAV.items().find(e=>KNAV.key(e)===k)||null);return}
     KNAV.off();
     if(el.tagName==="SELECT"){try{el.showPicker()}catch(x){el.focus()}return}
@@ -2232,25 +2237,32 @@ const KNAV={cur:null,grp:null,grpScr:null, // HM1c: grp = gruppo aperto (scheda 
   tab(d){ // L1/R1: linguetta precedente/successiva della riga .tabs, senza giro; l'anello va sul primo controllo della nuova linguetta. HM1c: torna al livello alto
     KNAV.grp=null;
     const row=root.querySelector(".tabs");if(!row)return;const bs=[...row.querySelectorAll("button")],i=bs.findIndex(b=>b.classList.contains("on")),t=bs[i+d];
-    if(!t)return;KNAV.off();t.click();const it=KNAV.items();if(it.length)KNAV.set(KNAV.first(it,true));
+    if(!t)return;KNAV.off();KNAV.panel=false;t.click();if(screen==="wish"){KNAV.set(root.querySelector(".tabs button.on"));return} // HM1d: Lista desideri, l'anello resta sulla linguetta attiva
+    const it=KNAV.items();if(it.length)KNAV.set(KNAV.first(it,true));
   },
   move(dir){ // 0 su, 1 destra, 2 giu, 3 sinistra
+    KNAV.mode="keys";
     const it=KNAV.items();if(!it.length)return false;
     const cur=KNAV.cur&&it.includes(KNAV.cur)?KNAV.cur:null;
-    if(!cur){KNAV.set(KNAV.first(it));return true}
+    if(!cur){KNAV.set(screen==="wish"&&!KNAV.panel?it.find(e=>e.classList.contains("on"))||it[0]:KNAV.first(it));return true} // HM1d: Lista desideri, l'anello parte dalla linguetta attiva
+    if(screen==="wish"&&!KNAV.panel&&!KNAV.grp&&dir%2===0)return true; // HM1d: sulla riga delle linguette su/giu non fanno nulla
     const tr=cur.closest(".tabs"); // HM1c: destra/sinistra nella riga delle linguette: la precedente o la successiva, senza giro e senza selezionarla
     if(tr&&(dir===1||dir===3)){const bs=it.filter(e=>e.parentElement===tr),t=bs[bs.indexOf(cur)+(dir===1?1:-1)];if(t)KNAV.set(t);return true}
     if(cur.type==="range"&&(dir===1||dir===3)){KNAV.slide(cur,dir===1?1:-1);return true}
-    const c=r=>[(r.left+r.right)/2,(r.top+r.bottom)/2],a=c(cur.getBoundingClientRect());let best=null,bs=1e9;
-    for(const e of it){if(e===cur)continue;const b=c(e.getBoundingClientRect()),dx=b[0]-a[0],dy=b[1]-a[1];
+    const organic=!!cur.closest(".scroll")&&(screen==="wish"||screen==="ach")&&!cur.closest(".tabs"); // HM1d: nel pannello e nella lista, chi si sovrappone sulla stessa riga/colonna vince
+    const ar=cur.getBoundingClientRect(),c=r=>[(r.left+r.right)/2,(r.top+r.bottom)/2],a=c(ar);let best=null,bs=1e9,ovBest=null,ovS=1e9;
+    for(const e of it){if(e===cur)continue;const er=e.getBoundingClientRect(),b=c(er),dx=b[0]-a[0],dy=b[1]-a[1];
       const along=dir===1?dx:dir===3?-dx:dir===2?dy:-dy,cross=dir%2?Math.abs(dy):Math.abs(dx);
-      if(along<=1)continue;const sc=along+cross/4;if(sc<bs){bs=sc;best=e}} // HM1b: prima la riga più vicina, poi l'allineamento (liste e griglie)
+      if(along<=1)continue;const sc=along+cross/4;if(sc<bs){bs=sc;best=e}
+      const ov=dir%2?(er.top<ar.bottom&&er.bottom>ar.top):(er.left<ar.right&&er.right>ar.left);if(ov&&sc<ovS){ovS=sc;ovBest=e}} // HM1b: prima la riga più vicina, poi l'allineamento (liste e griglie)
+    if(organic&&ovBest)best=ovBest;
     if(best)KNAV.set(best);
     return true;
   },
-  back(){ // B (HM1c): dentro un gruppo torna al suo titolo (scheda o accordion); su un accordion aperto lo chiude; altrimenti false = indietro di sempre
+  back(){KNAV.mode="keys"; // B (HM1c): dentro un gruppo torna al suo titolo (scheda o accordion); su un accordion aperto lo chiude; altrimenti false = indietro di sempre
     const md=modalEl();if((md&&md.firstChild)||KNAV_GAME.includes(screen))return false;
     if(KNAV.grp){const g=KNAV.grp;KNAV.grp=null;if(!g.isConnected)return false;KNAV.set(g.matches("details.acc")?g.firstElementChild:g);return true}
+    if(screen==="wish"&&KNAV.panel){KNAV.panel=false;KNAV.set(root.querySelector(".tabs button.on"));return true} // HM1d: pannello → linguetta attiva
     const c=KNAV.cur;if(c&&c.matches("details.acc>summary")&&c.parentElement.open){c.click();return true}
     return false;
   }};
@@ -2265,7 +2277,7 @@ addEventListener("keydown",e=>{
     e.preventDefault();e.stopImmediatePropagation();KNAV.act(KNAV.cur);
   }
 },true);
-for(const ev of["pointerdown","touchstart","mousedown"])addEventListener(ev,()=>{KNAV.grp=null;KNAV.off()},true); // HM1c: un tocco riporta al livello alto
+for(const ev of["pointerdown","touchstart","mousedown"])addEventListener(ev,()=>{KNAV.grp=null;KNAV.panel=false;KNAV.mode="ptr";KNAV.off()},true); // HM1c: un tocco riporta al livello alto
 addEventListener("scroll",()=>KNAV.place(),true);addEventListener("resize",()=>KNAV.place());
 /* ============ INPUT CONTROLLER (HM1, 0.5_2): il gamepad parla le stesse azioni di frecce, Invio ed Esc, senza leggere i tasti grezzi nei giochi ============ */
 const PAD_PRESETS={pocketTaco:{a:0,b:1,x:2,y:3,l1:4,r1:5,l2:6,r2:7,select:8,start:9,up:12,down:13,left:14,right:15}}; // Pocket Taco (misurato 0.5_1); la rimappatura arriva in HM4
