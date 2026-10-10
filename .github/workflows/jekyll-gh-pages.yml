@@ -1,4 +1,4 @@
-# Pages deploy: stable (main) at the site root, dev branch at /dev/
+# Pages deploy: stable (main) at the site root, dev branch at /dev/, appalokniax demo at /appalokniax/
 name: Deploy Pages (main at /, dev at /dev/)
 
 on:
@@ -30,6 +30,13 @@ jobs:
             git clone --depth 1 --branch dev "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" _site/dev
           else
             mkdir -p _site/dev && cp -r _site/. _site/dev/ 2>/dev/null || true
+          fi
+      - name: Add the Appalokniax demo (branch appalokniax at /appalokniax/)
+        run: |
+          if git ls-remote --exit-code --heads "${{ github.server_url }}/${{ github.repository }}" appalokniax >/dev/null 2>&1; then
+            git clone --depth 1 --branch appalokniax "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" /tmp/appalokniax \
+              && mkdir -p _site/appalokniax && cp /tmp/appalokniax/index.html _site/appalokniax/index.html \
+              || echo "appalokniax demo skipped"
           fi
       - name: Clean
         run: |

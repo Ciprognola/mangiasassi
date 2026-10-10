@@ -300,7 +300,7 @@ refs/                          reference art and review images
 refs/screens/                  screens library: one PNG per screen + SCREENS.md (canonical ids)
 ```
 
-GitHub Pages deploys from `main` via GitHub Actions on every push.
+GitHub Pages deploys from `main` via GitHub Actions on every push. The same deploy also publishes `index.html` of the orphan branch `appalokniax` (a separate demo project, never merged) at `/appalokniax/`; that branch re-runs this workflow on its own pushes.
 
 ### The historical log
 `CHANGELOG.md` is the detailed build-by-build log, kept current through the 0.3 release (`## 0.3 —
