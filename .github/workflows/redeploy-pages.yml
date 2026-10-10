@@ -1,0 +1,21 @@
+# A push to appalokniax re-runs the repo's Pages deploy (defined on main),
+# which copies this branch's index.html to /appalokniax/.
+name: Redeploy Pages (appalokniax demo)
+
+on:
+  push:
+    branches: ["appalokniax"]
+    paths: ["index.html"]
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  redeploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run the Pages deploy on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run jekyll-gh-pages.yml --repo "${{ github.repository }}" --ref main

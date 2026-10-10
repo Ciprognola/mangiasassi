@@ -21,6 +21,12 @@ a gambling budget to use the same night. The event is in November; judges and ga
   stage to advance, pick menu items with `[data-pi="0"]` = Sì, `[data-pi="1"]` = No). Real-device audio and touch
   are not verified headless — say so.
 
+## Web page
+Live at `https://ciprognola.github.io/mangiasassi/appalokniax/`. The Pages deploy lives on `main` (and `dev`):
+`jekyll-gh-pages.yml` copies this branch's `index.html` to `/appalokniax/`. On this branch,
+`.github/workflows/redeploy-pages.yml` re-runs that deploy whenever a push changes `index.html`, so pushing a
+rebuilt `index.html` is all it takes to update the page (allow 1–2 minutes).
+
 ## Assets (taken from `main`'s index.html, unchanged)
 `assets/prof_idle0-6.png` = `PRSPR.idle` (full-body standing loop), `assets/prof_blink0-2.png` = `PRSPR.blink`
 (dialogue-box portrait: 0 rest, 1 blink, 2 mouth open), `assets/prof_intro.mp3` = `PR_INTRO_B64`. Other professor
